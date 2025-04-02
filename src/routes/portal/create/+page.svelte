@@ -145,7 +145,7 @@
 
      <div class="flex flex-col space-y-1.5">
       <Label for="trash">Trash</Label>
-      <Input id="trash" name="trash" placeholder="1" type="text" bind:value={trash}/>
+      <Input id="trash" name="trash" placeholder="1" type="number" bind:value={trash}/>
      </div>
 
      <div class="flex flex-col space-y-1.5">

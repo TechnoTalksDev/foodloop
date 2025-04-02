@@ -139,8 +139,8 @@
 								</button>
 							</a>
 
+							<a href="/auth/login/google">
 							<button
-								onclick={() => alert('Google login')}
 								class="flex justify-center rounded-md border border-gray-700 bg-gray-900 px-4 py-2 text-gray-300 transition-all duration-300 hover:border-red-500 hover:bg-gray-800 hover:text-white"
 								aria-label="Sign in with Google"
 							>
@@ -159,6 +159,7 @@
 									/>
 								</svg>
 							</button>
+						</a>
 
 							<button
 								onclick={() => alert('Yahoo login')}
