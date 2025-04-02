@@ -11,17 +11,22 @@ export const load: PageServerLoad = async ({ params, locals: { supabase, safeGet
     .eq("id", session.user?.id)
     .single();
   
-
   if (!cartData || !cartData.products || !Array.isArray(cartData.products)) {
     // Return empty products array if cart is empty or products aren't in expected format
     return { products: [] };
   }
   
+  // Count occurrences of each product ID to determine quantity
+  const productQuantities = cartData.products.reduce((acc, productId) => {
+    acc[productId] = (acc[productId] || 0) + 1;
+    return acc;
+  }, {});
+  
   // Fetch all products that match the IDs in the cart
   const { data: productsData, error: productsError } = await supabase
     .from('product')
     .select('*')
-    .in('id', cartData.products);
+    .in('id', Object.keys(productQuantities));
     
   if (productsError) {
     throw error(500, 'Error fetching product data');
@@ -51,10 +56,11 @@ export const load: PageServerLoad = async ({ params, locals: { supabase, safeGet
     return map;
   }, {});
   
-  // Add owner data to each product
+  // Add owner data and quantity to each product
   const productsWithOwners = productsData.map(product => ({
     ...product,
-    owner: userMap[product.user_id] || null
+    owner: userMap[product.user_id] || null,
+    quantity: productQuantities[product.id] || 1
   }));
 
   return { products: productsWithOwners };

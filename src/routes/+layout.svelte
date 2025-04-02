@@ -3,6 +3,7 @@
 	import { cn } from '$lib/utils';
 	import { ShoppingBasket, Leaf, Menu, X } from '@lucide/svelte';
 	import { Button } from '$lib/components/ui/button';
+	import { Toaster } from "$lib/components/ui/sonner/index.js";
 	import { Sheet, SheetContent, SheetTrigger } from '$lib/components/ui/sheet';
 	import '../app.css';
 
@@ -19,7 +20,7 @@
 
 	let isOpen = $state(false);
 </script>
-
+<Toaster />
 <div class="flex min-h-screen flex-col">
 	<header
 		class="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
