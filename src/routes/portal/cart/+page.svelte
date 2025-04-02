@@ -35,11 +35,14 @@ import * as Avatar from "$lib/components/ui/avatar/index.js";
     <div class="flex gap-2 items-center justify-items-center">
 
       <Avatar.Root>
-        <Avatar.Image src={data.owner.avatar} alt={data.owner.username ?? data.owner.name} />
+        <Avatar.Image src={product.owner.avatar} alt={product.owner.username ?? product.owner.name} />
         <Avatar.Fallback>CN</Avatar.Fallback>
       </Avatar.Root>
-      <p>{data.owner.username ?? data.owner.name}</p>
+      <p>{product.owner.username ?? product.owner.name}</p>
     </div>
   </Card.Footer>
 </Card.Root>
 {/each}
+
+
+<Button>Checkout</Button>

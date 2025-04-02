@@ -10,10 +10,7 @@ export const load: PageServerLoad = async ({ params, locals: { supabase, safeGet
     .select('*')
     .eq("id", session.user?.id)
     .single();
-
-  if (cartError) {
-    throw error(500, 'Error fetching cart data');
-  }
+  
 
   if (!cartData || !cartData.products || !Array.isArray(cartData.products)) {
     // Return empty products array if cart is empty or products aren't in expected format
