@@ -1,19 +1,15 @@
 <script lang="ts">
-import type { PageProps } from "./$types";
-import { Button } from "$lib/components/ui/button/index.js";
+	import type { PageProps } from "./$types";
+  import { Button } from "$lib/components/ui/button/index.js";
 import * as Card from "$lib/components/ui/card/index.js";
 import * as Avatar from "$lib/components/ui/avatar/index.js";
-	import { addToCart } from "$lib/utils";
 
-let { data }: PageProps = $props();
+  let { data }: PageProps = $props();
 
-let product = data.product
-console.log(data.owner.username ?? data.owner.name)
-console.log(data.user?.user_metadata.name)
-//$inspect(product)
+  $inspect(data.products)
 </script>
 
-
+{#each data.products as product}
 <Card.Root>
   <Card.Header>
     <Card.Title><a href="/portal/product/{product.id}" class="underline">{product.name}</a></Card.Title>
@@ -29,6 +25,12 @@ console.log(data.user?.user_metadata.name)
     <p>{product.trash}</p>
     <p>{product.tags}</p>
     
+
+
+  </Card.Content>
+  <Card.Footer>
+
+
     
     <div class="flex gap-2 items-center justify-items-center">
 
@@ -38,12 +40,6 @@ console.log(data.user?.user_metadata.name)
       </Avatar.Root>
       <p>{data.owner.username ?? data.owner.name}</p>
     </div>
-
-  </Card.Content>
-  <Card.Footer>
-
-    <Button variant="outline" onclick={() => {addToCart(product.id)}}>Add to cart</Button>
-    <Button >Buy now</Button>
-
   </Card.Footer>
 </Card.Root>
+{/each}
