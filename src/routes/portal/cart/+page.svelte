@@ -7,6 +7,25 @@ import * as Avatar from "$lib/components/ui/avatar/index.js";
   let { data }: PageProps = $props();
 
   $inspect(data.products)
+
+
+  async function clearCart(id: string = "") {
+    console.log(data.products)
+    
+    if (id != "") {
+      data = { ...data, products: data.products.filter(product => product.id !== Number(id)) };
+    }else {
+      data = {...data, products: []}
+    }
+    console.log(data.products)
+
+    console.log("ran clear cart")
+    
+    await fetch(`/portal/cart/clear/${id}`, {
+      method: 'POST',
+    });
+    
+  }
 </script>
 
 {#each data.products as product}
@@ -39,6 +58,7 @@ import * as Avatar from "$lib/components/ui/avatar/index.js";
         <Avatar.Fallback>CN</Avatar.Fallback>
       </Avatar.Root>
       <p>{product.owner.username ?? product.owner.name}</p>
+      <Button onclick={async () => {await clearCart(product.id)}}>Remove</Button>
     </div>
   </Card.Footer>
 </Card.Root>
@@ -46,3 +66,5 @@ import * as Avatar from "$lib/components/ui/avatar/index.js";
 
 
 <Button>Checkout</Button>
+
+<Button onclick={async () => {await clearCart()}}>Clear all</Button>

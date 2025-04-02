@@ -3,6 +3,7 @@
 
   import { Button } from "$lib/components/ui/button/index.js";
   import * as Card from "$lib/components/ui/card/index.js";
+	import { addToCart } from "$lib/utils";
   let { data }: PageProps = $props();
 </script>
 
@@ -31,7 +32,7 @@
   </Card.Content>
   <Card.Footer>
     <p>{product.owner_id}</p>
-    <Button variant="outline">Add to cart</Button>
+    <Button variant="outline" onclick={() => {addToCart(product.id)}}>Add to cart</Button>
     <Button >Buy now</Button>
 
   </Card.Footer>
