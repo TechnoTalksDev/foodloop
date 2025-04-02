@@ -1,143 +1,241 @@
-<script lang="ts">
-  import { Button } from "$lib/components/ui/button/index.js";
-  import * as Card from "$lib/components/ui/card/index.js";
-  import * as Select from "$lib/components/ui/select/index.js";
-  import { Input } from "$lib/components/ui/input/index.js";
-  import { Label } from "$lib/components/ui/label/index.js";
-  import { Textarea } from "$lib/components/ui/textarea/index.js";
-  import  {env} from '$env/dynamic/public';
-  const maps_api = env.PUBLIC_MAPS_API;
-  const frameworks = [
-   {
-    value: "sveltekit",
-    label: "SvelteKit"
-   },
-   {
-    value: "next",
-    label: "Next.js"
-   },
-   {
-    value: "astro",
-    label: "Astro"
-   },
-   {
-    value: "nuxt",
-    label: "Nuxt.js"
-   }
+<script>
+  import { onMount } from 'svelte';
+  import { Button } from "$lib/components/ui/button";
+  import * as Card from "$lib/components/ui/card";
+  import { Input } from "$lib/components/ui/input";
+  import { Label } from "$lib/components/ui/label";
+  import { Textarea } from "$lib/components/ui/textarea";
+  
+  // Import icons from @lucide/svelte
+  import { 
+    Leaf, 
+    ImagePlus, 
+    Tag, 
+    Building, 
+    Clock, 
+    ArrowRight 
+  } from "@lucide/svelte";
+  
+  // Form state
+  let formVisible = false;
+  let formFieldsVisible = false;
+  let location = '';
+  
+  // Tags for food categories
+  let foodTags = [
+    { name: 'Bakery', selected: false },
+    { name: 'Produce', selected: false },
+    { name: 'Prepared Meals', selected: false },
+    { name: 'Seafood', selected: false },
+    { name: 'Cafe Items', selected: false },
+    { name: 'Grocery', selected: false }
   ];
   
-  let framework = $state("");
+  // Toggle a tag's selection
+  function toggleTag(index) {
+    const updatedTags = [...foodTags];
+    updatedTags[index].selected = !updatedTags[index].selected;
+    foodTags = updatedTags;
+  }
   
-  const selectedFramework = $derived(
-   frameworks.find((f) => f.value === framework)?.label ?? "Select a framework"
-  );
-
-
-  import { PlaceAutocomplete } from 'places-autocomplete-svelte';
-
-  // Response handler
-  let fullResponse = $state('')
-;  let onResponse = (response: any) => {
-    fullResponse = response;
-  };
-
-  // Error handler
-  let pacError = '';
-  let onError = (error: string) => {
-    pacError = error;
-  };
-
-  const options = {
-	classes : {
-		section: '',
-		container: 'relative z-10 transform rounded-xl mt-4',
-		icon_container: 'pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3',
-		icon: '<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>',
-		input: 'border-1 w-full rounded-md border-0 shadow-sm  px-4 py-3 pl-10 pr-20 text-gray-900 ring-1 ring-inset ring-gray-300 focus:ring-2 sm:text-sm',
-		kbd_container: 'absolute inset-y-0 right-0 flex py-1.5 pr-1.5',
-		kbd_escape: 'inline-flex items-center rounded border border-gray-300 px-1 font-sans text-xs text-gray-500 w-8 mr-1',
-		kbd_up: 'inline-flex items-center justify-center rounded border border-gray-300 px-1 font-sans text-xs text-gray-500 w-6',
-		kbd_down: 'inline-flex items-center rounded border border-gray-400 px-1 font-sans text-xs text-gray-500 justify-center w-6',
-		kbd_active: 'bg-indigo-500 text-white',
-		ul: 'absolute z-50 -mb-2 mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm divide-y divide-gray-100',
-		li: 'z-50 cursor-default select-none py-2 px-2 lg:px-4 text-gray-900 hover:bg-indigo-500 hover:text-white',
-		li_current: 'bg-indigo-500',
-		li_a: 'block w-full flex justify-between',
-		li_a_current: 'text-white',
-		li_div_container: 'flex min-w-0 gap-x-4',
-		li_div_one: 'min-w-0 flex-auto',
-		li_div_one_p: 'text-sm/6 font-semibold',
-		li_div_two: 'shrink-0 flex flex-col items-end min-w-16',
-		li_div_two_p: 'mt-1 text-xs/5'
-	}
-}
-  /**
-  * @type object optional
-  * AutocompleteRequest properties
-  */
-  const requestParams = {
-  "language": "en-us",
-  "region": "US",
-  "includedRegionCodes": [
-    "US"
-  ]
-}
-
-  /*
-      const name = data.get('name') as string;
-    const amount = data.get('amount') as string;
-    const description = data.get('description') as string;
-    const location = data.get('location') as string;
-    const price = data.get('price') as string;
-    const expiry = data.get('expiry') as string;
-    const trash = data.get('trash') as string;
-    const image_url = data.get('image_url') as string;
-    const tags = data.get('tags') as string;
-  */
- </script>
+  // Handle form submission
+  function handleSubmit(event) {
+    event.preventDefault();
+    // Process form submission here
+    console.log('Form submitted');
+  }
   
- <Card.Root class="w-[350px]">
-  <Card.Header>
-   <Card.Title>Create product</Card.Title>
-   <Card.Description>Deploy your new project in one-click.</Card.Description>
-  </Card.Header>
-  <Card.Content>
-   <form method="POST" action="?create">
-    <div class="grid w-full items-center gap-4">
-     <div class="flex flex-col space-y-1.5">
-      <Label for="name">Name</Label>
-      <Input id="name" placeholder="Name of your project" />
-     </div>
-     <div class="flex flex-col space-y-1.5">
-      <Label for="name">Quantity</Label>
-      <Input id="amount" placeholder="Amount" type="number" min="1"/>
-     </div>
-     <div class="flex flex-col space-y-1.5">
-      <Label for="name">Description</Label>
-      <Textarea id="description" placeholder="Type your message here." />
-     </div>
-     <div class="flex flex-col space-y-1.5">
-      <Label for="name">Pickup location</Label>
-      <input hidden id="location" name="location" bind:value={fullResponse.formattedAddress} />
-      <PlaceAutocomplete  {onResponse} {onError} {options} requestParams={requestParams} PUBLIC_GOOGLE_MAPS_API_KEY={maps_api}/>
-      <p>{fullResponse.formattedAddress}</p>
-     </div>
+  // Make the form visible with animation when component mounts
+  onMount(() => {
+    setTimeout(() => {
+      formVisible = true;
+      setTimeout(() => {
+        formFieldsVisible = true;
+      }, 300);
+    }, 200);
+  });
+  
+  // Define fields for easier rendering
+  const formFields = [
+    { id: 'name', label: 'Item Name', type: 'text', placeholder: 'E.g., Artisan Sourdough Bread', icon: null },
+    { id: 'amount', label: 'Quantity Available', type: 'number', placeholder: '5', icon: null },
+    { id: 'description', label: 'Description', type: 'textarea', placeholder: 'Describe your food item, its quality, and why it would otherwise go to waste', icon: null },
+    { id: 'location', label: 'Pickup Location', type: 'text', placeholder: 'Enter pickup address', icon: Building },
+    { id: 'price', label: 'Discounted Price (€)', type: 'number', placeholder: '2.50', icon: null },
+    { id: 'expiry', label: 'Best Before / Expiry Date', type: 'date', placeholder: '', icon: Clock },
+    { id: 'tags', label: 'Food Category', type: 'tags', placeholder: '', icon: Tag },
+    { id: 'image', label: 'Upload Image', type: 'file', placeholder: 'Browse...', icon: ImagePlus }
+  ];
+</script>
 
-     <div class="flex flex-col space-y-1.5">
-      <Label for="name">Price</Label>
-      <Input id="price" placeholder="2" type="number" min=".01" prefix="$" step="1"/>
-     </div>
+<svelte:head>
+  <title>FoodLoop | Add Surplus Food</title>
+  <meta
+    name="description"
+    content="Add your surplus food to FoodLoop to reduce waste and connect with customers."
+  />
+</svelte:head>
 
-     <div class="flex flex-col space-y-1.5">
-      <Label for="name">Expiry</Label>
-      <Input id="expiry" placeholder="2" type="date"/>
-     </div>
+<!-- Hero section -->
+<section class="relative bg-green-50 pb-16">
+  <div class="container mx-auto flex flex-col items-center px-4 py-12 md:py-16">
+    <div class="mb-8 space-y-4 text-center">
+      <div
+        class="inline-flex items-center rounded-full border border-green-200 bg-green-100 px-3 py-1 text-sm font-semibold text-green-800"
+      >
+        <Leaf class="mr-1 h-4 w-4" />
+        List Your Surplus Food
+      </div>
 
+      <h1 class="text-3xl font-bold tracking-tight md:text-4xl">
+        Share Your <span class="text-green-600">Extra Food</span>, Fight Waste
+      </h1>
+
+      <p class="mx-auto max-w-2xl text-lg text-muted-foreground">
+        Help reduce food waste by listing your surplus items. Connect with customers who value
+        sustainability and great deals.
+      </p>
     </div>
-   </form>
-  </Card.Content>
-  <Card.Footer class="flex justify-between">
-   <Button variant="outline">Cancel</Button>
-   <Button type="submit">Create</Button>
-  </Card.Footer>
- </Card.Root>
+  </div>
+
+  <!-- Curved separator -->
+  <div class="absolute bottom-0 left-0 right-0 h-16 bg-green-50">
+    <svg class="absolute bottom-0 h-16 w-full" preserveAspectRatio="none" viewBox="0 0 1440 48">
+      <path fill="white" d="M0,0 C480,48 960,48 1440,0 L1440,48 L0,48 Z"></path>
+    </svg>
+  </div>
+</section>
+
+<!-- Main form section -->
+<section class="py-8 md:py-12">
+  <div class="container mx-auto px-4">
+    <div 
+      class="mx-auto max-w-2xl transition-all duration-500 ease-in-out {formVisible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}"
+    >
+      <Card.Root class="overflow-hidden border-green-100 shadow-lg">
+        <Card.Header class="bg-gradient-to-r from-green-500 to-green-600 text-white">
+          <Card.Title class="text-2xl">Add New Food Item</Card.Title>
+          <Card.Description class="text-green-50">
+            List your surplus food for customers to discover and purchase
+          </Card.Description>
+        </Card.Header>
+        
+        <Card.Content class="p-6">
+          <form method="POST" action="?create" on:submit={handleSubmit}>
+            <div class="grid w-full items-center gap-6">
+              <!-- Form fields with animation -->
+              {#each formFields as field, i}
+                <div 
+                  class="flex flex-col space-y-1.5 transition-all duration-500 ease-in-out"
+                  style={'transition-delay: ' + (100 + i * 50) + 'ms'}
+                  class:translate-y-0={formFieldsVisible}
+                  class:opacity-100={formFieldsVisible}
+                  class:translate-y-5={!formFieldsVisible}
+                  class:opacity-0={!formFieldsVisible}
+                >
+                  <div class="flex items-center gap-2">
+                    {#if field.icon === Building}
+                      <Building class="h-4 w-4 text-green-600" />
+                    {:else if field.icon === Clock}
+                      <Clock class="h-4 w-4 text-green-600" />
+                    {:else if field.icon === Tag}
+                      <Tag class="h-4 w-4 text-green-600" />
+                    {:else if field.icon === ImagePlus}
+                      <ImagePlus class="h-4 w-4 text-green-600" />
+                    {/if}
+                    <Label for={field.id} class="font-medium text-gray-700">{field.label}</Label>
+                  </div>
+                  
+                  {#if field.type === 'textarea'}
+                    <Textarea 
+                      id={field.id} 
+                      name={field.id} 
+                      placeholder={field.placeholder}
+                      class="min-h-24 border-gray-200 focus-visible:ring-green-500"
+                    />
+                  
+                  {:else if field.type === 'tags'}
+                    <div class="flex flex-wrap gap-2 pt-1">
+                      {#each foodTags as tag, tagIndex}
+                        <button
+                          type="button"
+                          class="rounded-full px-3 py-1 text-sm font-medium transition-colors"
+                          class:bg-green-600={tag.selected}
+                          class:text-white={tag.selected}
+                          class:bg-green-100={!tag.selected}
+                          class:text-green-800={!tag.selected}
+                          on:click={() => toggleTag(tagIndex)}
+                        >
+                          {tag.name}
+                        </button>
+                      {/each}
+                    </div>
+                  
+                  {:else if field.type === 'file'}
+                    <div class="mt-1 flex items-center gap-3">
+                      <Button variant="outline" type="button" class="border-dashed text-gray-500">
+                        <ImagePlus class="mr-2 h-4 w-4" />
+                        Upload Photo
+                      </Button>
+                      <span class="text-sm text-gray-500">JPEG, PNG or GIF, max 5MB</span>
+                    </div>
+                  
+                  {:else}
+                    <Input
+                      id={field.id}
+                      name={field.id}
+                      type={field.type}
+                      placeholder={field.placeholder}
+                      min={field.type === 'number' ? '0.01' : undefined}
+                      step={field.type === 'number' ? '0.01' : undefined}
+                      class="border-gray-200 focus-visible:ring-green-500"
+                    />
+                  {/if}
+                </div>
+              {/each}
+            </div>
+            
+            <div 
+              class="mt-8 flex justify-between transition-all duration-500 ease-in-out"
+              style="transition-delay: 700ms"
+              class:translate-y-0={formFieldsVisible}
+              class:opacity-100={formFieldsVisible}
+              class:translate-y-5={!formFieldsVisible}
+              class:opacity-0={!formFieldsVisible}
+            >
+              <Button variant="outline" type="button" class="border-gray-200 text-gray-700">
+                Cancel
+              </Button>
+              <Button type="submit" class="bg-green-600 hover:bg-green-700">
+                List Food Item
+                <ArrowRight class="ml-2 h-4 w-4" />
+              </Button>
+            </div>
+          </form>
+        </Card.Content>
+      </Card.Root>
+      
+      <!-- Tips box -->
+      <div 
+        class="mt-6 rounded-lg border border-green-100 bg-green-50 p-4 shadow-sm transition-all duration-500 ease-in-out"
+        style="transition-delay: 800ms"
+        class:translate-y-0={formFieldsVisible}
+        class:opacity-100={formFieldsVisible}
+        class:translate-y-5={!formFieldsVisible}
+        class:opacity-0={!formFieldsVisible}
+      >
+        <h3 class="mb-2 flex items-center text-lg font-semibold text-green-800">
+          <Leaf class="mr-2 h-5 w-5" />
+          Tips for Success
+        </h3>
+        <ul class="ml-7 list-disc space-y-1 text-sm text-green-700">
+          <li>Be honest about the quality and condition of your food</li>
+          <li>Add a clear photo to increase interest from customers</li>
+          <li>Set a fair price that reflects the discount</li>
+          <li>Be specific about pickup times and location</li>
+          <li>Respond quickly to customer inquiries</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
