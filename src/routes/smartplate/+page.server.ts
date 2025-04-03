@@ -1,9 +1,10 @@
 import { error, type RequestEvent } from '@sveltejs/kit';
 import type { PageServerLoad } from '../portal/$types';
 
-const API_KEY = 'AIzaSyBPXcUCXyneITF0HMUChpULX_W173dK-lQ';
-const GEMINI_API_URL =
-	'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
+import { env } from '$env/dynamic/private';
+
+const API_KEY = env.GEMINI_API_KEY
+const GEMINI_API_URL = env.GEMINI_API_URL
 
 interface Recipe {
 	name: string;
