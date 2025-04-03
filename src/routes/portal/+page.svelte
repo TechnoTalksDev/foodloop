@@ -6,17 +6,17 @@
 	import { toast } from 'svelte-sonner';
 	import { Button } from '$lib/components/ui/button';
 	import * as Card from '$lib/components/ui/card';
-	import { 
-		ShoppingBasket, 
-		ShoppingCart, 
-		Tag, 
-		Calendar, 
-		MapPin, 
-		Clock, 
-		Plus, 
-		BarChart, 
+	import {
+		ShoppingBasket,
+		ShoppingCart,
+		Tag,
+		Calendar,
+		MapPin,
+		Clock,
+		Plus,
+		BarChart,
 		User,
-		History 
+		History
 	} from 'lucide-svelte';
 	import { addToCart } from '$lib/utils';
 	import type { PageProps } from './$types';
@@ -74,14 +74,14 @@
 
 	// Cart state
 	let cartCount = 0;
-	
+
 	// Simple add to cart function
 	function handleAddToCart(productId: any) {
 		console.log(`Added product ${productId} to cart`);
 		// Show toast notification
 		addToCart(productId);
 		cartCount++;
-		console.log("Trying to toast");
+		console.log('Trying to toast');
 	}
 
 	// Handle buy now action
@@ -93,7 +93,6 @@
 	function navigateTo(path: string) {
 		goto(path);
 	}
-
 </script>
 
 <svelte:head>
@@ -106,14 +105,17 @@
 
 <!-- Cart Indicator -->
 {#if cartCount > 0}
-<div class="fixed top-4 right-4 z-50 flex items-center gap-2" transition:fly={{ y: -20, duration: 300 }}>
-	<div class="rounded-full bg-green-600 px-3 py-1 text-sm font-bold text-white">
-		<span class="flex items-center">
-			<ShoppingCart class="mr-1 h-4 w-4" />
-			{cartCount}
-		</span>
+	<div
+		class="fixed right-4 top-4 z-50 flex items-center gap-2"
+		transition:fly={{ y: -20, duration: 300 }}
+	>
+		<div class="rounded-full bg-green-600 px-3 py-1 text-sm font-bold text-white">
+			<span class="flex items-center">
+				<ShoppingCart class="mr-1 h-4 w-4" />
+				{cartCount}
+			</span>
+		</div>
 	</div>
-</div>
 {/if}
 
 <!-- Header section -->
@@ -177,7 +179,6 @@
 
 								<Card.Content>
 									<div class="space-y-3 text-sm">
-										
 										<div class="flex items-center text-gray-600">
 											<MapPin class="mr-2 h-4 w-4 text-green-600" />
 											<span>{product.location}</span>
@@ -205,7 +206,7 @@
 										<button
 											class="flex items-center rounded-md border border-green-200 px-4 py-2 text-sm hover:border-green-300 hover:bg-green-50"
 											onclick={() => {
-												handleAddToCart(product.id)
+												handleAddToCart(product.id);
 												toast.success(`${product.name} added to cart`, {
 													description: `$${product.price}`,
 													action: {
@@ -214,7 +215,7 @@
 															goto('/portal/cart');
 														}
 													}
-												})
+												});
 											}}
 										>
 											<ShoppingCart class="mr-2 h-4 w-4" />
@@ -246,63 +247,63 @@
 <section class="mb-20 px-4">
 	<div class="container mx-auto">
 		{#if visible}
-			<div 
-				class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+			<div
+				class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4"
 				in:scale={{ duration: 800, delay: 200, start: 0.9 }}
 			>
 				<!-- Create Food Listing Button -->
-				<div 
-					class="rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-105"
+				<div
+					class="cursor-pointer rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl"
 					onclick={() => navigateTo('/portal/create')}
 				>
-					<div class="p-8 text-center text-white flex flex-col items-center">
-						<div class="rounded-full bg-white/20 p-4 mb-4">
+					<div class="flex flex-col items-center p-8 text-center text-white">
+						<div class="mb-4 rounded-full bg-white/20 p-4">
 							<Plus class="h-8 w-8" />
 						</div>
-						<h3 class="text-xl font-bold mb-2">Create Listing</h3>
-						<p class="text-green-50 text-sm">Add your surplus food items</p>
+						<h3 class="mb-2 text-xl font-bold">Create Listing</h3>
+						<p class="text-sm text-green-50">Add your surplus food items</p>
 					</div>
 				</div>
 
 				<!-- Impact Button -->
-				<div 
-					class="rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-105"
+				<div
+					class="cursor-pointer rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl"
 					onclick={() => navigateTo('/portal/impact')}
 				>
-					<div class="p-8 text-center text-white flex flex-col items-center">
-						<div class="rounded-full bg-white/20 p-4 mb-4">
+					<div class="flex flex-col items-center p-8 text-center text-white">
+						<div class="mb-4 rounded-full bg-white/20 p-4">
 							<BarChart class="h-8 w-8" />
 						</div>
-						<h3 class="text-xl font-bold mb-2">Impact</h3>
-						<p class="text-blue-50 text-sm">See your environmental impact</p>
+						<h3 class="mb-2 text-xl font-bold">Impact</h3>
+						<p class="text-sm text-blue-50">See your environmental impact</p>
 					</div>
 				</div>
 
 				<!-- Cart Button -->
-				<div 
-					class="rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-105"
+				<div
+					class="cursor-pointer rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl"
 					onclick={() => navigateTo('/portal/cart')}
 				>
-					<div class="p-8 text-center text-white flex flex-col items-center">
-						<div class="rounded-full bg-white/20 p-4 mb-4">
+					<div class="flex flex-col items-center p-8 text-center text-white">
+						<div class="mb-4 rounded-full bg-white/20 p-4">
 							<ShoppingCart class="h-8 w-8" />
 						</div>
-						<h3 class="text-xl font-bold mb-2">My Cart</h3>
-						<p class="text-amber-50 text-sm">View your selected items</p>
+						<h3 class="mb-2 text-xl font-bold">My Cart</h3>
+						<p class="text-sm text-amber-50">View your selected items</p>
 					</div>
 				</div>
 
 				<!-- Profile Button -->
-				<div 
-					class="rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-105"
+				<div
+					class="cursor-pointer rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl"
 					onclick={() => navigateTo('/portal/profile')}
 				>
-					<div class="p-8 text-center text-white flex flex-col items-center">
-						<div class="rounded-full bg-white/20 p-4 mb-4">
+					<div class="flex flex-col items-center p-8 text-center text-white">
+						<div class="mb-4 rounded-full bg-white/20 p-4">
 							<User class="h-8 w-8" />
 						</div>
-						<h3 class="text-xl font-bold mb-2">Profile</h3>
-						<p class="text-purple-50 text-sm">Manage your account</p>
+						<h3 class="mb-2 text-xl font-bold">Profile</h3>
+						<p class="text-sm text-purple-50">Manage your account</p>
 					</div>
 				</div>
 			</div>

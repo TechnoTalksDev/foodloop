@@ -11,9 +11,8 @@
 	import ListChecks from 'lucide-svelte/icons/list-checks';
 	import ShoppingCart from 'lucide-svelte/icons/shopping-cart';
 
-
 	export let data: PageData;
-	// RYAN FEED THIS TO THE AI, IT IS A ARRAY OF EVERY PRODUCT. 
+	// RYAN FEED THIS TO THE AI, IT IS A ARRAY OF EVERY PRODUCT.
 	$: console.log(data.products);
 
 	JSON.stringify(data.products);

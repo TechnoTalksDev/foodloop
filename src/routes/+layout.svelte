@@ -8,7 +8,7 @@
 	import { onMount } from 'svelte';
 	import { invalidate } from '$app/navigation';
 	import logoImage from './logo.png';
-	import { Toaster } from "$lib/components/ui/sonner/index.js";
+	import { Toaster } from '$lib/components/ui/sonner/index.js';
 
 	// Simplified navigation links
 	const links = [
@@ -20,19 +20,16 @@
 	// State for mobile menu
 	let isOpen = $state(false);
 
-
-	let { data, children } = $props()
-  let { session, supabase } = $derived(data)
-  onMount(() => {
-    const { data } = supabase.auth.onAuthStateChange((_, newSession) => {
-      if (newSession?.expires_at !== session?.expires_at) {
-        invalidate('supabase:auth')
-      }
-    })
-    return () => data.subscription.unsubscribe()
-  })
-
-	
+	let { data, children } = $props();
+	let { session, supabase } = $derived(data);
+	onMount(() => {
+		const { data } = supabase.auth.onAuthStateChange((_, newSession) => {
+			if (newSession?.expires_at !== session?.expires_at) {
+				invalidate('supabase:auth');
+			}
+		});
+		return () => data.subscription.unsubscribe();
+	});
 </script>
 
 <Toaster />
@@ -44,7 +41,7 @@
 		<div class="container flex h-16 items-center justify-between">
 			<!-- Logo -->
 			<a href="/" class="flex items-center gap-2 text-xl font-bold">
-				<img src="{logoImage}" alt="FoodLoop Logo" class="h-6 w-auto" />
+				<img src={logoImage} alt="FoodLoop Logo" class="h-6 w-auto" />
 				<span class="hidden md:inline">FoodLoop</span>
 			</a>
 

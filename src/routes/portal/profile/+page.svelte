@@ -64,7 +64,7 @@
 	// Animation control
 	let visible = $state(false);
 	let editMode = $state(false);
-	
+
 	// Form data (for edit mode)
 	let formData = $state({
 		name: profile.name,
@@ -110,23 +110,22 @@
 				</p>
 			</div>
 
-			<div class="mx-auto max-w-5xl grid grid-cols-1 lg:grid-cols-3 gap-6">
+			<div class="mx-auto grid max-w-5xl grid-cols-1 gap-6 lg:grid-cols-3">
 				<!-- Left Column - User Profile Card -->
 				<div class="lg:col-span-1" in:fly={{ x: -20, duration: 400 }}>
-					<Card.Root class="border-green-200 overflow-hidden">
-						<div class="relative bg-gradient-to-r from-green-500 to-green-600 h-32">
-							<div class="absolute bottom-0 left-0 w-full flex justify-center transform translate-y-1/2">
+					<Card.Root class="overflow-hidden border-green-200">
+						<div class="relative h-32 bg-gradient-to-r from-green-500 to-green-600">
+							<div
+								class="absolute bottom-0 left-0 flex w-full translate-y-1/2 transform justify-center"
+							>
 								<Avatar.Root class="h-24 w-24 border-4 border-white">
 									{#if profile.avatar}
-										<Avatar.Image
-											src={profile.avatar}
-											alt={profile.name}
-										/>
+										<Avatar.Image src={profile.avatar} alt={profile.name} />
 									{:else}
-										<Avatar.Fallback class="bg-green-100 text-green-800 text-xl">
+										<Avatar.Fallback class="bg-green-100 text-xl text-green-800">
 											{profile.name
 												.split(' ')
-												.map(n => n[0])
+												.map((n) => n[0])
 												.join('')
 												.toUpperCase()}
 										</Avatar.Fallback>
@@ -134,39 +133,39 @@
 								</Avatar.Root>
 							</div>
 						</div>
-						
-						<Card.Header class="flex flex-col items-center mt-12 pt-0 text-center">
+
+						<Card.Header class="mt-12 flex flex-col items-center pt-0 text-center">
 							<Card.Title class="text-xl">{profile.name}</Card.Title>
 							<Card.Description class="text-gray-500">
 								Member since {profile.joined}
 							</Card.Description>
 						</Card.Header>
-						
+
 						<Card.Content class="text-center">
-							<p class="text-gray-600 mb-4">{profile.bio}</p>
-							
-							<div class="grid grid-cols-3 gap-2 border-t border-b border-gray-100 py-4">
+							<p class="mb-4 text-gray-600">{profile.bio}</p>
+
+							<div class="grid grid-cols-3 gap-2 border-b border-t border-gray-100 py-4">
 								<div class="flex flex-col items-center">
-									<Leaf class="h-5 w-5 mb-1 text-green-600" />
+									<Leaf class="mb-1 h-5 w-5 text-green-600" />
 									<span class="text-lg font-semibold">{profile.impactScore}</span>
 									<span class="text-xs text-gray-500">Impact Score</span>
 								</div>
 								<div class="flex flex-col items-center">
-									<ShoppingBag class="h-5 w-5 mb-1 text-green-600" />
+									<ShoppingBag class="mb-1 h-5 w-5 text-green-600" />
 									<span class="text-lg font-semibold">{profile.purchaseCount}</span>
 									<span class="text-xs text-gray-500">Purchases</span>
 								</div>
 								<div class="flex flex-col items-center">
-									<Star class="h-5 w-5 mb-1 text-green-600" />
+									<Star class="mb-1 h-5 w-5 text-green-600" />
 									<span class="text-lg font-semibold">{profile.sellerRating}</span>
 									<span class="text-xs text-gray-500">Rating</span>
 								</div>
 							</div>
 						</Card.Content>
-						
+
 						<Card.Footer class="flex justify-center">
-							<Button 
-								variant="outline" 
+							<Button
+								variant="outline"
 								class="border-green-200 text-green-600 hover:border-green-300"
 								onclick={() => toggleEditMode()}
 							>
@@ -181,17 +180,15 @@
 						</Card.Footer>
 					</Card.Root>
 				</div>
-				
+
 				<!-- Right Column - Profile Details and Actions -->
 				<div class="lg:col-span-2" in:fly={{ x: 20, duration: 400 }}>
-					<Card.Root class="border-green-200 mb-6">
+					<Card.Root class="mb-6 border-green-200">
 						<Card.Header>
 							<Card.Title class="text-xl">Personal Information</Card.Title>
-							<Card.Description>
-								Your contact details and preferences
-							</Card.Description>
+							<Card.Description>Your contact details and preferences</Card.Description>
 						</Card.Header>
-						
+
 						<Card.Content>
 							<div class="space-y-4">
 								{#if editMode}
@@ -220,23 +217,23 @@
 									</div>
 								{:else}
 									<!-- View Mode -->
-									<div class="grid md:grid-cols-2 gap-y-4">
+									<div class="grid gap-y-4 md:grid-cols-2">
 										<div class="flex items-start space-x-3">
-											<Mail class="h-5 w-5 text-gray-500 mt-1 flex-shrink-0" />
+											<Mail class="mt-1 h-5 w-5 flex-shrink-0 text-gray-500" />
 											<div>
 												<p class="text-sm font-medium text-gray-700">Email</p>
 												<p class="text-sm text-gray-600">{profile.email}</p>
 											</div>
 										</div>
 										<div class="flex items-start space-x-3">
-											<Phone class="h-5 w-5 text-gray-500 mt-1 flex-shrink-0" />
+											<Phone class="mt-1 h-5 w-5 flex-shrink-0 text-gray-500" />
 											<div>
 												<p class="text-sm font-medium text-gray-700">Phone</p>
 												<p class="text-sm text-gray-600">{profile.phone}</p>
 											</div>
 										</div>
 										<div class="flex items-start space-x-3 md:col-span-2">
-											<MapPin class="h-5 w-5 text-gray-500 mt-1 flex-shrink-0" />
+											<MapPin class="mt-1 h-5 w-5 flex-shrink-0 text-gray-500" />
 											<div>
 												<p class="text-sm font-medium text-gray-700">Address</p>
 												<p class="text-sm text-gray-600">{profile.address}</p>
@@ -247,54 +244,63 @@
 							</div>
 						</Card.Content>
 					</Card.Root>
-					
+
 					<!-- Action Cards -->
-					<div class="grid grid-cols-1 md:grid-cols-2 gap-4" in:fly={{ y: 20, duration: 400, delay: 200 }}>
-						<div 
-							class="rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-105"
+					<div
+						class="grid grid-cols-1 gap-4 md:grid-cols-2"
+						in:fly={{ y: 20, duration: 400, delay: 200 }}
+					>
+						<div
+							class="cursor-pointer rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl"
 							onclick={() => navigateTo('/portal')}
 							role="button"
 							tabindex="0"
-							onkeydown={(e) => {if (e.key === 'Enter' || e.key === ' ') navigateTo('/portal')}}
+							onkeydown={(e) => {
+								if (e.key === 'Enter' || e.key === ' ') navigateTo('/portal');
+							}}
 						>
-							<div class="p-6 text-center text-white flex flex-col items-center">
-								<div class="rounded-full bg-white/20 p-3 mb-3">
+							<div class="flex flex-col items-center p-6 text-center text-white">
+								<div class="mb-3 rounded-full bg-white/20 p-3">
 									<ShoppingBag class="h-6 w-6" />
 								</div>
-								<h3 class="text-lg font-bold mb-1">Browse Deals</h3>
-								<p class="text-green-50 text-xs">Find food near you</p>
+								<h3 class="mb-1 text-lg font-bold">Browse Deals</h3>
+								<p class="text-xs text-green-50">Find food near you</p>
 							</div>
 						</div>
-						
-						<div 
-							class="rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-105"
+
+						<div
+							class="cursor-pointer rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl"
 							onclick={() => navigateTo('/portal/impact')}
 							role="button"
 							tabindex="0"
-							onkeydown={(e) => {if (e.key === 'Enter' || e.key === ' ') navigateTo('/portal/impact')}}
+							onkeydown={(e) => {
+								if (e.key === 'Enter' || e.key === ' ') navigateTo('/portal/impact');
+							}}
 						>
-							<div class="p-6 text-center text-white flex flex-col items-center">
-								<div class="rounded-full bg-white/20 p-3 mb-3">
+							<div class="flex flex-col items-center p-6 text-center text-white">
+								<div class="mb-3 rounded-full bg-white/20 p-3">
 									<Leaf class="h-6 w-6" />
 								</div>
-								<h3 class="text-lg font-bold mb-1">Your Impact</h3>
-								<p class="text-blue-50 text-xs">See your environmental contribution</p>
+								<h3 class="mb-1 text-lg font-bold">Your Impact</h3>
+								<p class="text-xs text-blue-50">See your environmental contribution</p>
 							</div>
 						</div>
-						
-						<div 
-							class="rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-105 md:col-span-2"
+
+						<div
+							class="cursor-pointer rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl md:col-span-2"
 							onclick={() => navigateTo('/portal/create')}
 							role="button"
 							tabindex="0"
-							onkeydown={(e) => {if (e.key === 'Enter' || e.key === ' ') navigateTo('/portal/create')}}
+							onkeydown={(e) => {
+								if (e.key === 'Enter' || e.key === ' ') navigateTo('/portal/create');
+							}}
 						>
-							<div class="p-6 text-center text-white flex flex-col items-center">
-								<div class="rounded-full bg-white/20 p-3 mb-3">
+							<div class="flex flex-col items-center p-6 text-center text-white">
+								<div class="mb-3 rounded-full bg-white/20 p-3">
 									<Truck class="h-6 w-6" />
 								</div>
-								<h3 class="text-lg font-bold mb-1">Create Food Listing</h3>
-								<p class="text-amber-50 text-xs">Sell surplus food items to the community</p>
+								<h3 class="mb-1 text-lg font-bold">Create Food Listing</h3>
+								<p class="text-xs text-amber-50">Sell surplus food items to the community</p>
 							</div>
 						</div>
 					</div>

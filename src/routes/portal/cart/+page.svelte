@@ -50,14 +50,18 @@
 	});
 
 	// Ensure total calculation has proper type handling
-	const total = $derived(data.products
-		.reduce((sum, product) => {
-			const price = parseFloat(product.price);
-			return sum + price * (product.quantity || 1);
-		}, 0)
-		.toFixed(2));
+	const total = $derived(
+		data.products
+			.reduce((sum, product) => {
+				const price = parseFloat(product.price);
+				return sum + price * (product.quantity || 1);
+			}, 0)
+			.toFixed(2)
+	);
 
-	const totalItems = $derived(data.products.reduce((sum, product) => sum + (product.quantity || 1), 0));
+	const totalItems = $derived(
+		data.products.reduce((sum, product) => sum + (product.quantity || 1), 0)
+	);
 
 	async function clearCart(id: string = '') {
 		if (id !== '') {
@@ -112,13 +116,13 @@
 								class="overflow-hidden border-gray-200 transition-all duration-300 hover:border-green-300 hover:shadow-md"
 							>
 								<div class="flex flex-col md:flex-row">
-									<div class="md:w-1/4 relative">
+									<div class="relative md:w-1/4">
 										<div class="aspect-square w-full bg-green-50">
 											{#if product.image_url}
 												<img
 													src={product.image_url}
 													alt={product.name}
-													class="absolute inset-0 h-full w-full object-cover rounded-lg m-0"
+													class="absolute inset-0 m-0 h-full w-full rounded-lg object-cover"
 												/>
 											{:else}
 												<div
@@ -260,8 +264,7 @@
 											{product.quantity || 1} × {product.name}
 										</span>
 										<span class="font-medium">
-											${parseFloat(product.price) *
-												(product.quantity || 1)}
+											${parseFloat(product.price) * (product.quantity || 1)}
 										</span>
 									</div>
 								{/each}
@@ -273,7 +276,10 @@
 							</div>
 						</Card.Content>
 						<Card.Footer class="flex flex-col gap-3 sm:flex-row">
-							<Button href="/portal/checkout/" class="bg-green-600 transition-colors hover:bg-green-700 sm:flex-1">
+							<Button
+								href="/portal/checkout/"
+								class="bg-green-600 transition-colors hover:bg-green-700 sm:flex-1"
+							>
 								<BadgeCheck class="mr-2 h-5 w-5" /> Checkout
 							</Button>
 							<Button variant="outline" class="sm:flex-1" onclick={() => clearCart()}>
@@ -302,7 +308,7 @@
 	.animate-bounce-slow {
 		animation: bounce-slow 2s infinite ease-in-out;
 	}
-	
+
 	/* Aspect ratio container for square images */
 	.aspect-square {
 		position: relative;
