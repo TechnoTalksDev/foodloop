@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
 	import { onMount } from 'svelte';
 	import { fade, fly, scale } from 'svelte/transition';
 	import { elasticOut } from 'svelte/easing';
@@ -7,8 +7,11 @@
 	import { Button } from '$lib/components/ui/button';
 	import * as Card from '$lib/components/ui/card';
 	import { ShoppingBasket, ShoppingCart, Tag, Calendar, MapPin, Clock } from 'lucide-svelte';
+	import { addToCart } from '$lib/utils';
+	import type { PageProps } from './$types';
 
 	// Sample data
+	/*
 	let data = {
 		products: [
 			{
@@ -52,14 +55,17 @@
 			}
 		]
 	};
-
-	let visible = false;
+	*/
+	let { data }: PageProps = $props();
+	$inspect(data);
+	let visible = true;
 	let loaded = false;
 
 	// Simple add to cart function
-	function handleAddToCart(productId) {
+	function handleAddToCart(productId: any) {
 		console.log(`Added product ${productId} to cart`);
 		// Show toast notification
+		addToCart(productId);
 		toast.success('Product added to cart', {
 			description: 'Item has been added to your cart',
 			action: {
@@ -77,15 +83,17 @@
 	}
 
 	// Simulate data loading
+	/*
 	onMount(() => {
 		// Simulate API fetch delay
+
 		setTimeout(() => {
-			loaded = true;
-			setTimeout(() => {
-				visible = true;
-			}, 100);
-		}, 800);
+			visible = true;
+		}, 100);
+
 	});
+
+	*/
 </script>
 
 <svelte:head>
@@ -120,7 +128,7 @@
 <!-- Products Grid -->
 <section class="mb-20 py-8">
 	<div class="container mx-auto px-4">
-		{#if loaded}
+		{#if data}
 			<div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
 				{#each data.products as product, i}
 					{#if visible}
@@ -137,7 +145,7 @@
 									<div
 										class="absolute right-3 top-3 rounded-full bg-green-600 px-3 py-1 text-sm font-semibold text-white"
 									>
-										{product.price}
+										${product.price}
 									</div>
 								</div>
 
@@ -164,7 +172,7 @@
 
 										<div class="flex items-center text-gray-600">
 											<Calendar class="mr-2 h-4 w-4 text-green-600" />
-											<span>Expires: {product.expiry}</span>
+											<span>Expires: {Date(product.expiry)}</span>
 										</div>
 
 										<div class="flex items-center text-gray-600">

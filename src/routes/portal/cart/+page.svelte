@@ -52,7 +52,7 @@
 	// Ensure total calculation has proper type handling
 	$: total = data.products
 		.reduce((sum, product) => {
-			const price = parseFloat(product.price.replace(/[^0-9.-]+/g, ''));
+			const price = parseFloat(product.price);
 			return sum + price * (product.quantity || 1);
 		}, 0)
 		.toFixed(2);
@@ -194,7 +194,7 @@
 									>
 										<div>
 											<p class="mb-2 text-2xl font-bold text-green-600">
-												{product.price}
+												${product.price}
 											</p>
 											<div class="mb-4 flex items-center gap-2">
 												<Avatar.Root class="h-8 w-8">
@@ -225,7 +225,7 @@
 											<Button
 												variant="outline"
 												class="w-full border-red-200 text-red-600 transition-colors hover:border-red-300 hover:bg-red-50"
-												on:click={() => clearCart(product.id.toString())}
+												onclick={() => clearCart(product.id.toString())}
 											>
 												<Trash2 class="mr-2 h-4 w-4" /> Remove
 											</Button>
@@ -258,8 +258,8 @@
 											{product.quantity || 1} × {product.name}
 										</span>
 										<span class="font-medium">
-											{parseFloat(product.price.replace(/[^0-9.-]+/g, '')) *
-												(product.quantity || 1)}€
+											${parseFloat(product.price) *
+												(product.quantity || 1)}
 										</span>
 									</div>
 								{/each}
@@ -267,14 +267,14 @@
 
 							<div class="mt-4 flex justify-between text-lg font-bold">
 								<span>Total</span>
-								<span class="text-green-600">{total}€</span>
+								<span class="text-green-600">${total}</span>
 							</div>
 						</Card.Content>
 						<Card.Footer class="flex flex-col gap-3 sm:flex-row">
 							<Button class="bg-green-600 transition-colors hover:bg-green-700 sm:flex-1">
 								<BadgeCheck class="mr-2 h-5 w-5" /> Checkout
 							</Button>
-							<Button variant="outline" class="sm:flex-1" on:click={() => clearCart()}>
+							<Button variant="outline" class="sm:flex-1" onclick={() => clearCart()}>
 								<Trash2 class="mr-2 h-5 w-5" /> Clear Cart
 							</Button>
 						</Card.Footer>

@@ -2,7 +2,7 @@
 	import { fade, fly, scale } from 'svelte/transition';
 	import { backOut, elasticOut, cubicOut } from 'svelte/easing';
 	import { enhance } from '$app/forms';
-	import type { ActionData } from './$types';
+	import type { ActionData, PageData } from './$types';
 	import { onMount } from 'svelte';
 	import ChefHat from 'lucide-svelte/icons/chef-hat';
 	import ShoppingBasket from 'lucide-svelte/icons/shopping-basket';
@@ -11,6 +11,12 @@
 	import ListChecks from 'lucide-svelte/icons/list-checks';
 	import ShoppingCart from 'lucide-svelte/icons/shopping-cart';
 
+
+	export let data: PageData;
+	// RYAN FEED THIS TO THE AI, IT IS A ARRAY OF EVERY PRODUCT. 
+	$: console.log(data.products);
+
+	JSON.stringify(data.products);
 	export let form: ActionData;
 
 	// Define the recipe interface

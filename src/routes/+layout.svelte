@@ -5,6 +5,8 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Sheet, SheetContent, SheetTrigger } from '$lib/components/ui/sheet';
 	import '../app.css';
+	import { onMount } from 'svelte';
+	import { invalidate } from '$app/navigation';
 
 	// Simplified navigation links
 	const links = [
@@ -15,7 +17,22 @@
 
 	// State for mobile menu
 	let isOpen = $state(false);
+
+
+	let { data, children } = $props()
+  let { session, supabase } = $derived(data)
+  onMount(() => {
+    const { data } = supabase.auth.onAuthStateChange((_, newSession) => {
+      if (newSession?.expires_at !== session?.expires_at) {
+        invalidate('supabase:auth')
+      }
+    })
+    return () => data.subscription.unsubscribe()
+  })
+
+	
 </script>
+
 
 <div class="flex min-h-screen flex-col">
 	<header
