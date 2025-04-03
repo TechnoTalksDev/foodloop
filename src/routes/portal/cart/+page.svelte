@@ -271,7 +271,7 @@
 							</div>
 						</Card.Content>
 						<Card.Footer class="flex flex-col gap-3 sm:flex-row">
-							<Button class="bg-green-600 transition-colors hover:bg-green-700 sm:flex-1">
+							<Button href="/portal/checkout/" class="bg-green-600 transition-colors hover:bg-green-700 sm:flex-1">
 								<BadgeCheck class="mr-2 h-5 w-5" /> Checkout
 							</Button>
 							<Button variant="outline" class="sm:flex-1" onclick={() => clearCart()}>
