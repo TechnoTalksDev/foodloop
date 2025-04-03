@@ -1,5 +1,5 @@
 <script>
-	// Using an image that fits our green theme better
+	// Green theme image
 	const imgSrc =
 		'https://images.unsplash.com/photo-1506484381205-f7945653044d?q=80&w=450&h=190&auto=format&fit=crop&ixlib=rb-4.0.3';
 
@@ -29,7 +29,7 @@
 		<header>
 			<img
 				src={imgSrc}
-				class="aspect-[21/9] w-full brightness-95 contrast-105 saturate-100 filter"
+				class="contrast-105 aspect-[21/9] w-full brightness-95 saturate-100 filter"
 				alt="banner"
 			/>
 			<!-- Green overlay for the image -->
@@ -79,7 +79,6 @@
 					</div>
 
 					<div class="space-y-4 pt-2">
-
 						<div class="grid grid-cols-2 gap-4">
 							<a href="/auth/login/github" class="block">
 								<button

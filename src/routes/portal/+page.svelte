@@ -7,8 +7,8 @@
 	import { Button } from '$lib/components/ui/button';
 	import * as Card from '$lib/components/ui/card';
 	import { ShoppingBasket, ShoppingCart, Tag, Calendar, MapPin, Clock } from 'lucide-svelte';
-	
-	// Sample data (replace with your actual data fetching)
+
+	// Sample data
 	let data = {
 		products: [
 			{
@@ -52,30 +52,30 @@
 			}
 		]
 	};
-	
+
 	let visible = false;
 	let loaded = false;
-	
+
 	// Simple add to cart function
 	function handleAddToCart(productId) {
 		console.log(`Added product ${productId} to cart`);
 		// Show toast notification
-		toast.success("Product added to cart", {
-			description: "Item has been added to your cart",
+		toast.success('Product added to cart', {
+			description: 'Item has been added to your cart',
 			action: {
 				label: 'Go to Cart',
 				onClick: () => {
-					window.location.href = "/portal/cart";
+					window.location.href = '/portal/cart';
 				}
 			}
 		});
 	}
-	
+
 	// Handle buy now action
 	function handleBuyNow() {
-		window.location.href = "/portal/checkout";
+		window.location.href = '/portal/checkout';
 	}
-	
+
 	// Simulate data loading
 	onMount(() => {
 		// Simulate API fetch delay
@@ -100,19 +100,17 @@
 <section class="relative bg-gradient-to-b from-green-50 to-white py-12">
 	<div class="container mx-auto px-4">
 		{#if visible}
-			<div class="max-w-3xl mx-auto space-y-6 text-center mb-8">
-				<h1 
+			<div class="mx-auto mb-8 max-w-3xl space-y-6 text-center">
+				<h1
 					class="text-4xl font-bold tracking-tight md:text-5xl"
 					in:fly={{ y: -30, duration: 800, easing: elasticOut }}
 				>
 					Available <span class="text-green-600">Food Deals</span>
 				</h1>
 
-				<p 
-					class="mx-auto text-lg text-muted-foreground"
-					in:fade={{ duration: 800, delay: 400 }}
-				>
-					Browse through our selection of surplus food items from local businesses at discounted prices.
+				<p class="mx-auto text-lg text-muted-foreground" in:fade={{ duration: 800, delay: 400 }}>
+					Browse through our selection of surplus food items from local businesses at discounted
+					prices.
 				</p>
 			</div>
 		{/if}
@@ -120,34 +118,34 @@
 </section>
 
 <!-- Products Grid -->
-<section class="py-8 mb-20">
+<section class="mb-20 py-8">
 	<div class="container mx-auto px-4">
 		{#if loaded}
-			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+			<div class="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-3">
 				{#each data.products as product, i}
 					{#if visible}
-						<div 
-							in:fly={{ y: 40, duration: 600, delay: 200 + i * 100 }}
-						>
-							<Card.Root 
-								class="overflow-hidden border border-green-100 shadow-md transition-all duration-300 hover:shadow-xl hover:scale-102"
+						<div in:fly={{ y: 40, duration: 600, delay: 200 + i * 100 }}>
+							<Card.Root
+								class="hover:scale-102 overflow-hidden border border-green-100 shadow-md transition-all duration-300 hover:shadow-xl"
 							>
 								<div class="relative">
-									<img 
-										src={product.image_url} 
-										alt={product.name} 
-										class="w-full h-48 object-cover bg-gray-100"
+									<img
+										src={product.image_url}
+										alt={product.name}
+										class="h-48 w-full bg-gray-100 object-cover"
 									/>
-									<div class="absolute top-3 right-3 bg-green-600 text-white text-sm font-semibold px-3 py-1 rounded-full">
+									<div
+										class="absolute right-3 top-3 rounded-full bg-green-600 px-3 py-1 text-sm font-semibold text-white"
+									>
 										{product.price}
 									</div>
 								</div>
-								
+
 								<Card.Header>
 									<Card.Title class="text-xl">
-										<a 
-											href="/portal/product/{product.id}" 
-											class="text-gray-800 hover:text-green-600 transition-colors duration-200"
+										<a
+											href="/portal/product/{product.id}"
+											class="text-gray-800 transition-colors duration-200 hover:text-green-600"
 										>
 											{product.name}
 										</a>
@@ -156,32 +154,32 @@
 										{product.description}
 									</Card.Description>
 								</Card.Header>
-								
+
 								<Card.Content>
 									<div class="space-y-3 text-sm">
 										<div class="flex items-center text-gray-600">
-											<MapPin class="h-4 w-4 mr-2 text-green-600" />
+											<MapPin class="mr-2 h-4 w-4 text-green-600" />
 											<span>{product.location}</span>
 										</div>
-										
+
 										<div class="flex items-center text-gray-600">
-											<Calendar class="h-4 w-4 mr-2 text-green-600" />
+											<Calendar class="mr-2 h-4 w-4 text-green-600" />
 											<span>Expires: {product.expiry}</span>
 										</div>
-										
+
 										<div class="flex items-center text-gray-600">
-											<Tag class="h-4 w-4 mr-2 text-green-600" />
+											<Tag class="mr-2 h-4 w-4 text-green-600" />
 											<span>{product.tags}</span>
 										</div>
-										
+
 										<div class="flex items-center text-gray-600">
-											<Clock class="h-4 w-4 mr-2 text-green-600" />
+											<Clock class="mr-2 h-4 w-4 text-green-600" />
 											<span>Amount: {product.amount}</span>
 										</div>
 									</div>
 								</Card.Content>
-								
-								<Card.Footer class="flex justify-between items-center">
+
+								<Card.Footer class="flex items-center justify-between">
 									<div class="flex flex-col">
 										<span class="text-xs text-gray-500">Seller ID: {product.owner_id}</span>
 										{#if product.trash}
@@ -190,14 +188,14 @@
 									</div>
 									<div class="flex space-x-2">
 										<button
-											class="flex items-center px-4 py-2 text-sm border border-green-200 rounded-md hover:bg-green-50 hover:border-green-300"
+											class="flex items-center rounded-md border border-green-200 px-4 py-2 text-sm hover:border-green-300 hover:bg-green-50"
 											onclick={() => handleAddToCart(product.id)}
 										>
-											<ShoppingCart class="h-4 w-4 mr-2" />
+											<ShoppingCart class="mr-2 h-4 w-4" />
 											Add to cart
 										</button>
-										<button 
-											class="px-4 py-2 text-sm text-white bg-green-600 rounded-md hover:bg-green-700"
+										<button
+											class="rounded-md bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700"
 											onclick={() => handleBuyNow()}
 										>
 											Buy now
@@ -210,11 +208,8 @@
 				{/each}
 			</div>
 		{:else}
-			<div 
-				class="flex flex-col items-center justify-center py-20"
-				in:fade={{ duration: 500 }}
-			>
-				<ShoppingBasket class="h-16 w-16 text-green-600 mb-4 animate-bounce-slow" />
+			<div class="flex flex-col items-center justify-center py-20" in:fade={{ duration: 500 }}>
+				<ShoppingBasket class="animate-bounce-slow mb-4 h-16 w-16 text-green-600" />
 				<p class="text-xl text-muted-foreground">Loading products...</p>
 			</div>
 		{/if}
@@ -232,13 +227,18 @@
 				<div class="p-12 text-center text-white">
 					<h2 class="mb-4 text-3xl font-bold">Can't find what you're looking for?</h2>
 					<p class="mx-auto mb-8 max-w-2xl text-green-50">
-						New items are added throughout the day as businesses list their surplus food. Check back later or set up notifications for your favorite sellers.
+						New items are added throughout the day as businesses list their surplus food. Check back
+						later or set up notifications for your favorite sellers.
 					</p>
 					<div class="flex flex-col justify-center gap-4 sm:flex-row">
-						<button class="px-5 py-3 font-medium bg-white text-green-600 rounded-md hover:bg-gray-100">
+						<button
+							class="rounded-md bg-white px-5 py-3 font-medium text-green-600 hover:bg-gray-100"
+						>
 							Set Up Alerts
 						</button>
-						<button class="px-5 py-3 font-medium text-white border border-white rounded-md hover:bg-green-700">
+						<button
+							class="rounded-md border border-white px-5 py-3 font-medium text-white hover:bg-green-700"
+						>
 							Browse By Category
 						</button>
 					</div>
@@ -251,14 +251,19 @@
 <style>
 	/* Animation for slow bounce */
 	@keyframes bounce-slow {
-		0%, 100% { transform: translateY(0); }
-		50% { transform: translateY(-10px); }
+		0%,
+		100% {
+			transform: translateY(0);
+		}
+		50% {
+			transform: translateY(-10px);
+		}
 	}
-	
+
 	.animate-bounce-slow {
 		animation: bounce-slow 3s infinite ease-in-out;
 	}
-	
+
 	/* Subtle hover scale */
 	.hover\:scale-102:hover {
 		transform: scale(1.02);

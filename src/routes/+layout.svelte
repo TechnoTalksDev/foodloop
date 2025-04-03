@@ -18,7 +18,9 @@
 </script>
 
 <div class="flex min-h-screen flex-col">
-	<header class="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+	<header
+		class="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+	>
 		<div class="container flex h-16 items-center justify-between">
 			<!-- Logo -->
 			<a href="/" class="flex items-center gap-2 text-xl font-bold">
@@ -49,7 +51,7 @@
 			<!-- Mobile navigation -->
 			<Sheet bind:open={isOpen}>
 				<SheetTrigger asChild>
-					<Button variant="ghost" size="icon" class="md:hidden ml-4">
+					<Button variant="ghost" size="icon" class="ml-4 md:hidden">
 						<Menu class="h-5 w-5" />
 						<span class="sr-only">Toggle menu</span>
 					</Button>

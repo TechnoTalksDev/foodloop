@@ -1,7 +1,16 @@
 <script>
 	import { page } from '$app/stores';
 	import { cn } from '$lib/utils';
-	import { ShoppingBasket, Leaf, ArrowRight, Building, User, Earth, Clock, ChefHat } from '@lucide/svelte';
+	import {
+		ShoppingBasket,
+		Leaf,
+		ArrowRight,
+		Building,
+		User,
+		Earth,
+		Clock,
+		ChefHat
+	} from '@lucide/svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Card } from '$lib/components/ui/card';
 	import { onMount } from 'svelte';
@@ -61,7 +70,7 @@
 
 	// Animation controls
 	let visible = false;
-	
+
 	// Animation on mount
 	onMount(() => {
 		visible = true;
@@ -89,22 +98,19 @@
 					Fighting Food Waste Together
 				</div>
 
-				<h1 
+				<h1
 					class="text-4xl font-bold tracking-tight md:text-5xl"
 					in:fly={{ y: -30, duration: 800, easing: elasticOut }}
 				>
 					Rescue Delicious Food, <span class="text-green-600">Save Money</span> & Our Planet
 				</h1>
 
-				<p 
-					class="mx-auto text-lg text-muted-foreground"
-					in:fade={{ duration: 800, delay: 400 }}
-				>
-					Connect with local businesses offering surplus food at great discounts. Enjoy quality meals
-					while reducing food waste and your environmental footprint.
+				<p class="mx-auto text-lg text-muted-foreground" in:fade={{ duration: 800, delay: 400 }}>
+					Connect with local businesses offering surplus food at great discounts. Enjoy quality
+					meals while reducing food waste and your environmental footprint.
 				</p>
 
-				<div 
+				<div
 					class="flex flex-col justify-center gap-4 sm:flex-row"
 					in:fade={{ duration: 800, delay: 600 }}
 				>
@@ -114,21 +120,21 @@
 					</Button>
 					<Button size="lg" variant="outline">For Businesses</Button>
 				</div>
-				
+
 				<div
 					in:scale={{ duration: 700, delay: 800, start: 0.5, easing: backOut }}
-					class="mt-5 flex flex-col gap-4 sm:flex-row justify-center"
+					class="mt-5 flex flex-col justify-center gap-4 sm:flex-row"
 				>
-					<a 
-						href="/auth/login" 
-						class="inline-flex items-center text-green-600 hover:text-green-700 font-medium"
+					<a
+						href="/auth/login"
+						class="inline-flex items-center font-medium text-green-600 hover:text-green-700"
 					>
 						<User class="mr-2 h-5 w-5" />
 						Log In
 					</a>
-					<a 
-						href="/smartplate" 
-						class="inline-flex items-center text-green-600 hover:text-green-700 font-medium"
+					<a
+						href="/smartplate"
+						class="inline-flex items-center font-medium text-green-600 hover:text-green-700"
 					>
 						<ChefHat class="mr-2 h-5 w-5" />
 						SmartPlate AI Recipes
@@ -143,31 +149,33 @@
 <section class="py-12">
 	<div class="container mx-auto px-4">
 		{#if visible}
-			<div 
-				class="mx-auto max-w-5xl rounded-2xl bg-gradient-to-br from-green-50 to-emerald-50 p-8 border border-green-100 shadow-sm"
+			<div
+				class="mx-auto max-w-5xl rounded-2xl border border-green-100 bg-gradient-to-br from-green-50 to-emerald-50 p-8 shadow-sm"
 				in:fly={{ y: 40, duration: 800, delay: 400 }}
 			>
-				<div class="flex flex-col md:flex-row items-center gap-6">
+				<div class="flex flex-col items-center gap-6 md:flex-row">
 					<div class="flex-1 space-y-4">
 						<div class="flex items-center">
-							<ChefHat class="h-8 w-8 text-green-600 mr-3 animate-bounce-slow" />
+							<ChefHat class="animate-bounce-slow mr-3 h-8 w-8 text-green-600" />
 							<h2 class="text-2xl font-bold text-gray-800">SmartPlate AI</h2>
 						</div>
 						<p class="text-muted-foreground">
-							Don't know what to cook? Let our AI create custom recipes from ingredients you already have at home.
-							Reduce food waste and discover delicious new meals!
+							Don't know what to cook? Let our AI create custom recipes from ingredients you already
+							have at home. Reduce food waste and discover delicious new meals!
 						</p>
 						<Button href="/smartplate" class="bg-green-600 hover:bg-green-700">
 							Try SmartPlate
 							<ArrowRight class="ml-2 h-4 w-4" />
 						</Button>
 					</div>
-					<div class="flex-1 flex justify-center">
-						<div class="bg-white p-5 rounded-xl shadow-md border border-green-100 max-w-xs transform rotate-2 hover:rotate-0 transition-transform duration-300">
-							<div class="text-center space-y-2">
+					<div class="flex flex-1 justify-center">
+						<div
+							class="max-w-xs rotate-2 transform rounded-xl border border-green-100 bg-white p-5 shadow-md transition-transform duration-300 hover:rotate-0"
+						>
+							<div class="space-y-2 text-center">
 								<div class="font-semibold">Ingredients:</div>
 								<div class="text-sm text-gray-600">Chicken, Spinach, Feta, Lemon</div>
-								<div class="font-semibold mt-4">SmartPlate Suggests:</div>
+								<div class="mt-4 font-semibold">SmartPlate Suggests:</div>
 								<div class="font-medium text-green-600">Greek-Style Stuffed Chicken Breast</div>
 							</div>
 						</div>
@@ -194,11 +202,11 @@
 				<div class="grid grid-cols-1 gap-8 md:grid-cols-3">
 					{#each featuredBusinesses as business, i}
 						<div
-							class="h-full overflow-hidden rounded-xl border bg-white shadow-md transition-all duration-300 hover:shadow-xl hover:scale-105"
+							class="h-full overflow-hidden rounded-xl border bg-white shadow-md transition-all duration-300 hover:scale-105 hover:shadow-xl"
 							in:fly={{ x: i % 2 === 0 ? -20 : 20, y: 0, duration: 600, delay: 300 + i * 200 }}
 						>
 							<div class="p-6">
-								<div class="rounded-md bg-green-50 p-5 flex justify-center mb-4">
+								<div class="mb-4 flex justify-center rounded-md bg-green-50 p-5">
 									<ShoppingBasket class="h-10 w-10 text-green-600" />
 								</div>
 								<div
@@ -216,7 +224,7 @@
 			</div>
 
 			<div class="mt-10 text-center" in:fade={{ duration: 600, delay: 800 }}>
-				<Button class="text-green-600 hover:bg-green-50 hover:text-green-700 underline">
+				<Button class="text-green-600 underline hover:bg-green-50 hover:text-green-700">
 					View All Nearby Deals
 					<ArrowRight class="ml-2 h-4 w-4" />
 				</Button>
@@ -238,7 +246,7 @@
 
 			<div class="mx-auto grid max-w-4xl grid-cols-2 gap-10 md:grid-cols-4">
 				{#each metrics as metric, i}
-					<div 
+					<div
 						class="flex flex-col items-center text-center"
 						in:scale={{ duration: 600, delay: 200 + i * 150, start: 0.5 }}
 					>
@@ -265,7 +273,7 @@
 
 			<div class="mx-auto grid max-w-5xl grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
 				{#each howItWorks as step, i}
-					<div 
+					<div
 						class="flex flex-col items-center text-center"
 						in:fly={{ y: 30, duration: 600, delay: 300 + i * 150 }}
 					>
@@ -318,10 +326,15 @@
 <style>
 	/* Animation for slow bounce */
 	@keyframes bounce-slow {
-		0%, 100% { transform: translateY(0); }
-		50% { transform: translateY(-10px); }
+		0%,
+		100% {
+			transform: translateY(0);
+		}
+		50% {
+			transform: translateY(-10px);
+		}
 	}
-	
+
 	.animate-bounce-slow {
 		animation: bounce-slow 3s infinite ease-in-out;
 	}
