@@ -297,6 +297,28 @@
 	</div>
 </section>
 
+<section class="py-12 bg-green-50">
+	<div class="container mx-auto px-4">
+		<div class="mx-auto max-w-3xl text-center">
+			<div class="flex items-center justify-center mb-4">
+				<Leaf class="mr-2 h-5 w-5 text-green-600" />
+				<h2 class="text-3xl font-bold">Feedback</h2>
+			</div>
+			<p class="text-muted-foreground mb-8">
+				Your thoughts help us grow! Share your experience with FoodLoop and help us improve our service.
+			</p>
+			<a 
+				href="https://tally.so/r/npzMVWZ" 
+				target="_blank" 
+				rel="noopener noreferrer" 
+				class="inline-flex items-center px-6 py-3 rounded-lg font-medium bg-green-600 text-white hover:bg-green-700 transition-colors">
+				Share Your Feedback
+				<ArrowRight class="ml-2 h-4 w-4" />
+			</a>
+		</div>
+	</div>
+</section>
+
 <!-- CTA -->
 <section class="mb-20 px-4">
 	<div class="container mx-auto">
