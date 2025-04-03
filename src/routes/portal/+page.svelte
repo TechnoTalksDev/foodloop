@@ -6,7 +6,18 @@
 	import { toast } from 'svelte-sonner';
 	import { Button } from '$lib/components/ui/button';
 	import * as Card from '$lib/components/ui/card';
-	import { ShoppingBasket, ShoppingCart, Tag, Calendar, MapPin, Clock } from 'lucide-svelte';
+	import { 
+		ShoppingBasket, 
+		ShoppingCart, 
+		Tag, 
+		Calendar, 
+		MapPin, 
+		Clock, 
+		Plus, 
+		BarChart, 
+		User,
+		History 
+	} from 'lucide-svelte';
 	import { addToCart } from '$lib/utils';
 	import type { PageProps } from './$types';
 
@@ -61,17 +72,21 @@
 	let visible = true;
 	let loaded = false;
 
+	// Cart state
+	let cartCount = 0;
+	
 	// Simple add to cart function
 	function handleAddToCart(productId: any) {
 		console.log(`Added product ${productId} to cart`);
 		// Show toast notification
 		addToCart(productId);
+		cartCount++;
 		toast.success('Product added to cart', {
 			description: 'Item has been added to your cart',
 			action: {
 				label: 'Go to Cart',
 				onClick: () => {
-					window.location.href = '/portal/cart';
+					goto('/portal/cart');
 				}
 			}
 		});
@@ -80,6 +95,11 @@
 	// Handle buy now action
 	function handleBuyNow() {
 		window.location.href = '/portal/checkout';
+	}
+
+	// Navigation functions
+	function navigateTo(path: string) {
+		goto(path);
 	}
 
 	// Simulate data loading
@@ -103,6 +123,18 @@
 		content="Browse available food deals on FoodLoop. Save food, save money, and help the environment."
 	/>
 </svelte:head>
+
+<!-- Cart Indicator -->
+{#if cartCount > 0}
+<div class="fixed top-4 right-4 z-50 flex items-center gap-2" transition:fly={{ y: -20, duration: 300 }}>
+	<div class="rounded-full bg-green-600 px-3 py-1 text-sm font-bold text-white">
+		<span class="flex items-center">
+			<ShoppingCart class="mr-1 h-4 w-4" />
+			{cartCount}
+		</span>
+	</div>
+</div>
+{/if}
 
 <!-- Header section -->
 <section class="relative bg-gradient-to-b from-green-50 to-white py-12">
@@ -224,33 +256,67 @@
 	</div>
 </section>
 
-<!-- CTA -->
+<!-- Action Buttons Grid (Replacement for CTA section) -->
 <section class="mb-20 px-4">
 	<div class="container mx-auto">
 		{#if visible}
-			<div
-				class="mx-auto max-w-5xl overflow-hidden rounded-2xl bg-gradient-to-r from-green-600 to-emerald-600 shadow-2xl"
+			<div 
+				class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
 				in:scale={{ duration: 800, delay: 200, start: 0.9 }}
 			>
-				<div class="p-12 text-center text-white">
-					<h2 class="mb-4 text-3xl font-bold">Stand Together Against Food Waste</h2>
-					<p class="mx-auto mb-8 max-w-2xl text-green-50">
-						Join our community of businesses and individuals committed to reducing food waste and creating 
-						a more sustainable food system.
-					</p>
-					<div class="flex flex-col justify-center gap-4 sm:flex-row">
-						<button
-							class="rounded-md bg-white px-5 py-3 font-medium text-green-600 hover:bg-gray-100"
-							onclick={() => goto('/portal/create')}
-						>
-							Create Food Listing
-						</button>
-						<button
-							class="rounded-md border border-white px-5 py-3 font-medium text-white hover:bg-green-700"
-							onclick={() => goto('/portal/impact')}
-						>
-							Impact
-						</button>
+				<!-- Create Food Listing Button -->
+				<div 
+					class="rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-105"
+					onclick={() => navigateTo('/portal/create')}
+				>
+					<div class="p-8 text-center text-white flex flex-col items-center">
+						<div class="rounded-full bg-white/20 p-4 mb-4">
+							<Plus class="h-8 w-8" />
+						</div>
+						<h3 class="text-xl font-bold mb-2">Create Listing</h3>
+						<p class="text-green-50 text-sm">Add your surplus food items</p>
+					</div>
+				</div>
+
+				<!-- Impact Button -->
+				<div 
+					class="rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-105"
+					onclick={() => navigateTo('/portal/impact')}
+				>
+					<div class="p-8 text-center text-white flex flex-col items-center">
+						<div class="rounded-full bg-white/20 p-4 mb-4">
+							<BarChart class="h-8 w-8" />
+						</div>
+						<h3 class="text-xl font-bold mb-2">Impact</h3>
+						<p class="text-blue-50 text-sm">See your environmental impact</p>
+					</div>
+				</div>
+
+				<!-- Cart Button -->
+				<div 
+					class="rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-105"
+					onclick={() => navigateTo('/portal/cart')}
+				>
+					<div class="p-8 text-center text-white flex flex-col items-center">
+						<div class="rounded-full bg-white/20 p-4 mb-4">
+							<ShoppingCart class="h-8 w-8" />
+						</div>
+						<h3 class="text-xl font-bold mb-2">My Cart</h3>
+						<p class="text-amber-50 text-sm">View your selected items</p>
+					</div>
+				</div>
+
+				<!-- Profile Button -->
+				<div 
+					class="rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer hover:scale-105"
+					onclick={() => navigateTo('/portal/profile')}
+				>
+					<div class="p-8 text-center text-white flex flex-col items-center">
+						<div class="rounded-full bg-white/20 p-4 mb-4">
+							<User class="h-8 w-8" />
+						</div>
+						<h3 class="text-xl font-bold mb-2">Profile</h3>
+						<p class="text-purple-50 text-sm">Manage your account</p>
 					</div>
 				</div>
 			</div>
