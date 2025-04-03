@@ -233,21 +233,23 @@
 				in:scale={{ duration: 800, delay: 200, start: 0.9 }}
 			>
 				<div class="p-12 text-center text-white">
-					<h2 class="mb-4 text-3xl font-bold">Can't find what you're looking for?</h2>
+					<h2 class="mb-4 text-3xl font-bold">Stand Together Against Food Waste</h2>
 					<p class="mx-auto mb-8 max-w-2xl text-green-50">
-						New items are added throughout the day as businesses list their surplus food. Check back
-						later or set up notifications for your favorite sellers.
+						Join our community of businesses and individuals committed to reducing food waste and creating 
+						a more sustainable food system.
 					</p>
 					<div class="flex flex-col justify-center gap-4 sm:flex-row">
 						<button
 							class="rounded-md bg-white px-5 py-3 font-medium text-green-600 hover:bg-gray-100"
+							onclick={() => goto('/portal/create')}
 						>
-							Set Up Alerts
+							Create Food Listing
 						</button>
 						<button
 							class="rounded-md border border-white px-5 py-3 font-medium text-white hover:bg-green-700"
+							onclick={() => goto('/portal/impact')}
 						>
-							Browse By Category
+							Impact
 						</button>
 					</div>
 				</div>
