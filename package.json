@@ -52,6 +52,7 @@
 		"@supabase/ssr": "^0.6.1",
 		"@supabase/supabase-js": "^2.49.4",
 		"jsrepo": "^1.45.2",
+		"lucide-svelte": "^0.487.0",
 		"places-autocomplete-svelte": "^2.2.4"
 	}
 }

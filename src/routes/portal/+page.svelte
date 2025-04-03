@@ -1,21 +1,90 @@
-<script lang="ts">
-	import type { PageProps } from './$types';
+<script>
+	import { onMount } from 'svelte';
+	import { fade, fly, scale } from 'svelte/transition';
+	import { elasticOut } from 'svelte/easing';
+	import { goto } from '$app/navigation';
 	import { toast } from 'svelte-sonner';
 	import { Button } from '$lib/components/ui/button';
 	import * as Card from '$lib/components/ui/card';
-	import { addToCart } from '$lib/utils';
-	import { goto } from '$app/navigation';
 	import { ShoppingBasket, ShoppingCart, Tag, Calendar, MapPin, Clock } from 'lucide-svelte';
-	import { onMount } from 'svelte';
-	import { fade, fly, scale } from 'svelte/transition';
-	import { elasticOut, backOut } from 'svelte/easing';
 	
-	let { data }: PageProps = $props();
+	// Sample data (replace with your actual data fetching)
+	let data = {
+		products: [
+			{
+				id: '1',
+				name: 'Organic Bread Bundle',
+				description: 'Pack of 2 fresh sourdough loaves from local bakery',
+				image_url: '/images/bread.jpg',
+				price: '$3.99',
+				location: 'Downtown Bakery',
+				expiry: 'Apr 4, 2025',
+				tags: 'Bakery, Organic',
+				amount: '2 loaves',
+				owner_id: 'BK102',
+				trash: true
+			},
+			{
+				id: '2',
+				name: 'Fresh Produce Box',
+				description: 'Mixed vegetables and fruits, slightly bruised but perfect for cooking',
+				image_url: '/images/produce.jpg',
+				price: '$5.50',
+				location: 'Green Market',
+				expiry: 'Apr 5, 2025',
+				tags: 'Produce, Vegetables',
+				amount: '3kg box',
+				owner_id: 'GM205',
+				trash: false
+			},
+			{
+				id: '3',
+				name: 'Dairy Collection',
+				description: 'Assorted yogurts and cheese approaching best-by date',
+				image_url: '/images/dairy.jpg',
+				price: '$4.25',
+				location: 'Creamery Co-op',
+				expiry: 'Apr 3, 2025',
+				tags: 'Dairy, Refrigerated',
+				amount: '5 items',
+				owner_id: 'CC089',
+				trash: true
+			}
+		]
+	};
+	
 	let visible = false;
+	let loaded = false;
 	
-	// Animation on mount
+	// Simple add to cart function
+	function handleAddToCart(productId) {
+		console.log(`Added product ${productId} to cart`);
+		// Show toast notification
+		toast.success("Product added to cart", {
+			description: "Item has been added to your cart",
+			action: {
+				label: 'Go to Cart',
+				onClick: () => {
+					window.location.href = "/portal/cart";
+				}
+			}
+		});
+	}
+	
+	// Handle buy now action
+	function handleBuyNow() {
+		window.location.href = "/portal/checkout";
+	}
+	
+	// Simulate data loading
 	onMount(() => {
-		visible = true;
+		// Simulate API fetch delay
+		setTimeout(() => {
+			loaded = true;
+			setTimeout(() => {
+				visible = true;
+			}, 100);
+		}, 800);
 	});
 </script>
 
@@ -53,7 +122,7 @@
 <!-- Products Grid -->
 <section class="py-8 mb-20">
 	<div class="container mx-auto px-4">
-		{#if data}
+		{#if loaded}
 			<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
 				{#each data.products as product, i}
 					{#if visible}
@@ -61,87 +130,81 @@
 							in:fly={{ y: 40, duration: 600, delay: 200 + i * 100 }}
 						>
 							<Card.Root 
-							class="overflow-hidden border border-green-100 shadow-md transition-all duration-300 hover:shadow-xl hover:scale-102"
-						>
-							<div class="relative">
-								<img 
-									src={product.image_url} 
-									alt={product.name} 
-									class="w-full h-48 object-cover"
-								/>
-								<div class="absolute top-3 right-3 bg-green-600 text-white text-sm font-semibold px-3 py-1 rounded-full">
-									{product.price}
-								</div>
-							</div>
-							
-							<Card.Header>
-								<Card.Title class="text-xl">
-									<a 
-										href="/portal/product/{product.id}" 
-										class="text-gray-800 hover:text-green-600 transition-colors duration-200"
-									>
-										{product.name}
-									</a>
-								</Card.Title>
-								<Card.Description class="text-muted-foreground">
-									{product.description}
-								</Card.Description>
-							</Card.Header>
-							
-							<Card.Content>
-								<div class="space-y-3 text-sm">
-									<div class="flex items-center text-gray-600">
-										<MapPin class="h-4 w-4 mr-2 text-green-600" />
-										<span>{product.location}</span>
-									</div>
-									
-									<div class="flex items-center text-gray-600">
-										<Calendar class="h-4 w-4 mr-2 text-green-600" />
-										<span>Expires: {product.expiry}</span>
-									</div>
-									
-									<div class="flex items-center text-gray-600">
-										<Tag class="h-4 w-4 mr-2 text-green-600" />
-										<span>{product.tags}</span>
-									</div>
-									
-									<div class="flex items-center text-gray-600">
-										<Clock class="h-4 w-4 mr-2 text-green-600" />
-										<span>Amount: {product.amount}</span>
+								class="overflow-hidden border border-green-100 shadow-md transition-all duration-300 hover:shadow-xl hover:scale-102"
+							>
+								<div class="relative">
+									<img 
+										src={product.image_url} 
+										alt={product.name} 
+										class="w-full h-48 object-cover bg-gray-100"
+									/>
+									<div class="absolute top-3 right-3 bg-green-600 text-white text-sm font-semibold px-3 py-1 rounded-full">
+										{product.price}
 									</div>
 								</div>
-							</Card.Content>
-							
-							<Card.Footer class="flex justify-between items-center">
-								<div class="flex flex-col">
-									<span class="text-xs text-gray-500">Seller ID: {product.owner_id}</span>
-									{#if product.trash}
-										<span class="text-xs text-green-600">Rescued from waste!</span>
-									{/if}
-								</div>
-								<div class="flex space-x-2">
-									<Button
-										variant="outline"
-										class="border-green-200 hover:bg-green-50 hover:border-green-300"
-										on:click={() => {
-											addToCart(product.id);
-											toast.success(`${product.name}`, {
-												description: `has been added to cart`,
-												action: {
-													label: 'Go to Cart',
-													onClick: () => goto("/portal/cart")
-												}
-											});
-										}} 
-										disabled={product.disabled ?? false}
-									>
-										<ShoppingCart class="h-4 w-4 mr-2" />
-										Add to cart
-									</Button>
-									<Button class="bg-green-600 hover:bg-green-700">Buy now</Button>
-								</div>
-							</Card.Footer>
-						</Card.Root>
+								
+								<Card.Header>
+									<Card.Title class="text-xl">
+										<a 
+											href="/portal/product/{product.id}" 
+											class="text-gray-800 hover:text-green-600 transition-colors duration-200"
+										>
+											{product.name}
+										</a>
+									</Card.Title>
+									<Card.Description class="text-muted-foreground">
+										{product.description}
+									</Card.Description>
+								</Card.Header>
+								
+								<Card.Content>
+									<div class="space-y-3 text-sm">
+										<div class="flex items-center text-gray-600">
+											<MapPin class="h-4 w-4 mr-2 text-green-600" />
+											<span>{product.location}</span>
+										</div>
+										
+										<div class="flex items-center text-gray-600">
+											<Calendar class="h-4 w-4 mr-2 text-green-600" />
+											<span>Expires: {product.expiry}</span>
+										</div>
+										
+										<div class="flex items-center text-gray-600">
+											<Tag class="h-4 w-4 mr-2 text-green-600" />
+											<span>{product.tags}</span>
+										</div>
+										
+										<div class="flex items-center text-gray-600">
+											<Clock class="h-4 w-4 mr-2 text-green-600" />
+											<span>Amount: {product.amount}</span>
+										</div>
+									</div>
+								</Card.Content>
+								
+								<Card.Footer class="flex justify-between items-center">
+									<div class="flex flex-col">
+										<span class="text-xs text-gray-500">Seller ID: {product.owner_id}</span>
+										{#if product.trash}
+											<span class="text-xs text-green-600">Rescued from waste!</span>
+										{/if}
+									</div>
+									<div class="flex space-x-2">
+										<button
+											class="flex items-center px-4 py-2 text-sm border border-green-200 rounded-md hover:bg-green-50 hover:border-green-300"
+											onclick={() => handleAddToCart(product.id)}
+										>
+											<ShoppingCart class="h-4 w-4 mr-2" />
+											Add to cart
+										</button>
+										<button 
+											class="px-4 py-2 text-sm text-white bg-green-600 rounded-md hover:bg-green-700"
+											onclick={() => handleBuyNow()}
+										>
+											Buy now
+										</button>
+									</div>
+								</Card.Footer>
+							</Card.Root>
 						</div>
 					{/if}
 				{/each}
@@ -172,10 +235,12 @@
 						New items are added throughout the day as businesses list their surplus food. Check back later or set up notifications for your favorite sellers.
 					</p>
 					<div class="flex flex-col justify-center gap-4 sm:flex-row">
-						<Button size="lg" class="bg-white text-green-600 hover:bg-gray-100">Set Up Alerts</Button>
-						<Button size="lg" variant="outline" class="border-white text-white hover:bg-green-700">
+						<button class="px-5 py-3 font-medium bg-white text-green-600 rounded-md hover:bg-gray-100">
+							Set Up Alerts
+						</button>
+						<button class="px-5 py-3 font-medium text-white border border-white rounded-md hover:bg-green-700">
 							Browse By Category
-						</Button>
+						</button>
 					</div>
 				</div>
 			</div>
