@@ -40,24 +40,24 @@
 		products: Product[];
 	}
 
-	// Use export let data to properly receive the data as a prop
-	export let data: PageData;
+	// Use the props syntax for data instead of export let
+	let { data }: { data: PageData } = $props();
 
 	// Animation control
-	let visible = false;
+	let visible = $state(false);
 	onMount(() => {
 		visible = true;
 	});
 
 	// Ensure total calculation has proper type handling
-	$: total = data.products
+	const total = $derived(data.products
 		.reduce((sum, product) => {
 			const price = parseFloat(product.price);
 			return sum + price * (product.quantity || 1);
 		}, 0)
-		.toFixed(2);
+		.toFixed(2));
 
-	$: totalItems = data.products.reduce((sum, product) => sum + (product.quantity || 1), 0);
+	const totalItems = $derived(data.products.reduce((sum, product) => sum + (product.quantity || 1), 0));
 
 	async function clearCart(id: string = '') {
 		if (id !== '') {
@@ -112,20 +112,22 @@
 								class="overflow-hidden border-gray-200 transition-all duration-300 hover:border-green-300 hover:shadow-md"
 							>
 								<div class="flex flex-col md:flex-row">
-									<div class="flex items-center justify-center bg-green-50 p-4 md:w-1/4">
-										{#if product.image_url}
-											<img
-												src={product.image_url}
-												alt={product.name}
-												class="h-48 w-full rounded-lg object-cover md:h-40 md:w-40"
-											/>
-										{:else}
-											<div
-												class="flex h-48 w-full items-center justify-center rounded-lg bg-gray-200 md:h-40 md:w-40"
-											>
-												<ShoppingCart class="h-12 w-12 text-gray-400" />
-											</div>
-										{/if}
+									<div class="md:w-1/4 relative">
+										<div class="aspect-square w-full bg-green-50">
+											{#if product.image_url}
+												<img
+													src={product.image_url}
+													alt={product.name}
+													class="absolute inset-0 h-full w-full object-cover rounded-lg m-0"
+												/>
+											{:else}
+												<div
+													class="absolute inset-0 flex items-center justify-center rounded-lg bg-gray-200"
+												>
+													<ShoppingCart class="h-12 w-12 text-gray-400" />
+												</div>
+											{/if}
+										</div>
 									</div>
 									<div class="p-6 md:w-2/4">
 										<Card.Header class="px-0 pt-0">
@@ -299,5 +301,13 @@
 
 	.animate-bounce-slow {
 		animation: bounce-slow 2s infinite ease-in-out;
+	}
+	
+	/* Aspect ratio container for square images */
+	.aspect-square {
+		position: relative;
+		padding-bottom: 100%; /* 1:1 square aspect ratio */
+		height: 0;
+		overflow: hidden;
 	}
 </style>
