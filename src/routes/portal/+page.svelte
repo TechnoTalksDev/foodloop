@@ -102,18 +102,6 @@
 		goto(path);
 	}
 
-	// Simulate data loading
-	/*
-	onMount(() => {
-		// Simulate API fetch delay
-
-		setTimeout(() => {
-			visible = true;
-		}, 100);
-
-	});
-
-	*/
 </script>
 
 <svelte:head>
