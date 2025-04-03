@@ -81,15 +81,7 @@
 		// Show toast notification
 		addToCart(productId);
 		cartCount++;
-		toast.success('Product added to cart', {
-			description: 'Item has been added to your cart',
-			action: {
-				label: 'Go to Cart',
-				onClick: () => {
-					goto('/portal/cart');
-				}
-			}
-		});
+		console.log("Trying to toast");
 	}
 
 	// Handle buy now action
@@ -212,7 +204,18 @@
 									<div class="flex space-x-2">
 										<button
 											class="flex items-center rounded-md border border-green-200 px-4 py-2 text-sm hover:border-green-300 hover:bg-green-50"
-											onclick={() => handleAddToCart(product.id)}
+											onclick={() => {
+												handleAddToCart(product.id)
+												toast.success(`${product.name} added to cart`, {
+													description: `$${product.price}`,
+													action: {
+														label: 'Go to Cart',
+														onClick: () => {
+															goto('/portal/cart');
+														}
+													}
+												})
+											}}
 										>
 											<ShoppingCart class="mr-2 h-4 w-4" />
 											Add to cart

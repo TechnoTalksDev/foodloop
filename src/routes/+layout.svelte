@@ -8,6 +8,7 @@
 	import { onMount } from 'svelte';
 	import { invalidate } from '$app/navigation';
 	import logoImage from './logo.png';
+	import { Toaster } from "$lib/components/ui/sonner/index.js";
 
 	// Simplified navigation links
 	const links = [
@@ -34,6 +35,7 @@
 	
 </script>
 
+<Toaster />
 
 <div class="flex min-h-screen flex-col">
 	<header
