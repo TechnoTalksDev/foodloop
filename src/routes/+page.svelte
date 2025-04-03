@@ -17,24 +17,6 @@
 	import { fade, fly, scale } from 'svelte/transition';
 	import { elasticOut, backOut } from 'svelte/easing';
 
-	// Featured businesses
-	const featuredBusinesses = [
-		{
-			name: 'Fresh Harvest Bakery',
-			description: 'Artisan breads and pastries at reduced prices at the end of each day',
-			discount: 'Up to 50% off'
-		},
-		{
-			name: 'Green Garden Market',
-			description: 'Fresh produce bundles with items that need to move quickly',
-			discount: '25-40% off'
-		},
-		{
-			name: 'Coastal Seafood Co.',
-			description: 'Daily catches at special prices near closing time',
-			discount: 'Up to 35% off'
-		}
-	];
 
 	// Success metrics
 	const metrics = [
@@ -118,7 +100,6 @@
 						Find Food Deals Near You
 						<ArrowRight class="ml-2 h-4 w-4" />
 					</Button>
-					<Button size="lg" variant="outline">For Businesses</Button>
 				</div>
 
 				<div
@@ -186,52 +167,6 @@
 	</div>
 </section>
 
-<!-- Featured businesses -->
-<section class="py-16">
-	<div class="container mx-auto px-4">
-		{#if visible}
-			<div class="mb-12 text-center" in:fade={{ duration: 800 }}>
-				<h2 class="mb-4 text-3xl font-bold">Today's Top Deals</h2>
-				<p class="mx-auto max-w-2xl text-muted-foreground">
-					Explore these amazing offers from local businesses. All items are high-quality and would
-					otherwise go to waste.
-				</p>
-			</div>
-
-			<div class="mx-auto w-full max-w-5xl">
-				<div class="grid grid-cols-1 gap-8 md:grid-cols-3">
-					{#each featuredBusinesses as business, i}
-						<div
-							class="h-full overflow-hidden rounded-xl border bg-white shadow-md transition-all duration-300 hover:scale-105 hover:shadow-xl"
-							in:fly={{ x: i % 2 === 0 ? -20 : 20, y: 0, duration: 600, delay: 300 + i * 200 }}
-						>
-							<div class="p-6">
-								<div class="mb-4 flex justify-center rounded-md bg-green-50 p-5">
-									<ShoppingBasket class="h-10 w-10 text-green-600" />
-								</div>
-								<div
-									class="absolute right-3 top-3 rounded-full bg-green-600 px-3 py-1 text-xs font-semibold text-white"
-								>
-									{business.discount}
-								</div>
-								<h3 class="mb-2 text-xl font-semibold">{business.name}</h3>
-								<p class="mb-4 text-muted-foreground">{business.description}</p>
-								<Button variant="outline" class="w-full">View Offers</Button>
-							</div>
-						</div>
-					{/each}
-				</div>
-			</div>
-
-			<div class="mt-10 text-center" in:fade={{ duration: 600, delay: 800 }}>
-				<Button class="text-green-600 underline hover:bg-green-50 hover:text-green-700">
-					View All Nearby Deals
-					<ArrowRight class="ml-2 h-4 w-4" />
-				</Button>
-			</div>
-		{/if}
-	</div>
-</section>
 
 <!-- Stats -->
 <section class="bg-gradient-to-r from-green-600 to-emerald-600 py-16 text-white">
@@ -335,9 +270,7 @@
 					</p>
 					<div class="flex flex-col justify-center gap-4 sm:flex-row">
 						<Button size="lg" class="bg-white text-green-600 hover:bg-gray-100">Sign Up Now</Button>
-						<Button size="lg" variant="outline" class="border-white text-white hover:bg-green-700">
-							Learn More
-						</Button>
+						<Button size="lg" class="bg-white text-green-600 hover:bg-gray-100">Sign Up Now</Button>
 					</div>
 				</div>
 			</div>
