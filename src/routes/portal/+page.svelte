@@ -197,6 +197,7 @@
 
 								<Card.Content>
 									<div class="space-y-3 text-sm">
+										
 										<div class="flex items-center text-gray-600">
 											<MapPin class="mr-2 h-4 w-4 text-green-600" />
 											<span>{product.location}</span>
@@ -220,12 +221,6 @@
 								</Card.Content>
 
 								<Card.Footer class="flex items-center justify-between">
-									<div class="flex flex-col">
-										<span class="text-xs text-gray-500">Seller ID: {product.owner_id}</span>
-										{#if product.trash}
-											<span class="text-xs text-green-600">Rescued from waste!</span>
-										{/if}
-									</div>
 									<div class="flex space-x-2">
 										<button
 											class="flex items-center rounded-md border border-green-200 px-4 py-2 text-sm hover:border-green-300 hover:bg-green-50"
