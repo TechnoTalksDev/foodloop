@@ -243,7 +243,7 @@
 				Your thoughts help us grow! Share your experience with FoodLoop and help us improve our service.
 			</p>
 			<a 
-				href="https://tally.so/r/npzMVWZ" 
+				href="https://tally.so/r/npzMWZ" 
 				target="_blank" 
 				rel="noopener noreferrer" 
 				class="inline-flex items-center px-6 py-3 rounded-lg font-medium bg-green-600 text-white hover:bg-green-700 transition-colors">
@@ -269,7 +269,6 @@
 						reducing waste, FoodLoop makes it easy to make a difference.
 					</p>
 					<div class="flex flex-col justify-center gap-4 sm:flex-row">
-						<Button size="lg" class="bg-white text-green-600 hover:bg-gray-100">Sign Up Now</Button>
 						<Button size="lg" class="bg-white text-green-600 hover:bg-gray-100">Sign Up Now</Button>
 					</div>
 				</div>
