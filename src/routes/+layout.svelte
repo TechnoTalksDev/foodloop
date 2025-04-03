@@ -1,12 +1,13 @@
 <script>
 	import { page } from '$app/stores';
 	import { cn } from '$lib/utils';
-	import { ShoppingBasket, Menu, X } from 'lucide-svelte';
+	import { Menu, X } from 'lucide-svelte';
 	import { Button } from '$lib/components/ui/button';
 	import { Sheet, SheetContent, SheetTrigger } from '$lib/components/ui/sheet';
 	import '../app.css';
 	import { onMount } from 'svelte';
 	import { invalidate } from '$app/navigation';
+	import logoImage from './logo.png';
 
 	// Simplified navigation links
 	const links = [
@@ -41,7 +42,7 @@
 		<div class="container flex h-16 items-center justify-between">
 			<!-- Logo -->
 			<a href="/" class="flex items-center gap-2 text-xl font-bold">
-				<ShoppingBasket class="h-6 w-6 text-green-600" />
+				<img src="{logoImage}" alt="FoodLoop Logo" class="h-6 w-auto" />
 				<span class="hidden md:inline">FoodLoop</span>
 			</a>
 
@@ -76,7 +77,7 @@
 				<SheetContent side="right" class="w-[250px] sm:w-[300px]">
 					<div class="flex flex-col gap-6 py-4">
 						<a href="/" class="flex items-center gap-2 text-xl font-bold">
-							<ShoppingBasket class="h-6 w-6 text-green-600" />
+							<img src="/assets/logo.png" alt="FoodLoop Logo" class="h-6 w-auto" />
 							<span>FoodLoop</span>
 						</a>
 						<nav class="flex flex-col gap-4">
