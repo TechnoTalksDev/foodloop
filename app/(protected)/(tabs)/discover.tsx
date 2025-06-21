@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { router, useLocalSearchParams } from "expo-router";
-import { Image, ScrollView, TouchableOpacity, View, TextInput, ActivityIndicator } from "react-native";
+import { Image, ScrollView, TouchableOpacity, View, TextInput, ActivityIndicator, RefreshControl } from "react-native";
 import Animated, { 
   useSharedValue, 
   useAnimatedStyle, 
@@ -45,94 +45,106 @@ export default function Discover() {  // Get search params to check if we should
   // State for products from Supabase
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-    // Fetch products from Supabase
-  useEffect(() => {
-    async function fetchProducts() {
-      try {
-        setLoading(true);
-        
-        // Fetch the 4 most recently created products
-        const { data, error } = await supabase
-          .from('product')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(40);
-        
-        if (error) {
-          console.error('Error fetching products:', error);
-          return;
-        }
-        
-        if (data) {
-          // Create a map to store user details for each user_id
-          const userIds = data
-            .map(product => product.user_id)
-            .filter(id => id !== null && id !== undefined);
-          
-          // Fetch user information for all products in one query
-          const { data: users, error: usersError } = await supabase
-            .from('users')
-            .select('id, username, name')
-            .in('id', userIds);
-            
-          if (usersError) {
-            console.error('Error fetching users:', usersError);
-          }
-          
-          // Create a lookup map for quick user data access
-          const userMap = new Map();
-          if (users) {
-            users.forEach(user => {
-              userMap.set(user.id, user);
-            });
-          }
-          
-          // Process the data to format it for UI
-          const formattedProducts: Product[] = await Promise.all(data.map(async (product) => {
-            // Calculate discount percentage
-            let discountPercentage = '';
-            if (product.original_price && product.price) {
-              const originalPrice = parseFloat(product.original_price);
-              const savings = originalPrice - product.price;
-              const percentage = Math.round((savings / originalPrice) * 100);
-              discountPercentage = `${percentage}% off`;
-            }
-            
-            // Format eco-friendly info based on trash saved
-            const eco = product.trash ? `Saves ${product.trash}kg CO₂` : undefined;
-            
-            // Get business name from user data
-            let business = "Local Business"; // Default
-            
-            if (product.user_id) {
-              const user = userMap.get(product.user_id);
-              
-              if (user) {
-                // Use username or name, whichever is available
-                business = user.username || user.name || business;
-              }
-            }
-            
-            return {
-              ...product,
-              discount: discountPercentage,
-              eco,
-              business
-            };
-          }));
-          
-          setProducts(formattedProducts);
-        }
-      } catch (error) {
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Move fetchProducts outside useEffect for reuse
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch the 4 most recently created products
+      const { data, error } = await supabase
+        .from('product')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(40);
+      
+      if (error) {
         console.error('Error fetching products:', error);
-      } finally {
-        setLoading(false);
+        return;
       }
+      
+      if (data) {
+        // Create a map to store user details for each user_id
+        const userIds = data
+          .map(product => product.user_id)
+          .filter(id => id !== null && id !== undefined);
+        
+        // Fetch user information for all products in one query
+        const { data: users, error: usersError } = await supabase
+          .from('users')
+          .select('id, username, name')
+          .in('id', userIds);
+          
+        if (usersError) {
+          console.error('Error fetching users:', usersError);
+        }
+        
+        // Create a lookup map for quick user data access
+        const userMap = new Map();
+        if (users) {
+          users.forEach(user => {
+            userMap.set(user.id, user);
+          });
+        }
+        
+        // Process the data to format it for UI
+        const formattedProducts: Product[] = await Promise.all(data.map(async (product) => {
+          // Calculate discount percentage
+          let discountPercentage = '';
+          if (product.original_price && product.price) {
+            const originalPrice = parseFloat(product.original_price);
+            const savings = originalPrice - product.price;
+            const percentage = Math.round((savings / originalPrice) * 100);
+            discountPercentage = `${percentage}% off`;
+          }
+          
+          // Format eco-friendly info based on trash saved
+          const eco = product.trash ? `Saves ${product.trash}kg CO₂` : undefined;
+          
+          // Get business name from user data
+          let business = "Local Business"; // Default
+          
+          if (product.user_id) {
+            const user = userMap.get(product.user_id);
+            
+            if (user) {
+              // Use username or name, whichever is available
+              business = user.username || user.name || business;
+            }
+          }
+          
+          return {
+            ...product,
+            discount: discountPercentage,
+            eco,
+            business
+          };
+        }));
+        
+        setProducts(formattedProducts);
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    } finally {
+      setLoading(false);
     }
-    
+  };
+
+  useEffect(() => {
     fetchProducts();
   }, []);
-  
+
+  // Handler for pull-to-refresh
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await fetchProducts();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   // Animation values for the search bar - always start with initial values
   const searchBgColor = useSharedValue(0);
   const searchScale = useSharedValue(0.9);
@@ -179,7 +191,18 @@ export default function Discover() {  // Get search params to check if we should
 
   return (
     <SafeAreaView className="flex-1 bg-background">
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        className="flex-1"
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#10b981"]}
+            tintColor="#10b981"
+          />
+        }
+      >
         <View className="p-4">
           <H1 className="mb-4">Discover</H1>
           <Muted className="mb-6">

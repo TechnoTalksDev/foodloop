@@ -134,7 +134,7 @@ export default function CreateProduct() {
 				alert("Maximum of 5 images allowed per product.");
 				return;
 			}
-			
+
 			setIsUploading(true);
 			// Request permission
 			const { status } =
@@ -315,7 +315,8 @@ export default function CreateProduct() {
 											<Ionicons name="close" size={16} color={textColor} />
 										</TouchableOpacity>
 									</View>
-								))}								{/* Add image button - only shown if less than 5 images */}
+								))}
+								{/* Add image button - only shown if less than 5 images */}
 								{images.length < 5 && (
 									<TouchableOpacity
 										onPress={pickImage}
@@ -332,8 +333,10 @@ export default function CreateProduct() {
 												</Text>
 											</>
 										)}
-									</TouchableOpacity>								)}
-							</View><Text className="text-sm text-muted-foreground mt-1">
+									</TouchableOpacity>
+								)}
+							</View>
+							<Text className="text-sm text-muted-foreground mt-1">
 								{images.length === 0
 									? "Add at least one image of your product (maximum 5)"
 									: `${images.length}/5 images added${images.length < 5 ? ", you can add " + (5 - images.length) + " more" : ""}`}
