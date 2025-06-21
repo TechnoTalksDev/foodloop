@@ -37,7 +37,16 @@ interface Product {
   eco?: string;
 }
 
-export default function Discover() {  // Get search params to check if we should focus the search input
+// Food categories (same as Home)
+const foodCategories = [
+  { id: 1, name: "Fruits", icon: "🍎" },
+  { id: 2, name: "Veggies", icon: "🥦" },
+  { id: 3, name: "Bakery", icon: "🍞" },
+  { id: 4, name: "Dairy", icon: "🥛" },
+  { id: 5, name: "Meals", icon: "🍲" },
+];
+
+export default function Marketplace() {  // Get search params to check if we should focus the search input
   const { focusSearch, timestamp } = useLocalSearchParams();
   // Reference to the input element
   const searchInputRef = useRef<React.ElementRef<typeof TextInput>>(null);
@@ -203,96 +212,126 @@ export default function Discover() {  // Get search params to check if we should
           />
         }
       >
-        <View className="p-4">
-          <H1 className="mb-4">Discover</H1>
-          <Muted className="mb-6">
-            Explore local businesses and find new surplus food deals
-          </Muted>
-          
-          {/* Search bar with improved animation */}
+        {/* Header with notification and cart icons, and Marketplace title */}
+        <View className="flex-row justify-between items-center px-4 py-3">
+          <TouchableOpacity onPress={() => router.push("/(protected)/notification-modal")}> 
+            <View className="w-10 h-10 items-center justify-center">
+              <Text className="text-2xl">🔔</Text>
+            </View>
+          </TouchableOpacity>
+          <H1>Marketplace</H1>
+          <TouchableOpacity onPress={() => router.push("/(protected)/(tabs)/cart")}> 
+            <View className="w-10 h-10 items-center justify-center">
+              <Text className="text-2xl">🛒</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
+        {/* Search bar with improved animation and Home's style */}
+        <View className="mb-5" style={{ marginHorizontal: -4 }}>
           <Animated.View 
             style={[{ borderRadius: 28 }, animatedSearchStyle]}
-            className="mb-6"
           >
-            <View className="flex-row items-center bg-secondary rounded-full px-4 py-2">
+            <View className="flex-row items-center bg-secondary rounded-full px-4 py-2 border border-secondary/50 shadow-sm w-full">
               <Text className="text-foreground/60 mr-2">🔍</Text>
               <Input 
                 ref={searchInputRef}
-                placeholder="Search businesses or items" 
-                className="flex-1 bg-transparent border-0 p-0 text-foreground text-base"
+                placeholder="Search products" 
+                className="flex-1 bg-transparent border-0 p-0 text-foreground text-base w-full" 
                 placeholderTextColor="#A0A0A0"
               />
+              <Text className="text-primary text-sm font-medium">Search</Text>
             </View>
           </Animated.View>
-            {/* Businesses section */}
-          <View className="mb-6">
-            <H3 className="mb-4">Local Businesses</H3>
-            
-            {/* Business cards */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
-              {loading ? (
-                <View className="items-center justify-center p-4 w-full">
-                  <ActivityIndicator size="small" color="#10b981" />
-                </View>
-              ) : products.length === 0 ? (
-                <View className="p-4">
-                  <Text className="text-muted-foreground">No businesses available</Text>
-                </View>
-              ) : (
-                // Use unique business names from products
-                Array.from(new Set(products.map(p => p.business)))
-                  .filter(Boolean)
-                  .map((business, index) => (
-                    <TouchableOpacity 
-                      key={index} 
-                      className="mr-4 bg-card rounded-xl overflow-hidden shadow-sm" 
-                      style={{ width: 150, elevation: 2 }}
-                    >
-                      <View className="h-20 bg-primary/20 items-center justify-center">
-                        <Text className="text-2xl">🏪</Text>
-                      </View>
-                      <View className="p-3">
-                        <Text className="font-medium">{business}</Text>
-                        <Text className="text-xs text-muted-foreground">Local business</Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))
-              )}
-            </ScrollView>
-              {/* Product grid - display products from Supabase */}
-            <H3 className="mb-4">Available Today</H3>
-            <View className="flex-row flex-wrap justify-between">
-              {loading ? (
-                // Loading state
-                <View className="w-full items-center justify-center py-8">
-                  <ActivityIndicator size="large" color="#10b981" />
-                  <Text className="mt-4 text-muted-foreground">Loading products...</Text>
-                </View>
-              ) : products.length === 0 ? (
-                // No products found
-                <View className="w-full items-center justify-center py-8">
-                  <Text className="text-muted-foreground">No products available at the moment</Text>
-                </View>
-              ) : (                // Map through products from Supabase
-                products.map((product) => (
-                  <ProductCard
-                    key={product.id}                    image={product.image_url && product.image_url.length > 0 
-                      ? { uri: product.image_url[0] } 
-                      : require("@/assets/foodloop.png")}
-                    name={product.name}
-                    business={product.business || "Local Business"}
-                    price={product.price}
-                    originalPrice={product.original_price ? parseFloat(product.original_price) : 0}
-                    discount={product.discount || ""}
-                    eco={product.eco || "Eco-friendly"}
-                    onPress={() => router.push({
-                      pathname: "/(protected)/product/[id]",
-                      params: { id: product.id }
-                    })}
-                  />
+        </View>
+
+        {/* Food categories (icon row) */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          className="pl-4 mb-6"
+        >
+          {foodCategories.map((category) => (
+            <TouchableOpacity
+              key={category.id}
+              className="items-center mr-6"
+            >
+              <View className="w-16 h-16 rounded-full bg-secondary items-center justify-center mb-2">
+                <Text className="text-3xl">{category.icon}</Text>
+              </View>
+              <Text className="text-sm text-center font-medium">{category.name}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+
+        {/* Businesses and products section (keep existing logic) */}
+        <View className="px-4 mb-6">
+          <View className="flex-row justify-between items-center mb-4">
+            <H3>Local Businesses</H3>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
+            {loading ? (
+              <View className="items-center justify-center p-4 w-full">
+                <ActivityIndicator size="small" color="#10b981" />
+              </View>
+            ) : products.length === 0 ? (
+              <View className="p-4">
+                <Text className="text-muted-foreground">No businesses available</Text>
+              </View>
+            ) : (
+              Array.from(new Set(products.map(p => p.business)))
+                .filter(Boolean)
+                .map((business, index) => (
+                  <TouchableOpacity 
+                    key={index} 
+                    className="mr-4 bg-card rounded-xl overflow-hidden shadow-sm" 
+                    style={{ width: 150, elevation: 2 }}
+                  >
+                    <View className="h-20 bg-primary/20 items-center justify-center">
+                      <Text className="text-2xl">🏪</Text>
+                    </View>
+                    <View className="p-3">
+                      <Text className="font-medium">{business}</Text>
+                      <Text className="text-xs text-muted-foreground">Local business</Text>
+                    </View>
+                  </TouchableOpacity>
                 ))
-              )}
-            </View>
+            )}
+          </ScrollView>
+
+          <View className="flex-row justify-between items-center mb-4">
+            <H3>Available Today</H3>
+          </View>
+          <View className="flex-row flex-wrap justify-between">
+            {loading ? (
+              <View className="w-full items-center justify-center py-8">
+                <ActivityIndicator size="large" color="#10b981" />
+                <Text className="mt-4 text-muted-foreground">Loading products...</Text>
+              </View>
+            ) : products.length === 0 ? (
+              <View className="w-full items-center justify-center py-8">
+                <Text className="text-muted-foreground">No products available at the moment</Text>
+              </View>
+            ) : (
+              products.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  image={product.image_url && product.image_url.length > 0 
+                    ? { uri: product.image_url[0] } 
+                    : require("@/assets/foodloop.png")}
+                  name={product.name}
+                  business={product.business || "Local Business"}
+                  price={product.price}
+                  originalPrice={product.original_price ? parseFloat(product.original_price) : 0}
+                  discount={product.discount || ""}
+                  eco={product.eco || "Eco-friendly"}
+                  onPress={() => router.push({
+                    pathname: "/(protected)/product/[id]",
+                    params: { id: product.id }
+                  })}
+                />
+              ))
+            )}
           </View>
         </View>
       </ScrollView>

@@ -41,10 +41,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
 	const [session, setSession] = useState<Session | null>(null);
 	const router = useRouter();
 
-	// Use explicit URL scheme instead of makeRedirectUri() for OAuth
-	const redirectTo = "expo-supabase-starter://auth";
-	
-	// Debug: Let's see what makeRedirectUri() was generating
+	// Use explicit URL scheme that matches app.json configuration
+	const redirectTo = "foodloop://auth";
+
+	// Debug: Let's see what we're using vs what makeRedirectUri() generates
 	console.log("Redirect URI being used:", redirectTo);
 	console.log("makeRedirectUri() would generate:", makeRedirectUri());
 

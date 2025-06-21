@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import { Image, ScrollView, TouchableOpacity, View } from "react-native";
 import { useSharedValue } from "react-native-reanimated";
 import { LinearGradient } from 'expo-linear-gradient';
+import { useEffect, useState } from "react";
 
 import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
@@ -9,6 +10,8 @@ import { H1, H3, Muted } from "@/components/ui/typography";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProductCard } from "@/components/ui/product-card";
+import { useAuth } from "@/context/supabase-provider";
+import { supabase } from "@/config/supabase";
 
 // Sample food categories with eco-friendly icons
 const foodCategories = [
@@ -64,125 +67,250 @@ const recommendedItems = [
 ];
 
 export default function Home() {
+	const { session } = useAuth();
+	const [username, setUsername] = useState<string | null>(null);
+	const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+	const [loadingUser, setLoadingUser] = useState(true);
+	
+	useEffect(() => {
+		const fetchUser = async () => {
+			if (session?.user?.id) {
+				const { data, error } = await supabase
+					.from("users")
+					.select("username, name, avatar")
+					.eq("id", session.user.id)
+					.single();
+				if (data) {
+					setUsername(data.name || data.username || "there");
+					setAvatarUrl(data.avatar);
+				} else {
+					setUsername("there");
+				}
+			} else {
+				setUsername("there");
+			}
+			setLoadingUser(false);
+		};
+		fetchUser();
+	}, [session?.user?.id]);
+
+	// Daily check-in state (placeholder logic)
+	const [checkedIn, setCheckedIn] = useState(false);
+	
+	// Weather data state (placeholder)
+	const [weather, setWeather] = useState({
+		temp: "22°C",
+		condition: "Sunny",
+		icon: "☀️",
+		forecast: [
+			{ day: "Today", icon: "☀️", temp: "22°" },
+			{ day: "Tue", icon: "☀️", temp: "24°" },
+			{ day: "Wed", icon: "🌤️", temp: "21°" },
+			{ day: "Thu", icon: "🌧️", temp: "18°" },
+		]
+	});
+
+	// Achievements data (placeholder)
+	const [achievements, setAchievements] = useState({
+		completed: 3,
+		total: 10,
+		next: "Waste Warrior - Rescue 10 items",
+		progress: 80
+	});
+
 	return (
 		<SafeAreaView className="flex-1 bg-background">
 			<ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
 				{/* Header with notification and cart */}
-				<View className="flex-row justify-between items-center px-4 py-3">
-					<TouchableOpacity onPress={() => router.push("/(protected)/notification-modal")}>
+				<View className="flex-row justify-between items-center px-4 py-3 mb-4">
+					<TouchableOpacity onPress={() => router.push("/(protected)/notification-modal")}> 
 						<View className="w-10 h-10 items-center justify-center">
 							<Text className="text-2xl">🔔</Text>
-						</View>
-					</TouchableOpacity>
-
-					<H1>Home</H1>
-
-					<TouchableOpacity onPress={() => router.push("/(protected)/(tabs)/cart")}>
-						<View className="w-10 h-10 items-center justify-center">
-							<Text className="text-2xl">🛒</Text>
-						</View>
-					</TouchableOpacity>
-				</View>
-
-				{/* Search bar */}
-				<View className="px-4 mb-5">
-					<TouchableOpacity 
-						activeOpacity={0.7}
-						onPress={() => {
-							// Navigate to discover page with unique timestamp to force animation
-							router.navigate({
-								pathname: "/(protected)/(tabs)/discover",
-								params: { 
-									focusSearch: "true", 
-									timestamp: Date.now().toString() 
-								}
-							});
-						}}
-					>
-						<View className="flex-row items-center bg-secondary rounded-full px-4 py-4 border border-secondary/50 shadow-sm">
-							<Text className="text-foreground/60 mr-2">🔍</Text>
-							<Text className="flex-1 text-foreground/60 text-base">Search Product</Text>
-							<Text className="text-primary text-sm font-medium">Search</Text>
-						</View>
-					</TouchableOpacity>
-				</View>
-
-				{/* Food categories */}
-				<ScrollView
-					horizontal
-					showsHorizontalScrollIndicator={false}
-					className="pl-4 mb-6"
-				>
-					{foodCategories.map((category) => (
-						<TouchableOpacity
-							key={category.id}
-							className="items-center mr-6"
-						>
-							<View className="w-16 h-16 rounded-full bg-secondary items-center justify-center mb-2">
-								<Text className="text-3xl">{category.icon}</Text>
+							<View className="absolute top-0 right-0 w-4 h-4 bg-red-500 rounded-full items-center justify-center">
+								<Text className="text-white text-xs font-bold">2</Text>
 							</View>
-							<Text className="text-sm text-center font-medium">{category.name}</Text>
-						</TouchableOpacity>
-					))}
-				</ScrollView>
+						</View>
+					</TouchableOpacity>
 
-				{/* Recommendations section */}
-				<View className="px-4 mb-6">
-					<View className="flex-row justify-between items-center mb-4">
-						<H3>Recommend for You</H3>
+					<H1>My Garden</H1>
+
+					<TouchableOpacity onPress={() => router.push("/(protected)/(tabs)/profile")}> 
+						<View className="w-10 h-10 items-center justify-center overflow-hidden rounded-full">
+							{avatarUrl ? (
+								<Image 
+									source={{ uri: avatarUrl }} 
+									className="w-10 h-10" 
+									resizeMode="cover"
+								/>
+							) : (
+								<View className="w-10 h-10 bg-primary/80 rounded-full items-center justify-center">
+									<Text className="text-white text-lg font-bold">
+										{username ? username.charAt(0).toUpperCase() : "U"}
+									</Text>
+								</View>
+							)}
+						</View>
+					</TouchableOpacity>
+				</View>
+
+				{/* Large Hey {username} text, not in a card */}
+				{/* <View className="px-4 mt-2 mb-4">
+					<Text className="text-4xl font-semibold mb-2">
+						Hey {loadingUser ? "..." : username}!
+					</Text>
+				</View> */}
+
+				{/* Daily Check-In Widget - Redesigned */}
+				<TouchableOpacity 
+					className="mx-4 mb-6 p-5 bg-secondary/30 rounded-2xl shadow border border-border"
+					onPress={() => router.push("/(protected)/modal")}
+					activeOpacity={0.7}
+				>
+					<View className="flex-row items-center mb-3">
+						<View className="rounded-full items-center justify-center mr-3">
+							<Text className="text-lg">📝</Text>
+						</View>
+						<View>
+							<Text className="text-lg font-semibold text-green-500">Daily Check-In</Text>
+							<Text className="text-muted-foreground text-sm">Keep track of your sustainability journey</Text>
+						</View>
+					</View>
+					
+					<View className="bg-secondary/50 rounded-xl p-4 mt-2">
+						<Text className="text-xl font-medium text-center mb-2">What did you do today?</Text>
+						<Text className="text-muted-foreground text-center mb-3">Share your environmental actions</Text>
+						
+						<Button
+							variant="default"
+							className="w-full"
+							onPress={() => router.push("/(protected)/modal")}
+						>
+							<Text className="text-primary-foreground font-medium">Add Check-In</Text>
+						</Button>
+					</View>
+				</TouchableOpacity>
+
+				{/* Achievements/Milestones Widget */}
+				<View className="mx-4 mb-6 p-5 bg-secondary/30 rounded-2xl border border-border">
+					<View className="flex-row justify-between items-center mb-3">
+						<View className="flex-row items-center">
+							<Text className="text-xl mr-2">🏆</Text>
+							<Text className="text-lg font-semibold">Milestones</Text>
+						</View>
 						<TouchableOpacity>
-							<Text className="text-primary font-medium">See More</Text>
+							<Text className="text-primary font-medium text-sm">See All</Text>
 						</TouchableOpacity>
 					</View>
+					
+					<View className="bg-secondary/50 p-3 rounded-lg mb-2">
+						<Text className="font-medium mb-1">{achievements.next}</Text>
+						<View className="w-full h-2 bg-secondary rounded-full overflow-hidden">
+							<View className="h-2 bg-green-500 rounded-full" style={{ width: `${achievements.progress}%` }} />
+						</View>
+						<Text className="text-muted-foreground mt-1 text-right text-xs">{achievements.progress}%</Text>
+					</View>
+					
+					<Text className="text-muted-foreground text-center mt-2">
+						{achievements.completed} of {achievements.total} achievements completed
+					</Text>
+				</View>
 
+				{/* Local Weather Widget */}
+				<View className="mx-4 mb-6 p-5 bg-secondary/30 rounded-2xl border border-border">
+					<View className="flex-row justify-between items-center mb-3">
+						<View className="flex-row items-center">
+							<Text className="text-xl mr-2">☁️</Text>
+							<Text className="text-lg font-semibold">Local Weather</Text>
+						</View>
+						<Text className="text-muted-foreground">Your Area</Text>
+					</View>
+					
+					<View className="flex-row items-center justify-between mb-3">
+						<View className="flex-row items-center">
+							<Text className="text-4xl mr-3">{weather.icon}</Text>
+							<View>
+								<Text className="text-2xl font-bold">{weather.temp}</Text>
+								<Text className="text-muted-foreground">{weather.condition}</Text>
+							</View>
+						</View>
+						<Text className="text-green-500">Good for harvesting</Text>
+					</View>
+					
+					<View className="flex-row justify-between mt-2">
+						{weather.forecast.map((day, index) => (
+							<View key={index} className="items-center">
+								<Text className="text-muted-foreground text-xs">{day.day}</Text>
+								<Text className="text-xl my-1">{day.icon}</Text>
+								<Text className="font-medium">{day.temp}</Text>
+							</View>
+						))}
+					</View>
+				</View>
+
+				{/* Recommendations Widget with ProductCard component */}
+				<View className="mx-4 mb-6">
+					<View className="flex-row justify-between items-center mb-4">
+						<Text className="text-lg font-semibold">Recommended For You</Text>
+						<TouchableOpacity onPress={() => router.push("/(protected)/(tabs)/marketplace")}>
+							<Text className="text-primary font-medium">See All</Text>
+						</TouchableOpacity>
+					</View>
+					
 					<View className="flex-row flex-wrap justify-between">
-						{recommendedItems.map((item) => (
+						{recommendedItems.slice(0, 2).map((item) => (
 							<ProductCard
 								key={item.id}
-								image={item.image}
 								name={item.name}
 								business={item.business}
 								price={item.price}
 								originalPrice={item.originalPrice}
 								discount={item.discount}
+								image={item.image}
 								eco={item.eco}
-								onPress={() => router.push({
-									pathname: "/(protected)/product/[id]",
-									params: { id: item.id }
-								})}
+								onPress={() => router.push(`/(protected)/product/${item.id}`)}
 							/>
 						))}
 					</View>
 				</View>
-
-				{/* SmartPlate AI section */}
-				<View className="mx-4 mb-8 p-5 rounded-xl border border-border overflow-hidden">
-					<LinearGradient
-						colors={["#22c55e", "#16a34a", "#166534"]} // vibrant green gradient
-						start={{ x: 0, y: 0 }}
-						end={{ x: 1, y: 1 }}
-						style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 16 }}
-					/>
-					<View style={{ position: 'relative', zIndex: 1 }}>
-						<View className="flex-row items-center mb-2">
-							<Text className="text-2xl mr-2">🍽️</Text>
-							<H3>SmartPlate AI</H3>
+				
+				{/* SmartPlate AI section - Redesigned */}
+				<View className="mx-4 mb-6 rounded-2xl border border-border overflow-hidden">
+					<View className="bg-green-900 p-5 pb-6">
+						<View className="flex-row items-center mb-3">
+							<View className="w-12 h-12 bg-green-600 rounded-full items-center justify-center mr-3">
+								<Text className="text-2xl">🍽️</Text>
+							</View>
+							<View>
+								<H3 className="text-white">SmartPlate AI</H3>
+								<Text className="text-green-100 opacity-80">Reduce food waste with AI</Text>
+							</View>
 						</View>
-						<Muted className="mb-4 text-white">
-							Get personalized recipes based on what you have at home and reduce food waste
-						</Muted>
+						
+						<Text className="text-green-50 mb-4">
+							Get personalized recipes based on ingredients you already have at home
+						</Text>
+					</View>
+					
+					<View className="bg-secondary/30 p-4">
 						<Button
 							className="w-full"
 							variant="default"
 							size="default"
 						>
-							<Text className="text-primary-foreground font-medium">Generate Recipes</Text>
+							<View className="flex-row items-center">
+								<Text className="text-xl mr-2">🧠</Text>
+								<Text className="text-primary-foreground font-medium">Generate Recipes</Text>
+							</View>
 						</Button>
+						
+						<Text className="text-center mt-2 text-xs text-muted-foreground">
+							Powered by AI · Saved 245kg food waste this month
+						</Text>
 					</View>
 				</View>
 
 				{/* Impact tracker */}
-				<View className="mx-4 mb-12 p-5 bg-secondary/50 rounded-xl border border-border">
+				<View className="mx-4 mb-12 p-5 bg-secondary/30 rounded-xl border border-border">
 					<View className="flex-row items-center justify-between mb-4">
 						<View className="flex-row items-center">
 							<Text className="text-2xl mr-2">🌍</Text>
@@ -195,21 +323,22 @@ export default function Home() {
 
 					<View className="flex-row justify-between">
 						<View className="items-center">
-							<Text className="text-lg font-bold text-green-600">12 kg</Text>
-							<Text className="text-xs text-foreground">CO₂ Saved</Text>
+							<Text className="text-2xl font-bold text-green-500">12 kg</Text>
+							<Text className="text-xs text-muted-foreground">CO₂ Saved</Text>
 						</View>
 						<View className="items-center">
-							<Text className="text-lg font-bold text-primary">$24.50</Text>
-							<Text className="text-xs text-foreground">Money Saved</Text>
+							<Text className="text-2xl font-bold text-primary">$24.50</Text>
+							<Text className="text-xs text-muted-foreground">Money Saved</Text>
 						</View>
 						<View className="items-center">
-							<Text className="text-lg font-bold text-amber-600">8</Text>
-							<Text className="text-xs text-foreground">Items Rescued</Text>
+							<Text className="text-2xl font-bold text-amber-500">8</Text>
+							<Text className="text-xs text-muted-foreground">Items Rescued</Text>
 						</View>
 					</View>
 				</View>
 				
 			</ScrollView>
+
 
 			{/* Tab navigation is handled by the parent layout */}
 		</SafeAreaView>

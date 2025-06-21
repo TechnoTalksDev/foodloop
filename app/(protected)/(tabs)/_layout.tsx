@@ -79,11 +79,11 @@ export default function TabsLayout() {
 				}}
 			/>
 			<Tabs.Screen
-				name="discover"
+				name="marketplace"
 				options={{
-					title: "Discover",
+					title: "Market",
 					tabBarIcon: ({ color, focused }) =>
-						createTabBarIcon("search", focused, color),
+						createTabBarIcon("basket", focused, color),
 				}}
 			/>
 			<Tabs.Screen
