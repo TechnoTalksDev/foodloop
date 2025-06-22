@@ -31,6 +31,7 @@
 			"bundleIdentifier": "com.flemingvincent.ExpoSupabaseStarter"
 		},
 		"android": {
+			"package": "com.technotalks.foodloop",
 			"adaptiveIcon": {
 				"foregroundImage": "./assets/adaptive-icon.png"
 			},
@@ -47,10 +48,13 @@
 			"intentFilters": [
 				{
 					"action": "VIEW",
-					"data": {
-						"scheme": "foodloop",
-						"host": "auth"
-					},
+					"autoVerify": true,
+					"data": [
+						{
+							"scheme": "foodloop",
+							"host": "auth"
+						}
+					],
 					"category": ["BROWSABLE", "DEFAULT"]
 				}
 			]
