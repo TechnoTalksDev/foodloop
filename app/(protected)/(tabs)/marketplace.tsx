@@ -503,19 +503,17 @@ export default function Marketplace() {
 							</View>
 						)}
 					</TouchableOpacity>
-				</View>
-
-				{/* Search bar */}
-				<View className="mb-5 px-4">
-					<Animated.View style={[{ borderRadius: 28 }, animatedSearchStyle]}>
-						<View className="flex-row items-center bg-secondary rounded-full px-4 py-2 border border-secondary/50 shadow-sm">
-							<Text className="text-foreground/60 mr-2">🔍</Text>
+				</View>				{/* Search bar */}
+				<View className="mb-5 w-full">
+					<Animated.View style={[{ borderRadius: 24 }, animatedSearchStyle]}>
+						<View className="flex-row items-center bg-secondary rounded-full px-4 py-4 border border-secondary/50 shadow-sm min-h-[44px]">
+							<Text className="text-foreground/60 mr-2 text-xl">🔍</Text>
 							<TextInput
 								ref={searchInputRef}
 								value={filters.searchQuery}
 								onChangeText={handleSearch}
 								placeholder="Search products, businesses, tags..."
-								className="flex-1 bg-transparent border-0 p-0 text-foreground text-base"
+								className="flex-1 bg-transparent border-0 p-0 text-foreground text-lg w-full"
 								placeholderTextColor="#A0A0A0"
 							/>
 							<TouchableOpacity
@@ -523,7 +521,7 @@ export default function Marketplace() {
 								className="ml-2 p-1"
 							>
 								<View className="flex-row items-center">
-									<Ionicons name="options" size={18} color="#10b981" />
+									<Ionicons name="options" size={24} color="#10b981" />
 									{getActiveFiltersCount() > 0 && (
 										<View className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full items-center justify-center">
 											<Text className="text-white text-xs font-bold">
