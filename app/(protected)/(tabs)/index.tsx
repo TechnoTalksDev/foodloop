@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { ProductCard } from "@/components/ui/product-card";
 import { useAuth } from "@/context/supabase-provider";
 import { supabase } from "@/config/supabase";
+import { format, subMonths } from 'date-fns';
 
 // Sample food categories with eco-friendly icons
 const foodCategories = [
@@ -66,11 +67,26 @@ const recommendedItems = [
 	},
 ];
 
+interface RealImpactData {
+	totalCO2Saved: number;
+	totalMoneySaved: number;
+	totalItemsRescued: number;
+	hasData: boolean;
+	loading: boolean;
+}
+
 export default function Home() {
 	const { session } = useAuth();
 	const [username, setUsername] = useState<string | null>(null);
 	const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 	const [loadingUser, setLoadingUser] = useState(true);
+	const [realImpact, setRealImpact] = useState<RealImpactData>({
+		totalCO2Saved: 0,
+		totalMoneySaved: 0,
+		totalItemsRescued: 0,
+		hasData: false,
+		loading: true
+	});
 	
 	useEffect(() => {
 		const fetchUser = async () => {
@@ -92,6 +108,81 @@ export default function Home() {
 			setLoadingUser(false);
 		};
 		fetchUser();
+	}, [session?.user?.id]);
+
+	// Fetch real impact data
+	useEffect(() => {
+		const fetchRealImpactData = async () => {
+			if (!session?.user?.id) {
+				setRealImpact(prev => ({ ...prev, loading: false }));
+				return;
+			}
+
+			try {
+				setRealImpact(prev => ({ ...prev, loading: true }));
+
+				// Get data from the last 12 months
+				const twelveMonthsAgo = subMonths(new Date(), 12);
+
+				// Fetch user transactions from cart_items (assuming completed purchases)
+				const { data: cartItems, error: cartError } = await supabase
+					.from('cart_items')
+					.select(`
+						quantity,
+						created_at,
+						product:product(price, original_price, trash, name)
+					`)
+					.eq('user_id', session.user.id)
+					.gte('created_at', twelveMonthsAgo.toISOString());
+
+				if (cartError) {
+					console.error('Error fetching cart items:', cartError);
+					setRealImpact(prev => ({ ...prev, loading: false }));
+					return;
+				}
+
+				const transactions = (cartItems as any[]) || [];
+
+				// Calculate real impact metrics
+				let totalCO2Saved = 0;
+				let totalMoneySaved = 0;
+				let totalItemsRescued = 0;
+
+				transactions.forEach((transaction: any) => {
+					const product = transaction.product;
+					if (!product) return;
+
+					const quantity = transaction.quantity;
+					
+					// CO2 savings (assuming each pound of food saves ~2.5kg CO2)
+					const trashAmount = product.trash ?? 1;
+					const co2Saved = trashAmount * quantity * 2.5;
+					totalCO2Saved += co2Saved;
+					
+					// Money savings
+					const originalPrice = product.original_price ? parseFloat(product.original_price) : 0;
+					const moneySaved = Math.max(0, (originalPrice - product.price) * quantity);
+					totalMoneySaved += moneySaved;
+					
+					// Items rescued
+					totalItemsRescued += quantity;
+				});
+
+				setRealImpact({
+					totalCO2Saved: Math.round(totalCO2Saved * 100) / 100,
+					totalMoneySaved: Math.round(totalMoneySaved * 100) / 100,
+					totalItemsRescued,
+					hasData: transactions.length > 0,
+					loading: false
+				});
+
+			} catch (error) {
+				console.error('Error fetching real impact data:', error);
+				setRealImpact(prev => ({ ...prev, loading: false }));
+			}
+		};
+
+		fetchRealImpactData();
 	}, [session?.user?.id]);
 
 	// Daily check-in state (placeholder logic)
@@ -303,33 +394,67 @@ export default function Home() {
 					</View>
 				</View>
 
-				{/* Impact tracker */}
-				<View className="mx-4 mb-12 p-5 bg-secondary/30 rounded-xl border border-border">
+				{/* Real Impact tracker - Updated with real data */}
+				<TouchableOpacity 
+					className="mx-4 mb-12 p-5 bg-secondary/30 rounded-xl border border-border"
+					onPress={() => router.push("/(protected)/impact-dashboard")}
+					activeOpacity={0.7}
+				>
 					<View className="flex-row items-center justify-between mb-4">
 						<View className="flex-row items-center">
 							<Text className="text-2xl mr-2">🌍</Text>
 							<H3>Your Impact</H3>
 						</View>
-						<TouchableOpacity>
-							<Text className="text-primary font-medium">Details</Text>
+						<TouchableOpacity onPress={() => router.push("/(protected)/impact-dashboard")}>
+							<Text className="text-primary font-medium">View Details</Text>
 						</TouchableOpacity>
 					</View>
 
-					<View className="flex-row justify-between">
-						<View className="items-center">
-							<Text className="text-2xl font-bold text-green-500">12 kg</Text>
-							<Text className="text-xs text-muted-foreground">CO₂ Saved</Text>
+					{realImpact.loading ? (
+						<View className="flex-row justify-center py-4">
+							<Text className="text-muted-foreground">Loading your impact...</Text>
 						</View>
-						<View className="items-center">
-							<Text className="text-2xl font-bold text-primary">$24.50</Text>
-							<Text className="text-xs text-muted-foreground">Money Saved</Text>
+					) : !realImpact.hasData ? (
+						<View className="items-center py-4">
+							<Text className="text-4xl mb-2">🌱</Text>
+							<Text className="text-center text-muted-foreground mb-2">
+								No impact data yet
+							</Text>
+							<Text className="text-center text-sm text-muted-foreground">
+								Make your first purchase to start tracking your environmental impact!
+							</Text>
 						</View>
-						<View className="items-center">
-							<Text className="text-2xl font-bold text-amber-500">8</Text>
-							<Text className="text-xs text-muted-foreground">Items Rescued</Text>
-						</View>
-					</View>
-				</View>
+					) : (
+						<>
+							<View className="flex-row justify-between">
+								<View className="items-center">
+									<Text className="text-2xl font-bold text-green-500">
+										{realImpact.totalCO2Saved} kg
+									</Text>
+									<Text className="text-xs text-muted-foreground">CO₂ Saved</Text>
+								</View>
+								<View className="items-center">
+									<Text className="text-2xl font-bold text-primary">
+										${realImpact.totalMoneySaved}
+									</Text>
+									<Text className="text-xs text-muted-foreground">Money Saved</Text>
+								</View>
+								<View className="items-center">
+									<Text className="text-2xl font-bold text-amber-500">
+										{realImpact.totalItemsRescued}
+									</Text>
+									<Text className="text-xs text-muted-foreground">Items Rescued</Text>
+								</View>
+							</View>
+							
+							<View className="mt-3 pt-3 border-t border-border">
+								<Text className="text-center text-sm text-muted-foreground">
+									Tap to see your detailed environmental impact
+								</Text>
+							</View>
+						</>
+					)}
+				</TouchableOpacity>
 				
 			</ScrollView>
 

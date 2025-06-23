@@ -28,6 +28,7 @@ export default function ProtectedLayout() {
 			<Stack.Screen name="cart-modal" options={{ presentation: "modal" }} />
 			<Stack.Screen name="create-product-modal" options={{ presentation: "modal" }} />
 			<Stack.Screen name="smartplate-ai" options={{ presentation: "card" }} />
+			<Stack.Screen name="impact-dashboard" options={{ presentation: "card" }} />
 		</Stack>
 	);
 }
