@@ -5,10 +5,11 @@ import { nanoid } from 'nanoid';
 interface ChatContextType {
   messages: ChatMessage[];
   isLoading: boolean;
-  sendMessage: (content: string) => Promise<void>;
+  sendMessage: (content: string, images?: string[]) => Promise<void>;
   clearChat: () => void;
   generateRecipes: (ingredients: string[]) => Promise<void>;
   getSustainabilityTips: () => Promise<void>;
+  analyzeImage: (imageBase64: string, context?: string) => Promise<void>;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -26,14 +27,15 @@ export const ChatProvider: React.FC<PropsWithChildren> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
   const geminiService = GeminiService.getInstance();
 
-  const sendMessage = useCallback(async (content: string) => {
-    if (!content.trim() || isLoading) return;
+  const sendMessage = useCallback(async (content: string, images?: string[]) => {
+    if ((!content.trim() && (!images || images.length === 0)) || isLoading) return;
 
     const userMessage: ChatMessage = {
       id: nanoid(),
       role: 'user',
-      content: content.trim(),
+      content: content.trim() || '📸 Image shared',
       timestamp: new Date(),
+      images: images
     };
 
     // Add user message immediately
@@ -135,6 +137,49 @@ export const ChatProvider: React.FC<PropsWithChildren> = ({ children }) => {
     }
   }, [isLoading, geminiService]);
 
+  const analyzeImage = useCallback(async (imageBase64: string, context?: string) => {
+    if (isLoading) return;
+
+    setIsLoading(true);
+
+    // Add user message with image
+    const userMessage: ChatMessage = {
+      id: nanoid(),
+      role: 'user',
+      content: context || '📸 Please analyze this image',
+      timestamp: new Date(),
+      images: [imageBase64]
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+
+    try {
+      const response = await geminiService.analyzeImage(imageBase64, context);
+      
+      const assistantMessage: ChatMessage = {
+        id: nanoid(),
+        role: 'assistant',
+        content: response,
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('Error analyzing image:', error);
+      
+      const errorMessage: ChatMessage = {
+        id: nanoid(),
+        role: 'assistant',
+        content: 'Sorry, I encountered an error while analyzing the image. Please try again.',
+        timestamp: new Date(),
+      };
+
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isLoading, geminiService]);
+
   const clearChat = useCallback(() => {
     setMessages([]);
   }, []);
@@ -148,6 +193,7 @@ export const ChatProvider: React.FC<PropsWithChildren> = ({ children }) => {
         clearChat,
         generateRecipes,
         getSustainabilityTips,
+        analyzeImage,
       }}
     >
       {children}

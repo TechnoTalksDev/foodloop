@@ -6,6 +6,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  images?: string[]; // Base64 encoded images
 }
 
 export interface GeminiResponse {
@@ -31,10 +32,30 @@ export class GeminiService {
   async sendMessage(messages: ChatMessage[]): Promise<string> {
     try {
       // Convert our chat format to Gemini's expected format
-      const geminiMessages = messages.map(msg => ({
-        role: msg.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: msg.content }]
-      }));
+      const geminiMessages = messages.map(msg => {
+        const parts: any[] = [{ text: msg.content }];
+        
+        // Add images if present
+        if (msg.images && msg.images.length > 0) {
+          msg.images.forEach(imageBase64 => {
+            // Extract mime type and data from base64 string
+            const [mimeInfo, data] = imageBase64.split(',');
+            const mimeType = mimeInfo.match(/data:([^;]+)/)?.[1] || 'image/jpeg';
+            
+            parts.push({
+              inline_data: {
+                mime_type: mimeType,
+                data: data
+              }
+            });
+          });
+        }
+        
+        return {
+          role: msg.role === 'assistant' ? 'model' : 'user',
+          parts: parts
+        };
+      });
 
       const requestBody = {
         contents: geminiMessages,
@@ -64,7 +85,7 @@ export class GeminiService {
         ],
         systemInstruction: {
           parts: [{
-            text: "You are SmartPlate AI, a helpful assistant focused on sustainable food practices, reducing food waste, and eco-friendly cooking. Provide practical, actionable advice while being friendly and encouraging. Keep responses concise but informative."
+            text: "You are SmartPlate AI, a helpful assistant focused on sustainable food practices, reducing food waste, and eco-friendly cooking. You can also analyze images of plants, food, and ingredients to provide specific advice. When analyzing images, provide detailed observations and practical recommendations. For plant images, check for diseases, pests, or health issues and suggest organic treatments. For food images, assess freshness, suggest recipes, or provide nutritional insights. Always be encouraging and provide actionable advice."
           }]
         }
       };
@@ -126,6 +147,23 @@ export class GeminiService {
         role: 'user',
         content: prompt,
         timestamp: new Date()
+      }
+    ];
+
+    return this.sendMessage(messages);
+  }
+
+  // Method to analyze plant/food images
+  async analyzeImage(imageBase64: string, context?: string): Promise<string> {
+    const prompt = context || "Please analyze this image and provide insights about what you see. If it's a plant, check for health issues, diseases, or care recommendations. If it's food, assess freshness and suggest ways to use it sustainably.";
+    
+    const messages: ChatMessage[] = [
+      {
+        id: '1',
+        role: 'user',
+        content: prompt,
+        timestamp: new Date(),
+        images: [imageBase64]
       }
     ];
 
