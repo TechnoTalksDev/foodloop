@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   View,
   ScrollView,
@@ -17,17 +17,7 @@ import { H1 } from '@/components/ui/typography';
 import { useColorScheme } from '@/lib/useColorScheme';
 import { colors } from '@/constants/colors';
 import { format } from 'date-fns';
-import { nanoid } from 'nanoid';
-
-interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-}
-
-const API_KEY = 'AIzaSyCB5BR0-zGxedYP3yH6V7P88_mA6oe8f0s';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+import { useChatContext } from '@/context/chat-provider';
 
 const SUGGESTED_PROMPTS = [
   "What can I make with leftover vegetables?",
@@ -40,9 +30,8 @@ const SUGGESTED_PROMPTS = [
 export default function SmartPlateAI() {
   const router = useRouter();
   const { colorScheme } = useColorScheme();
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [inputText, setInputText] = useState('');
+  const { messages, isLoading, sendMessage, clearChat } = useChatContext();
+  const [inputText, setInputText] = React.useState('');
   const scrollViewRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
 
@@ -61,38 +50,6 @@ export default function SmartPlateAI() {
     }
   }, [messages]);
 
-  const sendMessageToGemini = async (chatMessages: ChatMessage[]): Promise<string> => {
-    const geminiMessages = chatMessages.map(msg => ({
-      role: msg.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: msg.content }]
-    }));
-
-    const requestBody = {
-      contents: geminiMessages,
-      generationConfig: {
-        temperature: 0.7,
-        topK: 40,
-        topP: 0.95,
-        maxOutputTokens: 2048,
-      }
-    };
-
-    const response = await fetch(`${GEMINI_API_URL}?key=${API_KEY}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-    });
-
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return data.candidates[0].content.parts[0].text;
-  };
-
   const handleSendMessage = async () => {
     if (!inputText.trim() || isLoading) return;
     
@@ -100,66 +57,12 @@ export default function SmartPlateAI() {
     setInputText('');
     Keyboard.dismiss();
 
-    // Add user message
-    const userMessage: ChatMessage = {
-      id: nanoid(),
-      role: 'user',
-      content: messageText,
-      timestamp: new Date(),
-    };
-
-    console.log('Adding user message:', userMessage);
-    setMessages(prevMessages => {
-      const newMessages = [...prevMessages, userMessage];
-      console.log('Updated messages after user:', newMessages.length);
-      return newMessages;
-    });
-
-    setIsLoading(true);
-
-    try {
-      // Get the current messages including the new user message
-      const currentMessages = [...messages, userMessage];
-      console.log('Sending to API with messages:', currentMessages.length);
-      
-      const response = await sendMessageToGemini(currentMessages);
-      
-      // Add assistant message
-      const assistantMessage: ChatMessage = {
-        id: nanoid(),
-        role: 'assistant',
-        content: response,
-        timestamp: new Date(),
-      };
-
-      console.log('Adding assistant message:', assistantMessage);
-      setMessages(prevMessages => {
-        const newMessages = [...prevMessages, assistantMessage];
-        console.log('Updated messages after assistant:', newMessages.length);
-        return newMessages;
-      });
-
-    } catch (error) {
-      console.error('Error:', error);
-      const errorMessage: ChatMessage = {
-        id: nanoid(),
-        role: 'assistant',
-        content: 'Sorry, there was an error processing your message.',
-        timestamp: new Date(),
-      };
-      setMessages(prevMessages => [...prevMessages, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
+    // Use the context's sendMessage function
+    await sendMessage(messageText);
   };
 
   const handleSuggestedPrompt = (prompt: string) => {
     setInputText(prompt);
-  };
-
-  const clearChat = () => {
-    setMessages([]);
-    console.log('Chat cleared');
   };
 
   console.log('Rendering with messages count:', messages.length);
@@ -199,9 +102,21 @@ export default function SmartPlateAI() {
         >
           <View className="py-4">
             {/* Debug info */}
-            <Text style={{ color: 'red', fontSize: 12 }}>
-              Debug: {messages.length} messages
-            </Text>
+            <View style={{ backgroundColor: 'yellow', padding: 10, marginBottom: 10 }}>
+              <Text style={{ color: 'black', fontSize: 14, fontWeight: 'bold' }}>
+                DEBUG: {messages.length} messages (from context)
+              </Text>
+              {messages.map((msg, i) => (
+                <Text key={i} style={{ color: 'black', fontSize: 12 }}>
+                  {i}: {msg.role} - {msg.content?.substring(0, 50) || 'NO CONTENT'}...
+                </Text>
+              ))}
+            </View>
+            
+            {/* Test message - always visible */}
+            <View className="mb-4 p-4" style={{ backgroundColor: 'blue' }}>
+              <Text style={{ color: 'white' }}>TEST MESSAGE - Always visible (using context)</Text>
+            </View>
             
             {/* Welcome message when no messages */}
             {messages.length === 0 && (
@@ -243,34 +158,43 @@ export default function SmartPlateAI() {
               </>
             )}
 
-            {/* Actual messages */}
+            {/* Actual messages - SIMPLIFIED */}
+            {messages.length > 0 && (
+              <View style={{ backgroundColor: 'red', padding: 10, marginBottom: 10 }}>
+                <Text style={{ color: 'white', fontWeight: 'bold' }}>
+                  MESSAGES SECTION ({messages.length} messages from context):
+                </Text>
+              </View>
+            )}
+            
             {messages.map((message, index) => {
-              console.log('Rendering message:', index, message.role, message.content.substring(0, 30));
+              console.log('Rendering message:', index, message.role, message.content);
+              
+              // Add safety check for message content
+              if (!message || !message.content) {
+                console.log('Skipping empty message:', message);
+                return null;
+              }
+              
               return (
-                <View key={message.id} className="mb-4">
-                  {message.role === 'user' ? (
-                    // User message
-                    <View className="flex-row justify-end mb-2">
-                      <View className="bg-green-500 max-w-[80%] px-4 py-3 rounded-2xl rounded-tr-sm">
-                        <Text className="text-white">{message.content}</Text>
-                      </View>
-                    </View>
-                  ) : (
-                    // Assistant message
-                    <View className="flex-row justify-start mb-2">
-                      <View className="flex-row max-w-[85%]">
-                        <View className="w-8 h-8 bg-green-500 rounded-full items-center justify-center mr-3 mt-1">
-                          <Text className="text-white text-xs">🧠</Text>
-                        </View>
-                        <View className="bg-secondary/50 px-4 py-3 rounded-2xl rounded-tl-sm flex-1">
-                          <Text style={{ color: textColor }}>{message.content}</Text>
-                          <Text className="text-xs mt-2" style={{ color: mutedTextColor }}>
-                            {format(message.timestamp, 'HH:mm')}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                  )}
+                <View 
+                  key={message.id} 
+                  style={{ 
+                    backgroundColor: message.role === 'user' ? 'green' : 'blue',
+                    padding: 10,
+                    marginBottom: 10,
+                    borderRadius: 8
+                  }}
+                >
+                  <Text style={{ color: 'white', fontWeight: 'bold' }}>
+                    {message.role?.toUpperCase() || 'UNKNOWN'}:
+                  </Text>
+                  <Text style={{ color: 'white' }}>
+                    {message.content || 'NO CONTENT'}
+                  </Text>
+                  <Text style={{ color: 'lightgray', fontSize: 10 }}>
+                    {message.timestamp ? message.timestamp.toLocaleTimeString() : 'NO TIME'}
+                  </Text>
                 </View>
               );
             })}
