@@ -28,10 +28,11 @@ export interface MarketplaceProduct {
   price: number;
   description: string;
   location: string;
-  image_url: string[];
+  image_url: string[] | string;
   user_id: string;
   tags: any[];
   amount: number;
+  original_price?: string | number;
   business?: string;
 }
 
@@ -45,6 +46,130 @@ export interface GeminiResponse {
   }[];
 }
 
+// AI Mode system prompts
+const AI_MODE_PROMPTS = {
+  smartplate: `You are SmartPlate AI, a recipe and cooking assistant specialized in the FoodLoop marketplace. Your expertise includes:
+
+CORE FUNCTIONS:
+- Create recipes from available ingredients and FoodLoop marketplace items
+- Suggest creative ways to use surplus/discounted foods
+- Provide cooking techniques that minimize food waste
+- Recommend meal planning strategies using marketplace items
+
+APPROACH:
+- Always prioritize reducing food waste in your recommendations
+- Suggest sustainable cooking methods and storage techniques
+- When users mention ingredients, check if similar items are available on FoodLoop
+- Provide step-by-step recipes with prep time, cook time, and difficulty level
+- Offer substitution suggestions using marketplace alternatives
+
+MARKETPLACE INTEGRATION:
+- Actively suggest relevant products from FoodLoop when appropriate
+- Help users discover new ingredients from local businesses
+- Explain how surplus food can be just as nutritious and delicious
+- Promote supporting local food businesses through the marketplace`,
+
+  smartdoctor: `You are SmartDoctor AI, a plant health and agricultural specialist. Your expertise includes:
+
+DIAGNOSTIC CAPABILITIES:
+- Identify plant diseases, pests, and nutrient deficiencies from photos
+- Recognize symptoms of over/under-watering, light issues, and environmental stress
+- Analyze soil conditions, leaf discoloration, growth patterns, and structural issues
+- Assess plant maturity and optimal harvest timing
+
+TREATMENT RECOMMENDATIONS:
+- Provide organic and sustainable treatment options
+- Suggest preventive care measures and integrated pest management
+- Recommend proper pruning, fertilization, and watering schedules
+- Offer companion planting suggestions for natural pest control
+
+GROWING GUIDANCE:
+- Advise on optimal growing conditions for different crops
+- Help with crop rotation and seasonal planning
+- Provide guidance on seed starting, transplanting, and plant care
+- Suggest varieties suitable for local growing conditions`,
+
+  harvesthelper: `You are HarvestHelper AI, an agricultural optimization specialist focused on harvest timing and post-harvest management. Your expertise includes:
+
+HARVEST OPTIMIZATION:
+- Determine optimal harvest timing for maximum quality and yield
+- Identify ripeness indicators for various crops and varieties
+- Suggest harvest scheduling to extend growing seasons
+- Advise on succession planting for continuous harvests
+
+STORAGE & PRESERVATION:
+- Recommend proper storage conditions for different crops
+- Suggest preservation methods to extend shelf life
+- Provide guidance on root cellars, cold storage, and controlled atmosphere storage
+- Offer techniques for minimizing post-harvest losses
+
+MARKET READINESS:
+- Help prepare crops for sale on FoodLoop marketplace
+- Suggest packaging and presentation techniques
+- Advise on pricing strategies for surplus produce
+- Recommend timing for listing items to maximize sales`,
+
+  soilsage: `You are SoilSage AI, a soil health and fertility expert specializing in sustainable agriculture. Your expertise includes:
+
+SOIL ANALYSIS:
+- Interpret soil test results and recommend amendments
+- Identify soil structure, drainage, and compaction issues
+- Assess soil pH, nutrient levels, and organic matter content
+- Recognize signs of soil degradation or contamination
+
+SOIL IMPROVEMENT:
+- Design composting systems for different scales and needs
+- Recommend organic fertilizers and natural amendments
+- Suggest cover cropping and green manure strategies
+- Provide guidance on building soil biology and microbial health
+
+SUSTAINABLE PRACTICES:
+- Promote no-till and reduced tillage methods
+- Advise on crop rotation for soil health improvement
+- Suggest ways to increase carbon sequestration in soil
+- Help design permaculture and regenerative agriculture systems`,
+
+  weatherwise: `You are WeatherWise AI, a climate and weather specialist for agricultural planning. Your expertise includes:
+
+WEATHER ADAPTATION:
+- Help farmers adapt to changing weather patterns and climate conditions
+- Suggest crop varieties suited to local climate challenges
+- Provide guidance on season extension techniques
+- Advise on drought, flood, and extreme weather preparedness
+
+SEASONAL PLANNING:
+- Create planting schedules based on local weather patterns
+- Recommend protection methods for crops during weather events
+- Suggest timing for field operations and harvest activities
+- Help plan for seasonal labor and resource needs
+
+CLIMATE RESILIENCE:
+- Promote climate-smart agriculture practices
+- Suggest water conservation and irrigation strategies
+- Advise on building resilience against climate variability
+- Recommend diversification strategies to reduce weather-related risks`,
+
+  wastewarrior: `You are WasteWarrior AI, a food waste reduction and resource optimization expert. Your expertise includes:
+
+WASTE PREVENTION:
+- Suggest proper food storage techniques to extend freshness
+- Provide meal planning strategies to minimize waste
+- Recommend portion control and inventory management
+- Offer creative ways to use food scraps and byproducts
+
+RESCUE & REPURPOSE:
+- Help transform surplus ingredients into valuable products
+- Suggest preservation methods like pickling, fermenting, and dehydrating
+- Provide recipes for using overripe or imperfect produce
+- Connect users with FoodLoop opportunities to rescue surplus food
+
+CIRCULAR ECONOMY:
+- Promote composting and nutrient recycling
+- Suggest ways to turn food waste into valuable resources
+- Help businesses optimize their waste streams
+- Advise on donation programs and surplus food redistribution`
+};
+
 export class GeminiService {
   private static instance: GeminiService;
   private marketplaceProducts: MarketplaceProduct[] = [];
@@ -56,6 +181,40 @@ export class GeminiService {
       GeminiService.instance = new GeminiService();
     }
     return GeminiService.instance;
+  }
+
+  private detectAIMode(content: string): string {
+    const contentLower = content.toLowerCase();
+    
+    // Check for mode indicators in the message
+    if (content.includes('[SmartPlate Mode]')) return 'smartplate';
+    if (content.includes('[SmartDoctor Mode]')) return 'smartdoctor';
+    if (content.includes('[HarvestHelper Mode]')) return 'harvesthelper';
+    if (content.includes('[SoilSage Mode]')) return 'soilsage';
+    if (content.includes('[WeatherWise Mode]')) return 'weatherwise';
+    if (content.includes('[WasteWarrior Mode]')) return 'wastewarrior';
+    
+    // Fallback keyword detection
+    if (contentLower.includes('recipe') || contentLower.includes('cook') || contentLower.includes('ingredient')) {
+      return 'smartplate';
+    }
+    if (contentLower.includes('plant') || contentLower.includes('disease') || contentLower.includes('pest')) {
+      return 'smartdoctor';
+    }
+    if (contentLower.includes('harvest') || contentLower.includes('storage') || contentLower.includes('preserve')) {
+      return 'harvesthelper';
+    }
+    if (contentLower.includes('soil') || contentLower.includes('compost') || contentLower.includes('fertilizer')) {
+      return 'soilsage';
+    }
+    if (contentLower.includes('weather') || contentLower.includes('climate') || contentLower.includes('season')) {
+      return 'weatherwise';
+    }
+    if (contentLower.includes('waste') || contentLower.includes('surplus') || contentLower.includes('leftover')) {
+      return 'wastewarrior';
+    }
+    
+    return 'smartplate'; // Default mode
   }
 
   private async fetchMarketplaceProducts(): Promise<void> {
@@ -79,7 +238,8 @@ export class GeminiService {
           image_url,
           user_id,
           tags,
-          amount
+          amount,
+          original_price
         `)
         .gt('amount', 0) // Only available products
         .order('created_at', { ascending: false })
@@ -115,7 +275,7 @@ export class GeminiService {
     }
   }
 
-  private findRelevantProducts(content: string, maxProducts: number = 3): ProductSuggestion[] {
+  private findRelevantProducts(content: string, mode: string, maxProducts: number = 3): ProductSuggestion[] {
     if (this.marketplaceProducts.length === 0) {
       return [];
     }
@@ -123,7 +283,42 @@ export class GeminiService {
     const contentLower = content.toLowerCase();
     const suggestions: ProductSuggestion[] = [];
 
+    // Mode-specific product filtering
+    const shouldIncludeProduct = (product: MarketplaceProduct): boolean => {
+      const name = product.name.toLowerCase();
+      const desc = product.description?.toLowerCase() || '';
+      const tags = product.tags?.map(t => t.label?.toLowerCase()).join(' ') || '';
+      const productText = `${name} ${desc} ${tags}`;
+
+      switch (mode) {
+        case 'smartplate':
+          return true; // All food products are relevant for recipes
+        case 'smartdoctor':
+          return productText.includes('seed') || productText.includes('plant') || 
+                 productText.includes('herb') || productText.includes('organic');
+        case 'harvesthelper':
+          return productText.includes('fresh') || productText.includes('harvest') ||
+                 productText.includes('produce') || productText.includes('vegetable') ||
+                 productText.includes('fruit');
+        case 'soilsage':
+          return productText.includes('compost') || productText.includes('fertilizer') ||
+                 productText.includes('organic') || productText.includes('soil');
+        case 'weatherwise':
+          return productText.includes('seasonal') || productText.includes('winter') ||
+                 productText.includes('summer') || productText.includes('greenhouse');
+        case 'wastewarrior':
+          const originalPrice = typeof product.original_price === 'string' 
+            ? parseFloat(product.original_price || '0') 
+            : (product.original_price || 0);
+          return originalPrice > 0 && product.price < (originalPrice * 0.7); // Discounted items
+        default:
+          return true;
+      }
+    };
+
     for (const product of this.marketplaceProducts) {
+      if (!shouldIncludeProduct(product)) continue;
+
       let relevanceScore = 0;
       let reason = '';
 
@@ -158,11 +353,16 @@ export class GeminiService {
         }
       }
 
-      // Food-related keywords boost
-      const foodKeywords = ['recipe', 'cook', 'meal', 'ingredient', 'fresh', 'organic', 'vegetable', 'fruit'];
-      const keywordMatches = foodKeywords.filter(keyword => contentLower.includes(keyword));
-      if (keywordMatches.length > 0) {
-        relevanceScore += keywordMatches.length;
+      // Mode-specific scoring boosts
+      if (mode === 'wastewarrior' && product.original_price) {
+        const originalPrice = typeof product.original_price === 'string' 
+          ? parseFloat(product.original_price) 
+          : product.original_price;
+        const discount = (originalPrice - product.price) / originalPrice;
+        if (discount > 0.3) {
+          relevanceScore += 5;
+          reason = reason || `${Math.round(discount * 100)}% off - rescue surplus food`;
+        }
       }
 
       if (relevanceScore > 0) {
@@ -173,7 +373,7 @@ export class GeminiService {
           business: product.business || 'Local Business',
           location: product.location,
           image_url: Array.isArray(product.image_url) ? product.image_url[0] : product.image_url,
-          relevance_reason: reason || 'Available on FoodLoop'
+          relevance_reason: reason || `Perfect for ${mode.replace('smart', '').replace('wise', '').replace('warrior', '').replace('helper', '').replace('sage', '')}`
         });
       }
     }
@@ -189,9 +389,13 @@ export class GeminiService {
       // Fetch latest marketplace products
       await this.fetchMarketplaceProducts();
 
+      // Detect AI mode from the latest message
+      const lastMessage = messages[messages.length - 1];
+      const aiMode = this.detectAIMode(lastMessage.content);
+
       // Convert our chat format to Gemini's expected format
       const geminiMessages = messages.map(msg => {
-        const parts: any[] = [{ text: msg.content }];
+        const parts: any[] = [{ text: msg.content.replace(/^\[.*?\sMode\]\s/, '') }];
         
         // Add images if present
         if (msg.images && msg.images.length > 0) {
@@ -216,8 +420,10 @@ export class GeminiService {
 
       // Add marketplace context to system instruction
       const productContext = this.marketplaceProducts.length > 0 
-        ? `\n\nCurrent FoodLoop marketplace has ${this.marketplaceProducts.length} available products including: ${this.marketplaceProducts.slice(0, 10).map(p => p.name).join(', ')}. When relevant to user queries, mention that these items are available on FoodLoop marketplace.`
+        ? `\n\nCURRENT FOODLOOP MARKETPLACE: ${this.marketplaceProducts.length} available products including: ${this.marketplaceProducts.slice(0, 10).map(p => `${p.name} ($${p.price})`).join(', ')}. When relevant, suggest these marketplace items to users.`
         : '';
+
+      const systemPrompt = AI_MODE_PROMPTS[aiMode as keyof typeof AI_MODE_PROMPTS] + productContext;
 
       const requestBody = {
         contents: geminiMessages,
@@ -247,7 +453,7 @@ export class GeminiService {
         ],
         systemInstruction: {
           parts: [{
-            text: `You are SmartPlate AI, a helpful assistant focused on sustainable food practices, reducing food waste, and eco-friendly cooking. You can also analyze images of plants, food, and ingredients to provide specific advice. When analyzing images, provide detailed observations and practical recommendations. For plant images, check for diseases, pests, or health issues and suggest organic treatments. For food images, assess freshness, suggest recipes, or provide nutritional insights. Always be encouraging and provide actionable advice.${productContext}`
+            text: systemPrompt
           }]
         }
       };
@@ -272,10 +478,9 @@ export class GeminiService {
 
       const responseText = data.candidates[0].content.parts[0].text;
       
-      // Find relevant products based on the conversation
-      const lastUserMessage = messages[messages.length - 1];
-      const conversationContext = lastUserMessage?.content + ' ' + responseText;
-      const productSuggestions = this.findRelevantProducts(conversationContext);
+      // Find relevant products based on the conversation and AI mode
+      const conversationContext = lastMessage?.content + ' ' + responseText;
+      const productSuggestions = this.findRelevantProducts(conversationContext, aiMode);
 
       return {
         response: responseText,
@@ -291,7 +496,7 @@ export class GeminiService {
   async generateRecipes(ingredients: string[]): Promise<{ response: string; productSuggestions: ProductSuggestion[] }> {
     await this.fetchMarketplaceProducts();
     
-    const prompt = `I have these ingredients: ${ingredients.join(', ')}. Please suggest 3 creative recipes I can make with these ingredients to reduce food waste. Include cooking time and difficulty level for each recipe.`;
+    const prompt = `[SmartPlate Mode] I have these ingredients: ${ingredients.join(', ')}. Please suggest 3 creative recipes I can make with these ingredients to reduce food waste. Include cooking time and difficulty level for each recipe.`;
     
     const messages: ChatMessage[] = [
       {
@@ -307,7 +512,7 @@ export class GeminiService {
 
   // Method to get sustainability tips
   async getSustainabilityTips(): Promise<{ response: string; productSuggestions: ProductSuggestion[] }> {
-    const prompt = "Give me 5 practical tips for reducing food waste and living more sustainably in my daily life.";
+    const prompt = "[WasteWarrior Mode] Give me 5 practical tips for reducing food waste and living more sustainably in my daily life.";
     
     const messages: ChatMessage[] = [
       {
@@ -323,7 +528,7 @@ export class GeminiService {
 
   // Method to analyze plant/food images
   async analyzeImage(imageBase64: string, context?: string): Promise<{ response: string; productSuggestions: ProductSuggestion[] }> {
-    const prompt = context || "Please analyze this image and provide insights about what you see. If it's a plant, check for health issues, diseases, or care recommendations. If it's food, assess freshness and suggest ways to use it sustainably.";
+    const prompt = context || "[SmartDoctor Mode] Please analyze this image and provide insights about what you see. If it's a plant, check for health issues, diseases, or care recommendations. If it's food, assess freshness and suggest ways to use it sustainably.";
     
     const messages: ChatMessage[] = [
       {
@@ -347,6 +552,7 @@ export class GeminiService {
   // Search products by query
   async searchProducts(query: string, limit: number = 10): Promise<ProductSuggestion[]> {
     await this.fetchMarketplaceProducts();
-    return this.findRelevantProducts(query, limit);
+    const mode = this.detectAIMode(query);
+    return this.findRelevantProducts(query, mode, limit);
   }
 }

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
   View,
   ScrollView,
@@ -10,6 +10,8 @@ import {
   ActivityIndicator,
   Image,
   Alert,
+  Modal,
+  FlatList,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -24,21 +26,72 @@ import Markdown from 'react-native-markdown-display';
 import { useChatContext } from '@/context/chat-provider';
 import { ProductSuggestion } from '@/lib/gemini';
 
-const SUGGESTED_PROMPTS = [
-  "What can I make with leftover vegetables?",
-  "Give me sustainable cooking tips",
-  "How can I reduce food waste?",
-  "Plan a zero-waste meal",
-  "What are some eco-friendly food storage tips?",
-  "📸 Take a photo of your plants or food for analysis",
+// AI Mode definitions
+const AI_MODES = [
+  {
+    id: 'smartplate',
+    name: 'SmartPlate',
+    icon: '🍽️',
+    description: 'Build recipes from foods on FoodLoop marketplace',
+    color: '#10b981',
+    placeholder: 'What ingredients do you have? I\'ll suggest recipes and find items on FoodLoop...',
+    systemPrompt: 'You are SmartPlate AI, a recipe and cooking assistant. Help users create recipes from ingredients they have or want to buy from FoodLoop marketplace. Focus on reducing food waste, sustainable cooking, and creative recipe ideas. Always suggest relevant products from the FoodLoop marketplace when appropriate.'
+  },
+  {
+    id: 'smartdoctor',
+    name: 'SmartDoctor',
+    icon: '🌱',
+    description: 'Diagnose your plants with photo analysis',
+    color: '#059669',
+    placeholder: 'Take a photo of your plant for health diagnosis and care recommendations...',
+    systemPrompt: 'You are SmartDoctor AI, a plant health and gardening expert. Analyze plant photos to diagnose diseases, pests, nutrient deficiencies, and health issues. Provide detailed care recommendations, organic treatment options, and preventive measures. Focus on sustainable and eco-friendly gardening practices.'
+  },
+  {
+    id: 'harvesthelper',
+    name: 'HarvestHelper',
+    icon: '🚜',
+    description: 'Optimize your harvest timing and storage',
+    color: '#dc2626',
+    placeholder: 'Ask about harvest timing, storage methods, or crop planning...',
+    systemPrompt: 'You are HarvestHelper AI, an agricultural specialist focused on harvest optimization, crop storage, and farming efficiency. Help users determine optimal harvest times, proper storage techniques, and crop planning strategies. Emphasize reducing post-harvest losses and maximizing yield quality.'
+  },
+  {
+    id: 'soilsage',
+    name: 'SoilSage',
+    icon: '🌾',
+    description: 'Soil health analysis and improvement advice',
+    color: '#92400e',
+    placeholder: 'Upload soil photos or ask about soil health, composting, and fertility...',
+    systemPrompt: 'You are SoilSage AI, a soil health and fertility expert. Analyze soil conditions, provide composting advice, recommend organic amendments, and help users improve their soil health naturally. Focus on sustainable farming practices and building healthy soil ecosystems.'
+  },
+  {
+    id: 'weatherwise',
+    name: 'WeatherWise',
+    icon: '🌤️',
+    description: 'Weather-based farming and growing advice',
+    color: '#1d4ed8',
+    placeholder: 'Ask about weather patterns, seasonal planning, or climate adaptation...',
+    systemPrompt: 'You are WeatherWise AI, a climate and weather specialist for agriculture. Help users adapt their farming and gardening practices to weather conditions, plan for seasonal changes, and build resilience against climate challenges. Provide location-appropriate advice for sustainable agriculture.'
+  },
+  {
+    id: 'wastewarrior',
+    name: 'WasteWarrior',
+    icon: '♻️',
+    description: 'Reduce food waste and maximize resource use',
+    color: '#059669',
+    placeholder: 'Ask how to reduce waste, preserve food, or repurpose ingredients...',
+    systemPrompt: 'You are WasteWarrior AI, a food waste reduction and sustainability expert. Help users minimize food waste through proper storage, preservation techniques, creative repurposing, and efficient meal planning. Connect users with FoodLoop marketplace opportunities to rescue surplus food.'
+  }
 ];
 
 export default function SmartPlateAI() {
   const router = useRouter();
   const { colorScheme } = useColorScheme();
   const { messages, isLoading, sendMessage, clearChat } = useChatContext();
-  const [inputText, setInputText] = React.useState('');
-  const [selectedImages, setSelectedImages] = React.useState<string[]>([]);
+  const [inputText, setInputText] = useState('');
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [currentMode, setCurrentMode] = useState(AI_MODES[0]);
+  const [showModeSelector, setShowModeSelector] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
 
@@ -58,6 +111,11 @@ export default function SmartPlateAI() {
     }
   }, [messages]);
 
+  // Clear chat when mode changes
+  useEffect(() => {
+    clearChat();
+  }, [currentMode.id]);
+
   const handleSendMessage = async () => {
     if ((!inputText.trim() && selectedImages.length === 0) || isLoading) return;
     
@@ -68,16 +126,14 @@ export default function SmartPlateAI() {
     setSelectedImages([]);
     Keyboard.dismiss();
 
-    await sendMessage(messageText, images.length > 0 ? images : undefined);
+    // Add mode context to the message
+    const contextualMessage = `[${currentMode.name} Mode] ${messageText}`;
+    await sendMessage(contextualMessage, images.length > 0 ? images : undefined);
   };
 
-  const handleSuggestedPrompt = (prompt: string) => {
-    if (prompt.includes('📸')) {
-      showImagePickerOptions();
-    } else {
-      setInputText(prompt);
-      inputRef.current?.focus();
-    }
+  const handleModeSelect = (mode: typeof AI_MODES[0]) => {
+    setCurrentMode(mode);
+    setShowModeSelector(false);
   };
 
   const showImagePickerOptions = () => {
@@ -211,134 +267,212 @@ export default function SmartPlateAI() {
   const renderMessage = (message: any, index: number) => {
     const isUser = message.role === 'user';
     
+    // Remove mode prefix from display if present
+    const displayContent = message.content.replace(/^\[.*?\sMode\]\s/, '');
+    
     return (
       <View 
         key={message.id || index}
-        className={`mb-4 ${isUser ? 'items-end' : 'items-start'}`}
+        className={`mb-6 ${isUser ? 'items-end' : 'items-start'}`}
       >
-        <View className={`flex-row max-w-[85%] ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
-          {/* Avatar */}
-          <View className={`w-8 h-8 rounded-full items-center justify-center ${isUser ? 'ml-3' : 'mr-3'} mt-1`}>
-            {isUser ? (
+        {isUser ? (
+          // User message - keep in bubble format
+          <View className="flex-row max-w-[85%] flex-row-reverse">
+            <View className="w-8 h-8 rounded-full items-center justify-center ml-3 mt-1">
               <View className="w-8 h-8 bg-primary rounded-full items-center justify-center">
                 <Text className="text-primary-foreground text-xs font-bold">You</Text>
               </View>
-            ) : (
-              <View className="w-8 h-8 bg-green-500 rounded-full items-center justify-center">
-                <Text className="text-white text-xs">🧠</Text>
-              </View>
-            )}
-          </View>
-          
-          {/* Message bubble */}
-          <View 
-            className={`px-4 py-3 rounded-2xl flex-1 ${
-              isUser 
-                ? 'bg-primary rounded-tr-sm' 
-                : 'rounded-tl-sm'
-            }`}
-            style={{
-              backgroundColor: isUser 
-                ? colorScheme === 'dark' ? colors.dark.primary : colors.light.primary
-                : colorScheme === 'dark' ? colors.dark.secondary + '80' : colors.light.secondary
-            }}
-          >
-            {/* Images in message */}
-            {message.images && message.images.length > 0 && (
-              <View className="mb-3">
-                {message.images.map((imageUri: string, imgIndex: number) => (
-                  <Image
-                    key={imgIndex}
-                    source={{ uri: imageUri }}
-                    style={{
-                      width: 200,
-                      height: 150,
-                      borderRadius: 8,
-                      marginBottom: imgIndex < message.images.length - 1 ? 8 : 0
-                    }}
-                    resizeMode="cover"
-                  />
-                ))}
-              </View>
-            )}
+            </View>
             
-            {/* Message text */}
-            {isUser ? (
+            <View 
+              className="px-4 py-3 rounded-2xl flex-1 bg-primary rounded-tr-sm"
+              style={{
+                backgroundColor: colorScheme === 'dark' ? colors.dark.primary : colors.light.primary
+              }}
+            >
+              {message.images && message.images.length > 0 && (
+                <View className="mb-3">
+                  {message.images.map((imageUri: string, imgIndex: number) => (
+                    <Image
+                      key={imgIndex}
+                      source={{ uri: imageUri }}
+                      style={{
+                        width: 200,
+                        height: 150,
+                        borderRadius: 8,
+                        marginBottom: imgIndex < message.images.length - 1 ? 8 : 0
+                      }}
+                      resizeMode="cover"
+                    />
+                  ))}
+                </View>
+              )}
+              
               <Text 
                 className="text-base leading-6 text-primary-foreground"
                 style={{ 
                   color: colorScheme === 'dark' ? colors.dark.primaryForeground : colors.light.primaryForeground
                 }}
               >
-                {message.content}
+                {displayContent}
               </Text>
-            ) : (
-              <Markdown
+              
+              <Text 
+                className="text-xs mt-2 text-primary-foreground/70"
                 style={{
-                  body: {
-                    color: textColor,
-                    fontSize: 16,
-                    lineHeight: 24,
-                  },
-                  paragraph: {
-                    marginTop: 0,
-                    marginBottom: 8,
-                  },
-                  strong: {
-                    fontWeight: 'bold',
-                  },
-                  em: {
-                    fontStyle: 'italic',
-                  },
-                  code_inline: {
-                    backgroundColor: colorScheme === 'dark' ? colors.dark.muted : colors.light.muted,
-                    paddingHorizontal: 4,
-                    paddingVertical: 2,
-                    borderRadius: 4,
-                    fontSize: 14,
-                  },
-                  code_block: {
-                    backgroundColor: colorScheme === 'dark' ? colors.dark.muted : colors.light.muted,
-                    padding: 12,
-                    borderRadius: 8,
-                    fontSize: 14,
-                  },
-                  bullet_list: {
-                    marginVertical: 4,
-                  },
-                  ordered_list: {
-                    marginVertical: 4,
-                  },
-                  list_item: {
-                    marginVertical: 2,
-                  },
+                  color: colorScheme === 'dark' ? colors.dark.primaryForeground + '80' : colors.light.primaryForeground + '80'
                 }}
               >
-                {message.content}
-              </Markdown>
-            )}
-
-            {/* Product suggestions for AI messages */}
-            {!isUser && message.productSuggestions && renderProductSuggestions(message.productSuggestions)}
-            
-            {/* Timestamp */}
-            <Text 
-              className={`text-xs mt-2 ${
-                isUser ? 'text-primary-foreground/70' : ''
-              }`}
-              style={{
-                color: isUser
-                  ? colorScheme === 'dark' ? colors.dark.primaryForeground + '80' : colors.light.primaryForeground + '80'
-                  : mutedTextColor
-              }}
-            >
-              {message.timestamp ? format(new Date(message.timestamp), 'h:mm a') : format(new Date(), 'h:mm a')}
-            </Text>
+                {message.timestamp ? format(new Date(message.timestamp), 'h:mm a') : format(new Date(), 'h:mm a')}
+              </Text>
+            </View>
           </View>
-        </View>
+        ) : (
+          // AI message - full width with avatar on side
+          <View className="w-full">
+            <View className="flex-row items-start">
+              <View className="w-10 h-10 rounded-full items-center justify-center mr-4 mt-2" style={{ backgroundColor: currentMode.color }}>
+                <Text className="text-white text-lg">{currentMode.icon}</Text>
+              </View>
+              
+              <View className="flex-1">
+                <View className="mb-2">
+                  <Text className="font-semibold text-lg" style={{ color: currentMode.color }}>
+                    {currentMode.name}
+                  </Text>
+                </View>
+                
+                <View 
+                  className="p-4 rounded-2xl rounded-tl-sm"
+                  style={{ backgroundColor: secondaryBg + '40' }}
+                >
+                  <Markdown
+                    style={{
+                      body: {
+                        color: textColor,
+                        fontSize: 16,
+                        lineHeight: 24,
+                      },
+                      paragraph: {
+                        marginTop: 0,
+                        marginBottom: 8,
+                      },
+                      strong: {
+                        fontWeight: 'bold',
+                      },
+                      em: {
+                        fontStyle: 'italic',
+                      },
+                      code_inline: {
+                        backgroundColor: colorScheme === 'dark' ? colors.dark.muted : colors.light.muted,
+                        paddingHorizontal: 4,
+                        paddingVertical: 2,
+                        borderRadius: 4,
+                        fontSize: 14,
+                      },
+                      code_block: {
+                        backgroundColor: colorScheme === 'dark' ? colors.dark.muted : colors.light.muted,
+                        padding: 12,
+                        borderRadius: 8,
+                        fontSize: 14,
+                      },
+                      bullet_list: {
+                        marginVertical: 4,
+                      },
+                      ordered_list: {
+                        marginVertical: 4,
+                      },
+                      list_item: {
+                        marginVertical: 2,
+                      },
+                    }}
+                  >
+                    {displayContent}
+                  </Markdown>
+
+                  {message.productSuggestions && renderProductSuggestions(message.productSuggestions)}
+                  
+                  <Text 
+                    className="text-xs mt-3"
+                    style={{ color: mutedTextColor }}
+                  >
+                    {message.timestamp ? format(new Date(message.timestamp), 'h:mm a') : format(new Date(), 'h:mm a')}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
       </View>
     );
   };
+
+  const renderModeSelector = () => (
+    <Modal
+      visible={showModeSelector}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={() => setShowModeSelector(false)}
+    >
+      <View className="flex-1 justify-end bg-black/50">
+        <View 
+          className="rounded-t-3xl p-6 max-h-[80%]"
+          style={{ backgroundColor: bgColor }}
+        >
+          <View className="flex-row items-center justify-between mb-6">
+            <Text className="text-xl font-bold" style={{ color: textColor }}>
+              Choose AI Assistant
+            </Text>
+            <TouchableOpacity onPress={() => setShowModeSelector(false)}>
+              <Ionicons name="close" size={24} color={textColor} />
+            </TouchableOpacity>
+          </View>
+          
+          <FlatList
+            data={AI_MODES}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                onPress={() => handleModeSelect(item)}
+                className="p-4 rounded-xl mb-3 border"
+                style={{ 
+                  backgroundColor: item.id === currentMode.id ? item.color + '20' : secondaryBg + '30',
+                  borderColor: item.id === currentMode.id ? item.color : borderColor
+                }}
+              >
+                <View className="flex-row items-center">
+                  <View 
+                    className="w-12 h-12 rounded-full items-center justify-center mr-4"
+                    style={{ backgroundColor: item.color }}
+                  >
+                    <Text className="text-white text-2xl">{item.icon}</Text>
+                  </View>
+                  <View className="flex-1">
+                    <Text 
+                      className="font-semibold text-base mb-1"
+                      style={{ 
+                        color: item.id === currentMode.id ? item.color : textColor 
+                      }}
+                    >
+                      {item.name}
+                    </Text>
+                    <Text className="text-sm" style={{ color: mutedTextColor }}>
+                      {item.description}
+                    </Text>
+                  </View>
+                  {item.id === currentMode.id && (
+                    <View className="w-6 h-6 rounded-full items-center justify-center" style={{ backgroundColor: item.color }}>
+                      <Ionicons name="checkmark" size={16} color="white" />
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+      </View>
+    </Modal>
+  );
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: bgColor }}>
@@ -348,12 +482,24 @@ export default function SmartPlateAI() {
           <Ionicons name="chevron-back" size={24} color={textColor} />
         </TouchableOpacity>
         
-        <View className="flex-row items-center">
-          <View className="w-8 h-8 bg-green-500 rounded-full items-center justify-center mr-2">
-            <Text className="text-white text-sm font-bold">🧠</Text>
+        <TouchableOpacity 
+          onPress={() => setShowModeSelector(true)}
+          className="flex-row items-center flex-1 justify-center"
+        >
+          <View 
+            className="w-8 h-8 rounded-full items-center justify-center mr-2"
+            style={{ backgroundColor: currentMode.color }}
+          >
+            <Text className="text-white text-sm">{currentMode.icon}</Text>
           </View>
-          <H1 className="text-lg">SmartPlate AI</H1>
-        </View>
+          <View className="flex-1">
+            <H1 className="text-lg">{currentMode.name}</H1>
+            <Text className="text-xs" style={{ color: mutedTextColor }}>
+              {currentMode.description}
+            </Text>
+          </View>
+          <Ionicons name="chevron-down" size={20} color={textColor} />
+        </TouchableOpacity>
 
         <TouchableOpacity onPress={clearChat}>
           <Ionicons name="refresh" size={24} color={textColor} />
@@ -375,46 +521,36 @@ export default function SmartPlateAI() {
           <View className="py-4">
             {/* Welcome message when no messages */}
             {messages.length === 0 && (
-              <>
-                <View className="mb-4 mt-2 items-start">
-                  <View className="flex-row max-w-[85%]">
-                    <View className="w-8 h-8 bg-green-500 rounded-full items-center justify-center mr-3 mt-1">
-                      <Text className="text-white text-xs">🧠</Text>
-                    </View>
-                    <View 
-                      className="px-4 py-3 rounded-2xl rounded-tl-sm flex-1"
-                      style={{ backgroundColor: secondaryBg + '80' }}
-                    >
-                      <Text style={{ color: textColor }}>
-                        Hello! I'm SmartPlate AI, your sustainable food assistant. I can help you with recipes, reduce food waste, give eco-friendly cooking tips, and analyze images of plants and food. I can also recommend products from the FoodLoop marketplace! What would you like to know?
+              <View className="mb-4 mt-2 w-full">
+                <View className="flex-row items-start">
+                  <View 
+                    className="w-10 h-10 rounded-full items-center justify-center mr-4 mt-2"
+                    style={{ backgroundColor: currentMode.color }}
+                  >
+                    <Text className="text-white text-lg">{currentMode.icon}</Text>
+                  </View>
+                  
+                  <View className="flex-1">
+                    <View className="mb-2">
+                      <Text className="font-semibold text-lg" style={{ color: currentMode.color }}>
+                        {currentMode.name}
                       </Text>
-                      <Text className="text-xs mt-2" style={{ color: mutedTextColor }}>
+                    </View>
+                    
+                    <View 
+                      className="p-4 rounded-2xl rounded-tl-sm"
+                      style={{ backgroundColor: secondaryBg + '40' }}
+                    >
+                      <Text style={{ color: textColor }} className="text-base leading-6">
+                        Hello! I'm your {currentMode.name} assistant. {currentMode.description}. How can I help you today?
+                      </Text>
+                      <Text className="text-xs mt-3" style={{ color: mutedTextColor }}>
                         {format(new Date(), 'h:mm a')}
                       </Text>
                     </View>
                   </View>
                 </View>
-
-                {/* Suggested prompts */}
-                <View className="mt-6">
-                  <Text className="text-sm font-medium mb-3" style={{ color: textColor }}>
-                    Try asking about:
-                  </Text>
-                  {SUGGESTED_PROMPTS.map((prompt, index) => (
-                    <TouchableOpacity
-                      key={index}
-                      onPress={() => handleSuggestedPrompt(prompt)}
-                      className="p-3 rounded-xl mb-2 border"
-                      style={{ 
-                        backgroundColor: secondaryBg + '30',
-                        borderColor: borderColor 
-                      }}
-                    >
-                      <Text style={{ color: textColor }}>{prompt}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </>
+              </View>
             )}
 
             {/* Chat messages */}
@@ -422,22 +558,34 @@ export default function SmartPlateAI() {
 
             {/* Loading indicator */}
             {isLoading && (
-              <View className="items-start mb-4">
-                <View className="flex-row max-w-[85%]">
-                  <View className="w-8 h-8 bg-green-500 rounded-full items-center justify-center mr-3 mt-1">
-                    <Text className="text-white text-xs">🧠</Text>
-                  </View>
+              <View className="w-full mb-4">
+                <View className="flex-row items-start">
                   <View 
-                    className="px-4 py-3 rounded-2xl rounded-tl-sm"
-                    style={{ backgroundColor: secondaryBg + '80' }}
+                    className="w-10 h-10 rounded-full items-center justify-center mr-4 mt-2"
+                    style={{ backgroundColor: currentMode.color }}
                   >
-                    <View className="flex-row items-center">
-                      <ActivityIndicator size="small" color={textColor} />
-                      <Text className="ml-2" style={{ color: textColor }}>Analyzing...</Text>
+                    <Text className="text-white text-lg">{currentMode.icon}</Text>
+                  </View>
+                  
+                  <View className="flex-1">
+                    <View className="mb-2">
+                      <Text className="font-semibold text-lg" style={{ color: currentMode.color }}>
+                        {currentMode.name}
+                      </Text>
                     </View>
-                    <Text className="text-xs mt-2" style={{ color: mutedTextColor }}>
-                      {format(new Date(), 'h:mm a')}
-                    </Text>
+                    
+                    <View 
+                      className="p-4 rounded-2xl rounded-tl-sm"
+                      style={{ backgroundColor: secondaryBg + '40' }}
+                    >
+                      <View className="flex-row items-center">
+                        <ActivityIndicator size="small" color={textColor} />
+                        <Text className="ml-2" style={{ color: textColor }}>Analyzing...</Text>
+                      </View>
+                      <Text className="text-xs mt-3" style={{ color: mutedTextColor }}>
+                        {format(new Date(), 'h:mm a')}
+                      </Text>
+                    </View>
                   </View>
                 </View>
               </View>
@@ -484,7 +632,7 @@ export default function SmartPlateAI() {
                 ref={inputRef}
                 value={inputText}
                 onChangeText={setInputText}
-                placeholder="Ask SmartPlate AI anything or add a photo..."
+                placeholder={currentMode.placeholder}
                 placeholderTextColor={mutedTextColor}
                 className="border rounded-2xl px-4 py-3 text-base min-h-[48px] max-h-32"
                 style={{ 
@@ -502,8 +650,9 @@ export default function SmartPlateAI() {
             <TouchableOpacity
               onPress={handleSendMessage}
               disabled={(!inputText.trim() && selectedImages.length === 0) || isLoading}
-              className="w-12 h-12 bg-green-500 rounded-full items-center justify-center"
+              className="w-12 h-12 rounded-full items-center justify-center"
               style={{ 
+                backgroundColor: currentMode.color,
                 opacity: ((!inputText.trim() && selectedImages.length === 0) || isLoading) ? 0.5 : 1 
               }}
             >
@@ -516,6 +665,9 @@ export default function SmartPlateAI() {
           </View>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Mode Selector Modal */}
+      {renderModeSelector()}
     </SafeAreaView>
   );
 }
