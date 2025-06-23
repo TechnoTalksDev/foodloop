@@ -288,13 +288,24 @@ export default function CreateProduct() {
 	};
 	return (
 		<SafeAreaView className="flex-1 bg-background">
+			{/* Modal Header */}
+			<View className="flex-row items-center justify-between px-4 py-3 border-b border-border">
+				<TouchableOpacity
+					onPress={() => router.back()}
+					className="p-2 -ml-2"
+					activeOpacity={0.7}
+				>
+					<Ionicons name="close" size={24} color={textColor} />
+				</TouchableOpacity>
+				<H1 className="flex-1 text-center">Create Product</H1>
+				<View className="w-8" />
+			</View>
+
 			<ScrollView
 				className="flex-1 px-4 py-4"
 				keyboardShouldPersistTaps="handled"
 				keyboardDismissMode="on-drag"
 			>
-				<H1 className="mb-4">Create new product</H1>
-
 				<Form {...form}>
 					<View className="space-y-6 mb-8">
 						{/* Image upload section */}
@@ -654,37 +665,41 @@ export default function CreateProduct() {
 							</View>
 						</View>
 						{/* Submit button */}
-						<Button
-							onPress={form.handleSubmit(onSubmit)}
-							className="w-full mt-4"
-							style={{
-								backgroundColor: isSubmitting
-									? colorScheme === "dark"
-										? colors.dark.mutedForeground
-										: colors.light.mutedForeground
-									: accentColor,
-							}}
-							disabled={isSubmitting}
-						>
-							{isSubmitting ? (
-								<View className="flex-row items-center">
-									<ActivityIndicator size="small" color="#ffffff" />
-									<Text className="text-white font-semibold ml-2">
-										Creating...
+						<View className="pt-4 pb-8">
+							<Button
+								onPress={form.handleSubmit(onSubmit)}
+								className="w-full"
+								style={{
+									backgroundColor: isSubmitting
+										? colorScheme === "dark"
+											? colors.dark.mutedForeground
+											: colors.light.mutedForeground
+										: accentColor,
+								}}
+								disabled={isSubmitting}
+							>
+								{isSubmitting ? (
+									<View className="flex-row items-center">
+										<ActivityIndicator size="small" color="#ffffff" />
+										<Text className="text-white font-semibold ml-2">
+											Creating...
+										</Text>
+									</View>
+								) : (
+									<Text className="text-white font-semibold">
+										Create Product
 									</Text>
-								</View>
-							) : (
-								<Text className="text-white font-semibold">Create Product</Text>
-							)}
-						</Button>
-						{/* Cancel button */}
-						<Button
-							variant="outline"
-							onPress={() => router.back()}
-							className="w-full mt-2"
-						>
-							<Text>Cancel</Text>
-						</Button>
+								)}
+							</Button>
+							{/* Cancel button */}
+							<Button
+								variant="outline"
+								onPress={() => router.back()}
+								className="w-full mt-3"
+							>
+								<Text>Cancel</Text>
+							</Button>
+						</View>
 					</View>
 				</Form>
 			</ScrollView>

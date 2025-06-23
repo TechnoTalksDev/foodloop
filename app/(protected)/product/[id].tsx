@@ -1,8 +1,17 @@
 import React, { useState, useEffect } from "react";
-import { View, Image, ScrollView, TouchableOpacity, Dimensions, ActivityIndicator } from "react-native";
+import {
+	View,
+	Image,
+	ScrollView,
+	TouchableOpacity,
+	Dimensions,
+	ActivityIndicator,
+	Alert,
+} from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/config/supabase";
+import { useCart } from "@/context/cart-provider";
 
 import { Text } from "@/components/ui/text";
 import { SafeAreaView } from "@/components/safe-area-view";
@@ -30,7 +39,12 @@ const PLACEHOLDER_PRODUCT: ProductType = {
 	],
 	user_id: "business_123",
 	shop: "Alisha Mart", // Added for UI
-	image_url: ["https://bjs.scene7.com/is/image/bjs/15571?$bjs-Initial600$", "https://www.kroger.com/product/images/large/front/0000000004555", "https://www.farmfreshxpress.com/cdn/shop/products/GreenCabbage_b72e8489-7a21-4afd-af41-2af752c659c9_1.jpg?v=1655839691", "https://www.freshpoint.com/wp-content/uploads/2020/02/Freshpoint-green-cabbage.jpg"], // URL to the product image
+	image_url: [
+		"https://bjs.scene7.com/is/image/bjs/15571?$bjs-Initial600$",
+		"https://www.kroger.com/product/images/large/front/0000000004555",
+		"https://www.farmfreshxpress.com/cdn/shop/products/GreenCabbage_b72e8489-7a21-4afd-af41-2af752c659c9_1.jpg?v=1655839691",
+		"https://www.freshpoint.com/wp-content/uploads/2020/02/Freshpoint-green-cabbage.jpg",
+	], // URL to the product image
 	rating: 4.5, // UI field for ratings
 };
 
@@ -78,55 +92,64 @@ export default function ProductDetailScreen() {
 	const [currentImageIndex, setCurrentImageIndex] = useState(0);
 	const [product, setProduct] = useState<ProductType>(PLACEHOLDER_PRODUCT);
 	const [loading, setLoading] = useState(true);
-	const screenWidth = Dimensions.get('window').width;
+	const [addingToCart, setAddingToCart] = useState(false);
+	const screenWidth = Dimensions.get("window").width;
 	const scrollViewRef = React.useRef<ScrollView>(null);
+	// Cart functionality
+	const { addToCart, updateCartItem, removeFromCart, getCartItemByProductId } =
+		useCart();
+	const existingCartItem = getCartItemByProductId(id || "");
+	const isInCart = !!existingCartItem;
+
 	useEffect(() => {
 		const fetchProduct = async () => {
 			try {
 				setLoading(true);
-				
+
 				// Fetch the product with the given ID
 				const { data, error } = await supabase
-					.from('product')
-					.select('*')
-					.eq('id', id)
+					.from("product")
+					.select("*")
+					.eq("id", id)
 					.single();
-				
+
 				if (error) {
-					console.error('Error fetching product:', error);
+					console.error("Error fetching product:", error);
 					return; // Keep using placeholder data
 				}
-				
+
 				if (data) {
 					// Fetch business info based on user_id
 					let businessName = "Local Business"; // Default
-					
+
 					if (data.user_id) {
 						const { data: userData, error: userError } = await supabase
-							.from('users')
-							.select('id, username, name')
-							.eq('id', data.user_id)
+							.from("users")
+							.select("id, username, name")
+							.eq("id", data.user_id)
 							.single();
-						
+
 						if (!userError && userData) {
 							businessName = userData.username || userData.name || businessName;
 						}
 					}
-					
+
 					// Process the data to match our UI requirements
 					const formattedProduct = {
 						...data,
 						shop: businessName,
-						originalPrice: data.original_price ? parseFloat(data.original_price) : undefined,
+						originalPrice: data.original_price
+							? parseFloat(data.original_price)
+							: undefined,
 						rating: 4.5, // Default rating since not in DB
 						// Make sure tags is an array with the correct structure
-						tags: Array.isArray(data.tags) ? data.tags : []
+						tags: Array.isArray(data.tags) ? data.tags : [],
 					};
-					
+
 					setProduct(formattedProduct);
 				}
 			} catch (err) {
-				console.error('Error in fetch product:', err);
+				console.error("Error in fetch product:", err);
 				// Keep using placeholder data if there's an error
 			} finally {
 				setLoading(false);
@@ -135,6 +158,13 @@ export default function ProductDetailScreen() {
 
 		fetchProduct();
 	}, [id]);
+
+	// Set initial quantity based on cart item if it exists
+	useEffect(() => {
+		if (existingCartItem && quantity !== existingCartItem.quantity) {
+			setQuantity(existingCartItem.quantity);
+		}
+	}, [existingCartItem, quantity]);
 
 	if (loading) {
 		return (
@@ -145,18 +175,106 @@ export default function ProductDetailScreen() {
 	}
 	// If no product data was found in the database, we'll use the placeholder
 	// Note: This has been removed because we now start with PLACEHOLDER_PRODUCT
-	
+
 	// Ensure image_url is always an array
-	const productImages = Array.isArray(product.image_url) 
-		? product.image_url 
+	const productImages = Array.isArray(product.image_url)
+		? product.image_url
 		: [product.image_url];
-		
 	// Function to scroll to the selected image
 	const scrollToImage = (index: number) => {
 		if (scrollViewRef.current) {
-			scrollViewRef.current.scrollTo({ x: index * screenWidth, animated: true });
+			scrollViewRef.current.scrollTo({
+				x: index * screenWidth,
+				animated: true,
+			});
 			setCurrentImageIndex(index);
 		}
+	};
+
+	// Cart functionality handlers
+	const handleAddToCart = async () => {
+		if (!id) return;
+
+		setAddingToCart(true);
+		try {
+			const success = await addToCart(id, quantity);			if (success) {
+				Alert.alert(
+					"Added to Cart",
+					`${quantity} ${quantity > 1 ? "items" : "item"} added to your cart successfully!`,
+					[
+						{ text: "Continue Shopping", style: "cancel" },
+						{
+							text: "View Cart",
+							onPress: () => router.push("/(protected)/cart-modal"),
+						},
+					],
+				);
+			} else {
+				Alert.alert("Error", "Failed to add item to cart. Please try again.");
+			}
+		} catch (error) {
+			console.error("Error adding to cart:", error);
+			Alert.alert("Error", "Failed to add item to cart. Please try again.");
+		} finally {
+			setAddingToCart(false);
+		}
+	};
+
+	const handleUpdateCartQuantity = async (newQuantity: number) => {
+		if (!existingCartItem) return;
+
+		setAddingToCart(true);
+		try {
+			const success = await updateCartItem(existingCartItem.id, newQuantity);
+			if (success) {
+				Alert.alert("Cart Updated", "Item quantity updated successfully!");
+			} else {
+				Alert.alert("Error", "Failed to update cart. Please try again.");
+			}
+		} catch (error) {
+			console.error("Error updating cart:", error);
+			Alert.alert("Error", "Failed to update cart. Please try again.");
+		} finally {
+			setAddingToCart(false);
+		}
+	};
+
+	const handleRemoveFromCart = async () => {
+		if (!existingCartItem) return;
+
+		Alert.alert(
+			"Remove from Cart",
+			"Are you sure you want to remove this item from your cart?",
+			[
+				{ text: "Cancel", style: "cancel" },
+				{
+					text: "Remove",
+					style: "destructive",
+					onPress: async () => {
+						setAddingToCart(true);
+						try {
+							const success = await removeFromCart(existingCartItem.id);
+							if (success) {
+								Alert.alert("Removed", "Item removed from cart successfully!");
+							} else {
+								Alert.alert(
+									"Error",
+									"Failed to remove item from cart. Please try again.",
+								);
+							}
+						} catch (error) {
+							console.error("Error removing from cart:", error);
+							Alert.alert(
+								"Error",
+								"Failed to remove item from cart. Please try again.",
+							);
+						} finally {
+							setAddingToCart(false);
+						}
+					},
+				},
+			],
+		);
 	};
 
 	// Color variables based on color scheme
@@ -193,13 +311,19 @@ export default function ProductDetailScreen() {
 					showsHorizontalScrollIndicator={false}
 					onMomentumScrollEnd={(event) => {
 						const slideWidth = event.nativeEvent.layoutMeasurement.width;
-						const index = Math.floor(event.nativeEvent.contentOffset.x / slideWidth);
+						const index = Math.floor(
+							event.nativeEvent.contentOffset.x / slideWidth,
+						);
 						setCurrentImageIndex(index);
 					}}
 					className="w-full aspect-square bg-black"
 				>
 					{productImages.map((imageUrl, index) => (
-						<View key={index} className="w-full aspect-square bg-black rounded-2xl overflow-hidden" style={{ width: screenWidth }}>
+						<View
+							key={index}
+							className="w-full aspect-square bg-black rounded-2xl overflow-hidden"
+							style={{ width: screenWidth }}
+						>
 							<Image
 								source={{ uri: imageUrl }}
 								className="w-full h-full rounded-2xl"
@@ -211,14 +335,13 @@ export default function ProductDetailScreen() {
 				{/* Pagination dots */}
 				<View className="flex-row justify-center space-x-1 my-2 gap-2">
 					{productImages.map((_, index) => (
-						<TouchableOpacity 
-							key={index}
-							onPress={() => scrollToImage(index)}
-						>
-							<View 
+						<TouchableOpacity key={index} onPress={() => scrollToImage(index)}>
+							<View
 								className={`h-1.5 rounded-full ${
-									currentImageIndex === index ? 'w-6 bg-green-400' : 'w-1.5 bg-gray-300'
-								}`} 
+									currentImageIndex === index
+										? "w-6 bg-green-400"
+										: "w-1.5 bg-gray-300"
+								}`}
 							/>
 						</TouchableOpacity>
 					))}
@@ -322,7 +445,8 @@ export default function ProductDetailScreen() {
 						<Text className="text-base" style={{ color: mutedTextColor }}>
 							By purchasing this item, you help save
 							<Text className="font-bold text-green-600">
-								{" "}{product.trash} pounds {" "}
+								{" "}
+								{product.trash} pounds{" "}
 							</Text>
 							of food from going to waste.
 						</Text>
@@ -402,9 +526,8 @@ export default function ProductDetailScreen() {
 					</View>
 				</View>
 			</ScrollView>
-			{/* Add to cart button - fixed at bottom */}
+			{/* Cart actions - fixed at bottom */}
 			<View className="p-4 border-t border-gray-200 dark:border-gray-800">
-				
 				<View className="mb-2 flex-row justify-center items-center">
 					<Ionicons name="leaf" size={18} color="green" />
 					<Text className="text-base text-green-600 ml-1">
@@ -412,19 +535,62 @@ export default function ProductDetailScreen() {
 						waste
 					</Text>
 				</View>
-				<Button
-					className="bg-green-500 rounded-full"
-					onPress={() => {
-						// In a real app, we would add the product to the cart state
-						// For now, just show feedback and navigate to the cart
-						router.push("/(protected)/(tabs)/cart");
-					}}
-				>
-					<Text className="text-white font-semibold">
-						Add {quantity > 1 ? `${quantity} items` : "to Cart"} - $
-						{(product.price * quantity).toFixed(2)}
-					</Text>
-				</Button>
+
+				{isInCart ? (
+					// Item is already in cart - show update/remove options
+					<View className="gap-2">
+						<View className="flex-row gap-2">
+							<Button
+								className="flex-1 bg-blue-500 rounded-full"
+								onPress={() => handleUpdateCartQuantity(quantity)}
+								disabled={
+									addingToCart || quantity === existingCartItem?.quantity
+								}
+							>
+								{addingToCart ? (
+									<ActivityIndicator size="small" color="#ffffff" />
+								) : (
+									<Text className="text-white font-semibold">
+										Update Cart ({quantity} items) - $
+										{(product.price * quantity).toFixed(2)}
+									</Text>
+								)}
+							</Button>
+							<Button
+								className="bg-red-500 rounded-full px-4"
+								onPress={handleRemoveFromCart}
+								disabled={addingToCart}
+							>
+								<Ionicons name="trash" size={20} color="white" />
+							</Button>
+						</View>						<Button
+							variant="outline"
+							className="rounded-full"
+							onPress={() => router.push("/(protected)/cart-modal")}
+						>
+							<Text>View Cart</Text>
+						</Button>
+					</View>
+				) : (
+					// Item not in cart - show add to cart button
+					<Button
+						className="bg-green-500 rounded-full"
+						onPress={handleAddToCart}
+						disabled={addingToCart}
+					>
+						{addingToCart ? (
+							<View className="flex-row items-center">
+								<ActivityIndicator size="small" color="#ffffff" />
+								<Text className="text-white font-semibold ml-2">Adding...</Text>
+							</View>
+						) : (
+							<Text className="text-white font-semibold">
+								Add {quantity > 1 ? `${quantity} items` : "to Cart"} - $
+								{(product.price * quantity).toFixed(2)}
+							</Text>
+						)}
+					</Button>
+				)}
 			</View>
 		</SafeAreaView>
 	);

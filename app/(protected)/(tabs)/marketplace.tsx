@@ -1,15 +1,27 @@
 import React, { useState, useEffect, useRef } from "react";
 import { router, useLocalSearchParams } from "expo-router";
-import { Image, ScrollView, TouchableOpacity, View, TextInput, ActivityIndicator, RefreshControl } from "react-native";
-import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withTiming, 
-  withSequence,
-  withDelay,
-  Easing
+import {
+	Image,
+	ScrollView,
+	TouchableOpacity,
+	View,
+	TextInput,
+	ActivityIndicator,
+	RefreshControl,
+} from "react-native";
+import Animated, {
+	useSharedValue,
+	useAnimatedStyle,
+	withTiming,
+	withSequence,
+	withDelay,
+	Easing,
 } from "react-native-reanimated";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/config/supabase";
+import { useCart } from "@/context/cart-provider";
+import { useColorScheme } from "@/lib/useColorScheme";
+import { colors } from "@/constants/colors";
 
 import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
@@ -20,321 +32,379 @@ import { ProductCard } from "@/components/ui/product-card";
 
 // Define the product interface based on our database schema
 interface Product {
-  id: number;
-  name: string;
-  price: number;
-  original_price?: string;
-  description?: string;
-  image_url?: string[];
-  created_at: string;
-  expiry?: string;
-  trash?: number;
-  tags?: { label: string; icon: string }[];
-  user_id: string;
-  // Fields for UI display
-  business?: string;
-  discount?: string;
-  eco?: string;
+	id: number;
+	name: string;
+	price: number;
+	original_price?: string;
+	description?: string;
+	image_url?: string[];
+	created_at: string;
+	expiry?: string;
+	trash?: number;
+	tags?: { label: string; icon: string }[];
+	user_id: string;
+	// Fields for UI display
+	business?: string;
+	discount?: string;
+	eco?: string;
 }
 
 // Food categories (same as Home)
 const foodCategories = [
-  { id: 1, name: "Fruits", icon: "🍎" },
-  { id: 2, name: "Veggies", icon: "🥦" },
-  { id: 3, name: "Bakery", icon: "🍞" },
-  { id: 4, name: "Dairy", icon: "🥛" },
-  { id: 5, name: "Meals", icon: "🍲" },
+	{ id: 1, name: "Fruits", icon: "🍎" },
+	{ id: 2, name: "Veggies", icon: "🥦" },
+	{ id: 3, name: "Bakery", icon: "🍞" },
+	{ id: 4, name: "Dairy", icon: "🥛" },
+	{ id: 5, name: "Meals", icon: "🍲" },
 ];
 
-export default function Marketplace() {  // Get search params to check if we should focus the search input
-  const { focusSearch, timestamp } = useLocalSearchParams();
-  // Reference to the input element
-  const searchInputRef = useRef<React.ElementRef<typeof TextInput>>(null);
-  
-  // State for products from Supabase
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+export default function Marketplace() {
+	// Get search params to check if we should focus the search input
+	const { focusSearch, timestamp } = useLocalSearchParams();
+	// Reference to the input element
+	const searchInputRef = useRef<React.ElementRef<typeof TextInput>>(null);
 
-  // Move fetchProducts outside useEffect for reuse
-  const fetchProducts = async () => {
-    try {
-      setLoading(true);
-      
-      // Fetch the 4 most recently created products
-      const { data, error } = await supabase
-        .from('product')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(40);
-      
-      if (error) {
-        console.error('Error fetching products:', error);
-        return;
-      }
-      
-      if (data) {
-        // Create a map to store user details for each user_id
-        const userIds = data
-          .map(product => product.user_id)
-          .filter(id => id !== null && id !== undefined);
-        
-        // Fetch user information for all products in one query
-        const { data: users, error: usersError } = await supabase
-          .from('users')
-          .select('id, username, name')
-          .in('id', userIds);
-          
-        if (usersError) {
-          console.error('Error fetching users:', usersError);
-        }
-        
-        // Create a lookup map for quick user data access
-        const userMap = new Map();
-        if (users) {
-          users.forEach(user => {
-            userMap.set(user.id, user);
-          });
-        }
-        
-        // Process the data to format it for UI
-        const formattedProducts: Product[] = await Promise.all(data.map(async (product) => {
-          // Calculate discount percentage
-          let discountPercentage = '';
-          if (product.original_price && product.price) {
-            const originalPrice = parseFloat(product.original_price);
-            const savings = originalPrice - product.price;
-            const percentage = Math.round((savings / originalPrice) * 100);
-            discountPercentage = `${percentage}% off`;
-          }
-          
-          // Format eco-friendly info based on trash saved
-          const eco = product.trash ? `Saves ${product.trash}kg CO₂` : undefined;
-          
-          // Get business name from user data
-          let business = "Local Business"; // Default
-          
-          if (product.user_id) {
-            const user = userMap.get(product.user_id);
-            
-            if (user) {
-              // Use username or name, whichever is available
-              business = user.username || user.name || business;
-            }
-          }
-          
-          return {
-            ...product,
-            discount: discountPercentage,
-            eco,
-            business
-          };
-        }));
-        
-        setProducts(formattedProducts);
-      }
-    } catch (error) {
-      console.error('Error fetching products:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+	// Theme
+	const { colorScheme } = useColorScheme();
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+	// State for products from Supabase
+	const [products, setProducts] = useState<Product[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [refreshing, setRefreshing] = useState(false);
 
-  // Handler for pull-to-refresh
-  const onRefresh = async () => {
-    setRefreshing(true);
-    try {
-      await fetchProducts();
-    } finally {
-      setRefreshing(false);
-    }
-  };
+	// Cart functionality
+	const { getTotalItems } = useCart();
 
-  // Animation values for the search bar - always start with initial values
-  const searchBgColor = useSharedValue(0);
-  const searchScale = useSharedValue(0.9);
-  
-  // Animated styles for the search bar
-  const animatedSearchStyle = useAnimatedStyle(() => {
-    const backgroundColor = `rgba(144, 202, 249, ${searchBgColor.value})`;
-    return {
-      backgroundColor,
-      transform: [{ scale: searchScale.value }],
-    };
-  });
-  // Run animation whenever component mounts or when timestamp changes
-  useEffect(() => {
-    // Check if we should animate (coming from home page search)
-    if (focusSearch === "true" && timestamp) {
-      // Reset values to initial state explicitly
-      searchScale.value = 0.9;
-      searchBgColor.value = 0;
-      
-      // Small delay to ensure values are reset before animating
-      setTimeout(() => {
-        // Run scale animation
-        searchScale.value = withSequence(
-          withTiming(1.05, { duration: 200, easing: Easing.out(Easing.quad) }),
-          withTiming(1, { duration: 150 })
-        );
-        
-        // Run background color animation
-        searchBgColor.value = withSequence(
-          withTiming(0.3, { duration: 300 }),
-          withTiming(0, { duration: 700 })
-        );
-        
-        // Focus the input after animation starts
-        setTimeout(() => {
-          if (searchInputRef.current) {
-            searchInputRef.current.focus();
-          }
-        }, 250);
-      }, 50);
-    }
-  }, [focusSearch, timestamp]);
+	// Move fetchProducts outside useEffect for reuse
+	const fetchProducts = async () => {
+		try {
+			setLoading(true);
 
-  return (
-    <SafeAreaView className="flex-1 bg-background">
-      <ScrollView
-        className="flex-1"
-        showsVerticalScrollIndicator={false}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            colors={["#10b981"]}
-            tintColor="#10b981"
-          />
-        }
-      >
-        {/* Header with notification and cart icons, and Marketplace title */}
-        <View className="flex-row justify-between items-center px-4 py-3">
-          <TouchableOpacity onPress={() => router.push("/(protected)/notification-modal")}> 
-            <View className="w-10 h-10 items-center justify-center">
-              <Text className="text-2xl">🔔</Text>
-            </View>
-          </TouchableOpacity>
-          <H1>Marketplace</H1>
-          <TouchableOpacity onPress={() => router.push("/(protected)/(tabs)/cart")}> 
-            <View className="w-10 h-10 items-center justify-center">
-              <Text className="text-2xl">🛒</Text>
-            </View>
-          </TouchableOpacity>
-        </View>
+			// Fetch the 4 most recently created products
+			const { data, error } = await supabase
+				.from("product")
+				.select("*")
+				.order("created_at", { ascending: false })
+				.limit(40);
 
-        {/* Search bar with improved animation and Home's style */}
-        <View className="mb-5" style={{ marginHorizontal: -4 }}>
-          <Animated.View 
-            style={[{ borderRadius: 28 }, animatedSearchStyle]}
-          >
-            <View className="flex-row items-center bg-secondary rounded-full px-4 py-2 border border-secondary/50 shadow-sm w-full">
-              <Text className="text-foreground/60 mr-2">🔍</Text>
-              <Input 
-                ref={searchInputRef}
-                placeholder="Search products" 
-                className="flex-1 bg-transparent border-0 p-0 text-foreground text-base w-full" 
-                placeholderTextColor="#A0A0A0"
-              />
-              <Text className="text-primary text-sm font-medium">Search</Text>
-            </View>
-          </Animated.View>
-        </View>
+			if (error) {
+				console.error("Error fetching products:", error);
+				return;
+			}
 
-        {/* Food categories (icon row) */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          className="pl-4 mb-6"
-        >
-          {foodCategories.map((category) => (
-            <TouchableOpacity
-              key={category.id}
-              className="items-center mr-6"
-            >
-              <View className="w-16 h-16 rounded-full bg-secondary items-center justify-center mb-2">
-                <Text className="text-3xl">{category.icon}</Text>
-              </View>
-              <Text className="text-sm text-center font-medium">{category.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+			if (data) {
+				// Create a map to store user details for each user_id
+				const userIds = data
+					.map((product) => product.user_id)
+					.filter((id) => id !== null && id !== undefined);
 
-        {/* Businesses and products section (keep existing logic) */}
-        <View className="px-4 mb-6">
-          <View className="flex-row justify-between items-center mb-4">
-            <H3>Local Businesses</H3>
-          </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mb-4">
-            {loading ? (
-              <View className="items-center justify-center p-4 w-full">
-                <ActivityIndicator size="small" color="#10b981" />
-              </View>
-            ) : products.length === 0 ? (
-              <View className="p-4">
-                <Text className="text-muted-foreground">No businesses available</Text>
-              </View>
-            ) : (
-              Array.from(new Set(products.map(p => p.business)))
-                .filter(Boolean)
-                .map((business, index) => (
-                  <TouchableOpacity 
-                    key={index} 
-                    className="mr-4 bg-card rounded-xl overflow-hidden shadow-sm" 
-                    style={{ width: 150, elevation: 2 }}
-                  >
-                    <View className="h-20 bg-primary/20 items-center justify-center">
-                      <Text className="text-2xl">🏪</Text>
-                    </View>
-                    <View className="p-3">
-                      <Text className="font-medium">{business}</Text>
-                      <Text className="text-xs text-muted-foreground">Local business</Text>
-                    </View>
-                  </TouchableOpacity>
-                ))
-            )}
-          </ScrollView>
+				// Fetch user information for all products in one query
+				const { data: users, error: usersError } = await supabase
+					.from("users")
+					.select("id, username, name")
+					.in("id", userIds);
 
-          <View className="flex-row justify-between items-center mb-4">
-            <H3>Available Today</H3>
-          </View>
-          <View className="flex-row flex-wrap justify-between">
-            {loading ? (
-              <View className="w-full items-center justify-center py-8">
-                <ActivityIndicator size="large" color="#10b981" />
-                <Text className="mt-4 text-muted-foreground">Loading products...</Text>
-              </View>
-            ) : products.length === 0 ? (
-              <View className="w-full items-center justify-center py-8">
-                <Text className="text-muted-foreground">No products available at the moment</Text>
-              </View>
-            ) : (
-              products.map((product) => (
-                <ProductCard
-                  key={product.id}
-                  image={product.image_url && product.image_url.length > 0 
-                    ? { uri: product.image_url[0] } 
-                    : require("@/assets/foodloop.png")}
-                  name={product.name}
-                  business={product.business || "Local Business"}
-                  price={product.price}
-                  originalPrice={product.original_price ? parseFloat(product.original_price) : 0}
-                  discount={product.discount || ""}
-                  eco={product.eco || "Eco-friendly"}
-                  onPress={() => router.push({
-                    pathname: "/(protected)/product/[id]",
-                    params: { id: product.id }
-                  })}
-                />
-              ))
-            )}
-          </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
-  );
+				if (usersError) {
+					console.error("Error fetching users:", usersError);
+				}
+
+				// Create a lookup map for quick user data access
+				const userMap = new Map();
+				if (users) {
+					users.forEach((user) => {
+						userMap.set(user.id, user);
+					});
+				}
+
+				// Process the data to format it for UI
+				const formattedProducts: Product[] = await Promise.all(
+					data.map(async (product) => {
+						// Calculate discount percentage
+						let discountPercentage = "";
+						if (product.original_price && product.price) {
+							const originalPrice = parseFloat(product.original_price);
+							const savings = originalPrice - product.price;
+							const percentage = Math.round((savings / originalPrice) * 100);
+							discountPercentage = `${percentage}% off`;
+						}
+
+						// Format eco-friendly info based on trash saved
+						const eco = product.trash
+							? `Saves ${product.trash}kg CO₂`
+							: undefined;
+
+						// Get business name from user data
+						let business = "Local Business"; // Default
+
+						if (product.user_id) {
+							const user = userMap.get(product.user_id);
+
+							if (user) {
+								// Use username or name, whichever is available
+								business = user.username || user.name || business;
+							}
+						}
+
+						return {
+							...product,
+							discount: discountPercentage,
+							eco,
+							business,
+						};
+					}),
+				);
+
+				setProducts(formattedProducts);
+			}
+		} catch (error) {
+			console.error("Error fetching products:", error);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	useEffect(() => {
+		fetchProducts();
+	}, []);
+
+	// Handler for pull-to-refresh
+	const onRefresh = async () => {
+		setRefreshing(true);
+		try {
+			await fetchProducts();
+		} finally {
+			setRefreshing(false);
+		}
+	};
+
+	// Animation values for the search bar - always start with initial values
+	const searchBgColor = useSharedValue(0);
+	const searchScale = useSharedValue(0.9);
+
+	// Animated styles for the search bar
+	const animatedSearchStyle = useAnimatedStyle(() => {
+		const backgroundColor = `rgba(144, 202, 249, ${searchBgColor.value})`;
+		return {
+			backgroundColor,
+			transform: [{ scale: searchScale.value }],
+		};
+	});
+	// Run animation whenever component mounts or when timestamp changes
+	useEffect(() => {
+		// Check if we should animate (coming from home page search)
+		if (focusSearch === "true" && timestamp) {
+			// Reset values to initial state explicitly
+			searchScale.value = 0.9;
+			searchBgColor.value = 0;
+
+			// Small delay to ensure values are reset before animating
+			setTimeout(() => {
+				// Run scale animation
+				searchScale.value = withSequence(
+					withTiming(1.05, { duration: 200, easing: Easing.out(Easing.quad) }),
+					withTiming(1, { duration: 150 }),
+				);
+
+				// Run background color animation
+				searchBgColor.value = withSequence(
+					withTiming(0.3, { duration: 300 }),
+					withTiming(0, { duration: 700 }),
+				);
+
+				// Focus the input after animation starts
+				setTimeout(() => {
+					if (searchInputRef.current) {
+						searchInputRef.current.focus();
+					}
+				}, 250);
+			}, 50);
+		}
+	}, [focusSearch, timestamp]);
+
+	return (
+		<SafeAreaView className="flex-1 bg-background">
+			<ScrollView
+				className="flex-1"
+				showsVerticalScrollIndicator={false}
+				refreshControl={
+					<RefreshControl
+						refreshing={refreshing}
+						onRefresh={onRefresh}
+						colors={["#10b981"]}
+						tintColor="#10b981"
+					/>
+				}
+			>
+				{/* Header with notification and cart icons, and Marketplace title */}
+				<View className="flex-row justify-between items-center px-4 py-3">
+					<TouchableOpacity
+						onPress={() => router.push("/(protected)/notification-modal")}
+					>
+						<View className="w-10 h-10 items-center justify-center">
+							<Text className="text-2xl">🔔</Text>
+						</View>
+					</TouchableOpacity>
+					<H1>Marketplace</H1>
+					<TouchableOpacity
+						onPress={() => router.push("/(protected)/cart-modal")}
+						className="w-12 h-12 rounded-full bg-secondary/30 items-center justify-center active:bg-secondary/50"
+						activeOpacity={0.7}
+					>
+						<Text className="text-2xl">🛒</Text>
+						{getTotalItems() > 0 && (
+							<View className="absolute -top-1 -right-1 w-6 h-6 bg-primary rounded-full items-center justify-center border-2 border-background">
+								<Text className="text-black text-xs font-bold">
+									{getTotalItems() > 99 ? "99+" : getTotalItems()}
+								</Text>
+							</View>
+						)}
+					</TouchableOpacity>
+				</View>
+
+				{/* Search bar with improved animation and Home's style */}
+				<View className="mb-5" style={{ marginHorizontal: -4 }}>
+					<Animated.View style={[{ borderRadius: 28 }, animatedSearchStyle]}>
+						<View className="flex-row items-center bg-secondary rounded-full px-4 py-2 border border-secondary/50 shadow-sm w-full">
+							<Text className="text-foreground/60 mr-2">🔍</Text>
+							<Input
+								ref={searchInputRef}
+								placeholder="Search products"
+								className="flex-1 bg-transparent border-0 p-0 text-foreground text-base w-full"
+								placeholderTextColor="#A0A0A0"
+							/>
+							<Text className="text-primary text-sm font-medium">Search</Text>
+						</View>
+					</Animated.View>
+				</View>
+
+				{/* Food categories (icon row) */}
+				<ScrollView
+					horizontal
+					showsHorizontalScrollIndicator={false}
+					className="pl-4 mb-6"
+				>
+					{foodCategories.map((category) => (
+						<TouchableOpacity key={category.id} className="items-center mr-6">
+							<View className="w-16 h-16 rounded-full bg-secondary items-center justify-center mb-2">
+								<Text className="text-3xl">{category.icon}</Text>
+							</View>
+							<Text className="text-sm text-center font-medium">
+								{category.name}
+							</Text>
+						</TouchableOpacity>
+					))}
+				</ScrollView>
+
+				{/* Businesses and products section (keep existing logic) */}
+				<View className="px-4 mb-6">
+					<View className="flex-row justify-between items-center mb-4">
+						<H3>Local Businesses</H3>
+					</View>
+					<ScrollView
+						horizontal
+						showsHorizontalScrollIndicator={false}
+						className="mb-4"
+					>
+						{loading ? (
+							<View className="items-center justify-center p-4 w-full">
+								<ActivityIndicator size="small" color="#10b981" />
+							</View>
+						) : products.length === 0 ? (
+							<View className="p-4">
+								<Text className="text-muted-foreground">
+									No businesses available
+								</Text>
+							</View>
+						) : (
+							Array.from(new Set(products.map((p) => p.business)))
+								.filter(Boolean)
+								.map((business, index) => (
+									<TouchableOpacity
+										key={index}
+										className="mr-4 bg-card rounded-xl overflow-hidden shadow-sm"
+										style={{ width: 150, elevation: 2 }}
+									>
+										<View className="h-20 bg-primary/20 items-center justify-center">
+											<Text className="text-2xl">🏪</Text>
+										</View>
+										<View className="p-3">
+											<Text className="font-medium">{business}</Text>
+											<Text className="text-xs text-muted-foreground">
+												Local business
+											</Text>
+										</View>
+									</TouchableOpacity>
+								))
+						)}
+					</ScrollView>
+
+					<View className="flex-row justify-between items-center mb-4">
+						<H3>Available Today</H3>
+					</View>
+					<View className="flex-row flex-wrap justify-between">
+						{loading ? (
+							<View className="w-full items-center justify-center py-8">
+								<ActivityIndicator size="large" color="#10b981" />
+								<Text className="mt-4 text-muted-foreground">
+									Loading products...
+								</Text>
+							</View>
+						) : products.length === 0 ? (
+							<View className="w-full items-center justify-center py-8">
+								<Text className="text-muted-foreground">
+									No products available at the moment
+								</Text>
+							</View>
+						) : (
+							products.map((product) => (
+								<ProductCard
+									key={product.id}
+									image={
+										product.image_url && product.image_url.length > 0
+											? { uri: product.image_url[0] }
+											: require("@/assets/foodloop.png")
+									}
+									name={product.name}
+									business={product.business || "Local Business"}
+									price={product.price}
+									originalPrice={
+										product.original_price
+											? parseFloat(product.original_price)
+											: 0
+									}
+									discount={product.discount || ""}
+									eco={product.eco || "Eco-friendly"}
+									onPress={() =>
+										router.push({
+											pathname: "/(protected)/product/[id]",
+											params: { id: product.id },
+										})
+									}
+								/>
+							))
+						)}
+					</View>
+				</View>
+			</ScrollView>
+
+			{/* Floating Action Button */}
+			<TouchableOpacity
+				onPress={() => router.push("/(protected)/create-product-modal")}
+				className="absolute bottom-14 right-6 w-16 h-16 rounded-full shadow-lg active:scale-95"
+				style={{
+					backgroundColor: colorScheme === "dark" ? "#10b981" : "#10b981",
+					shadowColor: "#000",
+					shadowOffset: { width: 0, height: 4 },
+					shadowOpacity: 0.7,
+					shadowRadius: 8,
+					elevation: 8,
+				}}
+				activeOpacity={0.8}
+			>
+				<View className="flex-1 items-center justify-center">
+					<Ionicons name="add" size={28} color="#FFFFFF" />
+				</View>
+			</TouchableOpacity>
+		</SafeAreaView>
+	);
 }

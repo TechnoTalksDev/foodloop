@@ -86,7 +86,7 @@ export default function TabsLayout() {
 						createTabBarIcon("basket", focused, color),
 				}}
 			/>
-			<Tabs.Screen
+			{/* <Tabs.Screen
 				name="create-product"
 				options={{
 					title: "Create",
@@ -96,13 +96,13 @@ export default function TabsLayout() {
 					},
 					tabBarLabel: () => null, // This completely removes the label component
 				}}
-			/>
+			/> */}
 			<Tabs.Screen
-				name="cart"
+				name="community"
 				options={{
-					title: "Cart",
+					title: "Forum",
 					tabBarIcon: ({ color, focused }) =>
-						createTabBarIcon("cart", focused, color),
+						createTabBarIcon("globe", focused, color),
 				}}
 			/>
 			<Tabs.Screen

@@ -3,6 +3,7 @@ import "../global.css";
 import { Stack } from "expo-router";
 
 import { AuthProvider } from "@/context/supabase-provider";
+import { CartProvider } from "@/context/cart-provider";
 import { useColorScheme } from "@/lib/useColorScheme";
 import { colors } from "@/constants/colors";
 
@@ -11,6 +12,7 @@ export default function AppLayout() {
 
 	return (
 		<AuthProvider>
+			<CartProvider>
 			<Stack screenOptions={{ headerShown: false, gestureEnabled: false }}>
 				<Stack.Screen name="(protected)" />
 				<Stack.Screen name="welcome" />
@@ -53,6 +55,7 @@ export default function AppLayout() {
 					}}
 				/>
 			</Stack>
+		</CartProvider>
 		</AuthProvider>
 	);
 }
