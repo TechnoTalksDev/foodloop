@@ -108,17 +108,20 @@ export default function SmartPlateAI() {
       timestamp: new Date(),
     };
 
-    setMessages(prev => {
-      const newMessages = [...prev, userMessage];
-      console.log('Added user message, total:', newMessages.length);
+    console.log('Adding user message:', userMessage);
+    setMessages(prevMessages => {
+      const newMessages = [...prevMessages, userMessage];
+      console.log('Updated messages after user:', newMessages.length);
       return newMessages;
     });
 
     setIsLoading(true);
 
     try {
-      // Call API with current messages + user message
+      // Get the current messages including the new user message
       const currentMessages = [...messages, userMessage];
+      console.log('Sending to API with messages:', currentMessages.length);
+      
       const response = await sendMessageToGemini(currentMessages);
       
       // Add assistant message
@@ -129,9 +132,10 @@ export default function SmartPlateAI() {
         timestamp: new Date(),
       };
 
-      setMessages(prev => {
-        const newMessages = [...prev, assistantMessage];
-        console.log('Added assistant message, total:', newMessages.length);
+      console.log('Adding assistant message:', assistantMessage);
+      setMessages(prevMessages => {
+        const newMessages = [...prevMessages, assistantMessage];
+        console.log('Updated messages after assistant:', newMessages.length);
         return newMessages;
       });
 
@@ -143,7 +147,7 @@ export default function SmartPlateAI() {
         content: 'Sorry, there was an error processing your message.',
         timestamp: new Date(),
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages(prevMessages => [...prevMessages, errorMessage]);
     } finally {
       setIsLoading(false);
     }
@@ -155,9 +159,11 @@ export default function SmartPlateAI() {
 
   const clearChat = () => {
     setMessages([]);
+    console.log('Chat cleared');
   };
 
-  console.log('Render: messages count =', messages.length);
+  console.log('Rendering with messages count:', messages.length);
+  console.log('Current messages:', messages.map(m => ({ role: m.role, content: m.content.substring(0, 30) })));
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: bgColor }}>
@@ -192,6 +198,11 @@ export default function SmartPlateAI() {
           keyboardShouldPersistTaps="handled"
         >
           <View className="py-4">
+            {/* Debug info */}
+            <Text style={{ color: 'red', fontSize: 12 }}>
+              Debug: {messages.length} messages
+            </Text>
+            
             {/* Welcome message when no messages */}
             {messages.length === 0 && (
               <>
@@ -233,33 +244,36 @@ export default function SmartPlateAI() {
             )}
 
             {/* Actual messages */}
-            {messages.map((message) => (
-              <View key={message.id} className="mb-4">
-                {message.role === 'user' ? (
-                  // User message
-                  <View className="flex-row justify-end mb-2">
-                    <View className="bg-green-500 max-w-[80%] px-4 py-3 rounded-2xl rounded-tr-sm">
-                      <Text className="text-white">{message.content}</Text>
-                    </View>
-                  </View>
-                ) : (
-                  // Assistant message
-                  <View className="flex-row justify-start mb-2">
-                    <View className="flex-row max-w-[85%]">
-                      <View className="w-8 h-8 bg-green-500 rounded-full items-center justify-center mr-3 mt-1">
-                        <Text className="text-white text-xs">🧠</Text>
-                      </View>
-                      <View className="bg-secondary/50 px-4 py-3 rounded-2xl rounded-tl-sm flex-1">
-                        <Text style={{ color: textColor }}>{message.content}</Text>
-                        <Text className="text-xs mt-2" style={{ color: mutedTextColor }}>
-                          {format(message.timestamp, 'HH:mm')}
-                        </Text>
+            {messages.map((message, index) => {
+              console.log('Rendering message:', index, message.role, message.content.substring(0, 30));
+              return (
+                <View key={message.id} className="mb-4">
+                  {message.role === 'user' ? (
+                    // User message
+                    <View className="flex-row justify-end mb-2">
+                      <View className="bg-green-500 max-w-[80%] px-4 py-3 rounded-2xl rounded-tr-sm">
+                        <Text className="text-white">{message.content}</Text>
                       </View>
                     </View>
-                  </View>
-                )}
-              </View>
-            ))}
+                  ) : (
+                    // Assistant message
+                    <View className="flex-row justify-start mb-2">
+                      <View className="flex-row max-w-[85%]">
+                        <View className="w-8 h-8 bg-green-500 rounded-full items-center justify-center mr-3 mt-1">
+                          <Text className="text-white text-xs">🧠</Text>
+                        </View>
+                        <View className="bg-secondary/50 px-4 py-3 rounded-2xl rounded-tl-sm flex-1">
+                          <Text style={{ color: textColor }}>{message.content}</Text>
+                          <Text className="text-xs mt-2" style={{ color: mutedTextColor }}>
+                            {format(message.timestamp, 'HH:mm')}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  )}
+                </View>
+              );
+            })}
 
             {/* Loading indicator */}
             {isLoading && (
