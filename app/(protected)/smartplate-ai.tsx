@@ -17,6 +17,7 @@ import { H1 } from '@/components/ui/typography';
 import { useColorScheme } from '@/lib/useColorScheme';
 import { colors } from '@/constants/colors';
 import { format } from 'date-fns';
+import Markdown from 'react-native-markdown-display';
 import { useChatContext } from '@/context/chat-provider';
 
 const SUGGESTED_PROMPTS = [
@@ -40,6 +41,7 @@ export default function SmartPlateAI() {
   const bgColor = colorScheme === 'dark' ? colors.dark.background : colors.light.background;
   const mutedTextColor = colorScheme === 'dark' ? colors.dark.mutedForeground : colors.light.mutedForeground;
   const borderColor = colorScheme === 'dark' ? colors.dark.border : colors.light.border;
+  const secondaryBg = colorScheme === 'dark' ? colors.dark.secondary : colors.light.secondary;
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -57,16 +59,129 @@ export default function SmartPlateAI() {
     setInputText('');
     Keyboard.dismiss();
 
-    // Use the context's sendMessage function
     await sendMessage(messageText);
   };
 
   const handleSuggestedPrompt = (prompt: string) => {
     setInputText(prompt);
+    inputRef.current?.focus();
   };
 
-  console.log('Rendering with messages count:', messages.length);
-  console.log('Current messages:', messages.map(m => ({ role: m.role, content: m.content.substring(0, 30) })));
+  const renderMessage = (message: any, index: number) => {
+    const isUser = message.role === 'user';
+    const isLastMessage = index === messages.length - 1;
+    
+    return (
+      <View 
+        key={message.id || index}
+        className={`mb-4 ${isUser ? 'items-end' : 'items-start'}`}
+      >
+        <View className={`flex-row max-w-[85%] ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+          {/* Avatar */}
+          <View className={`w-8 h-8 rounded-full items-center justify-center ${isUser ? 'ml-3' : 'mr-3'} mt-1`}>
+            {isUser ? (
+              <View className="w-8 h-8 bg-primary rounded-full items-center justify-center">
+                <Text className="text-primary-foreground text-xs font-bold">You</Text>
+              </View>
+            ) : (
+              <View className="w-8 h-8 bg-green-500 rounded-full items-center justify-center">
+                <Text className="text-white text-xs">🧠</Text>
+              </View>
+            )}
+          </View>
+          
+          {/* Message bubble */}
+          <View 
+            className={`px-4 py-3 rounded-2xl flex-1 ${
+              isUser 
+                ? 'bg-primary rounded-tr-sm' 
+                : 'rounded-tl-sm'
+            }`}
+            style={{
+              backgroundColor: isUser 
+                ? colorScheme === 'dark' ? colors.dark.primary : colors.light.primary
+                : colorScheme === 'dark' ? colors.dark.secondary + '80' : colors.light.secondary
+            }}
+          >
+            <Text 
+              className={`text-base leading-6 ${
+                isUser 
+                  ? 'text-primary-foreground' 
+                  : ''
+              }`}
+              style={{ 
+                color: isUser 
+                  ? colorScheme === 'dark' ? colors.dark.primaryForeground : colors.light.primaryForeground
+                  : textColor 
+              }}
+            >
+              {isUser ? (
+                message.content
+              ) : (
+                <Markdown
+                  style={{
+                    body: {
+                      color: textColor,
+                      fontSize: 16,
+                      lineHeight: 24,
+                    },
+                    paragraph: {
+                      marginTop: 0,
+                      marginBottom: 8,
+                    },
+                    strong: {
+                      fontWeight: 'bold',
+                    },
+                    em: {
+                      fontStyle: 'italic',
+                    },
+                    code_inline: {
+                      backgroundColor: colorScheme === 'dark' ? colors.dark.muted : colors.light.muted,
+                      paddingHorizontal: 4,
+                      paddingVertical: 2,
+                      borderRadius: 4,
+                      fontSize: 14,
+                    },
+                    code_block: {
+                      backgroundColor: colorScheme === 'dark' ? colors.dark.muted : colors.light.muted,
+                      padding: 12,
+                      borderRadius: 8,
+                      fontSize: 14,
+                    },
+                    bullet_list: {
+                      marginVertical: 4,
+                    },
+                    ordered_list: {
+                      marginVertical: 4,
+                    },
+                    list_item: {
+                      marginVertical: 2,
+                    },
+                  }}
+                >
+                  {message.content}
+                </Markdown>
+              )}
+            </Text>
+            
+            {/* Timestamp */}
+            <Text 
+              className={`text-xs mt-2 ${
+                isUser ? 'text-primary-foreground/70' : ''
+              }`}
+              style={{
+                color: isUser
+                  ? colorScheme === 'dark' ? colors.dark.primaryForeground + '80' : colors.light.primaryForeground + '80'
+                  : mutedTextColor
+              }}
+            >
+              {message.timestamp ? format(new Date(message.timestamp), 'h:mm a') : format(new Date(), 'h:mm a')}
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: bgColor }}>
@@ -80,7 +195,7 @@ export default function SmartPlateAI() {
           <View className="w-8 h-8 bg-green-500 rounded-full items-center justify-center mr-2">
             <Text className="text-white text-sm font-bold">🧠</Text>
           </View>
-          <H1 className="text-lg">SmartPlate AI ({messages.length})</H1>
+          <H1 className="text-lg">SmartPlate AI</H1>
         </View>
 
         <TouchableOpacity onPress={clearChat}>
@@ -101,40 +216,24 @@ export default function SmartPlateAI() {
           keyboardShouldPersistTaps="handled"
         >
           <View className="py-4">
-            {/* Debug info */}
-            <View style={{ backgroundColor: 'yellow', padding: 10, marginBottom: 10 }}>
-              <Text style={{ color: 'black', fontSize: 14, fontWeight: 'bold' }}>
-                DEBUG: {messages.length} messages (from context)
-              </Text>
-              {messages.map((msg, i) => (
-                <Text key={i} style={{ color: 'black', fontSize: 12 }}>
-                  {i}: {msg.role} - {msg.content?.substring(0, 50) || 'NO CONTENT'}...
-                </Text>
-              ))}
-            </View>
-            
-            {/* Test message - always visible */}
-            <View className="mb-4 p-4" style={{ backgroundColor: 'blue' }}>
-              <Text style={{ color: 'white' }}>TEST MESSAGE - Always visible (using context)</Text>
-            </View>
-            
             {/* Welcome message when no messages */}
             {messages.length === 0 && (
               <>
-                <View className="mb-4 mt-2">
-                  <View className="flex-row justify-start mb-2">
-                    <View className="flex-row max-w-[85%]">
-                      <View className="w-8 h-8 bg-green-500 rounded-full items-center justify-center mr-3 mt-1">
-                        <Text className="text-white text-xs">🧠</Text>
-                      </View>
-                      <View className="bg-secondary/50 px-4 py-3 rounded-2xl rounded-tl-sm flex-1">
-                        <Text style={{ color: textColor }}>
-                          Hello! I'm SmartPlate AI, your sustainable food assistant. I can help you with recipes, reduce food waste, and give you eco-friendly cooking tips. What would you like to know?
-                        </Text>
-                        <Text className="text-xs mt-2" style={{ color: mutedTextColor }}>
-                          {format(new Date(), 'HH:mm')}
-                        </Text>
-                      </View>
+                <View className="mb-4 mt-2 items-start">
+                  <View className="flex-row max-w-[85%]">
+                    <View className="w-8 h-8 bg-green-500 rounded-full items-center justify-center mr-3 mt-1">
+                      <Text className="text-white text-xs">🧠</Text>
+                    </View>
+                    <View 
+                      className="px-4 py-3 rounded-2xl rounded-tl-sm flex-1"
+                      style={{ backgroundColor: secondaryBg + '80' }}
+                    >
+                      <Text style={{ color: textColor }}>
+                        Hello! I'm SmartPlate AI, your sustainable food assistant. I can help you with recipes, reduce food waste, and give you eco-friendly cooking tips. What would you like to know?
+                      </Text>
+                      <Text className="text-xs mt-2" style={{ color: mutedTextColor }}>
+                        {format(new Date(), 'h:mm a')}
+                      </Text>
                     </View>
                   </View>
                 </View>
@@ -148,8 +247,11 @@ export default function SmartPlateAI() {
                     <TouchableOpacity
                       key={index}
                       onPress={() => handleSuggestedPrompt(prompt)}
-                      className="bg-secondary/30 p-3 rounded-xl mb-2 border"
-                      style={{ borderColor: borderColor }}
+                      className="p-3 rounded-xl mb-2 border"
+                      style={{ 
+                        backgroundColor: secondaryBg + '30',
+                        borderColor: borderColor 
+                      }}
                     >
                       <Text style={{ color: textColor }}>{prompt}</Text>
                     </TouchableOpacity>
@@ -158,58 +260,26 @@ export default function SmartPlateAI() {
               </>
             )}
 
-            {/* Actual messages - SIMPLIFIED */}
-            {messages.length > 0 && (
-              <View style={{ backgroundColor: 'red', padding: 10, marginBottom: 10 }}>
-                <Text style={{ color: 'white', fontWeight: 'bold' }}>
-                  MESSAGES SECTION ({messages.length} messages from context):
-                </Text>
-              </View>
-            )}
-            
-            {messages.map((message, index) => {
-              console.log('Rendering message:', index, message.role, message.content);
-              
-              // Add safety check for message content
-              if (!message || !message.content) {
-                console.log('Skipping empty message:', message);
-                return null;
-              }
-              
-              return (
-                <View 
-                  key={message.id} 
-                  style={{ 
-                    backgroundColor: message.role === 'user' ? 'green' : 'blue',
-                    padding: 10,
-                    marginBottom: 10,
-                    borderRadius: 8
-                  }}
-                >
-                  <Text style={{ color: 'white', fontWeight: 'bold' }}>
-                    {message.role?.toUpperCase() || 'UNKNOWN'}:
-                  </Text>
-                  <Text style={{ color: 'white' }}>
-                    {message.content || 'NO CONTENT'}
-                  </Text>
-                  <Text style={{ color: 'lightgray', fontSize: 10 }}>
-                    {message.timestamp ? message.timestamp.toLocaleTimeString() : 'NO TIME'}
-                  </Text>
-                </View>
-              );
-            })}
+            {/* Chat messages */}
+            {messages.map((message, index) => renderMessage(message, index))}
 
             {/* Loading indicator */}
             {isLoading && (
-              <View className="flex-row justify-start mb-4">
+              <View className="items-start mb-4">
                 <View className="flex-row max-w-[85%]">
                   <View className="w-8 h-8 bg-green-500 rounded-full items-center justify-center mr-3 mt-1">
                     <Text className="text-white text-xs">🧠</Text>
                   </View>
-                  <View className="bg-secondary/50 px-4 py-3 rounded-2xl rounded-tl-sm">
-                    <ActivityIndicator size="small" color={textColor} />
+                  <View 
+                    className="px-4 py-3 rounded-2xl rounded-tl-sm"
+                    style={{ backgroundColor: secondaryBg + '80' }}
+                  >
+                    <View className="flex-row items-center">
+                      <ActivityIndicator size="small" color={textColor} />
+                      <Text className="ml-2" style={{ color: textColor }}>Thinking...</Text>
+                    </View>
                     <Text className="text-xs mt-2" style={{ color: mutedTextColor }}>
-                      Thinking...
+                      {format(new Date(), 'h:mm a')}
                     </Text>
                   </View>
                 </View>
@@ -232,7 +302,7 @@ export default function SmartPlateAI() {
                 style={{ 
                   color: textColor, 
                   borderColor: borderColor,
-                  backgroundColor: colorScheme === 'dark' ? colors.dark.secondary : colors.light.secondary
+                  backgroundColor: secondaryBg
                 }}
                 multiline
                 maxLength={500}

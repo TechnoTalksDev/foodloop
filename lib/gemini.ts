@@ -30,16 +30,11 @@ export class GeminiService {
 
   async sendMessage(messages: ChatMessage[]): Promise<string> {
     try {
-      console.log('🚀 Sending message to Gemini API...');
-      console.log('📝 Input messages:', messages);
-
       // Convert our chat format to Gemini's expected format
       const geminiMessages = messages.map(msg => ({
         role: msg.role === 'assistant' ? 'model' : 'user',
         parts: [{ text: msg.content }]
       }));
-
-      console.log('🔄 Converted to Gemini format:', geminiMessages);
 
       const requestBody = {
         contents: geminiMessages,
@@ -66,11 +61,13 @@ export class GeminiService {
             category: "HARM_CATEGORY_DANGEROUS_CONTENT",
             threshold: "BLOCK_MEDIUM_AND_ABOVE"
           }
-        ]
+        ],
+        systemInstruction: {
+          parts: [{
+            text: "You are SmartPlate AI, a helpful assistant focused on sustainable food practices, reducing food waste, and eco-friendly cooking. Provide practical, actionable advice while being friendly and encouraging. Keep responses concise but informative."
+          }]
+        }
       };
-
-      console.log('📤 Request body:', JSON.stringify(requestBody, null, 2));
-      console.log('🔗 API URL:', `${GEMINI_API_URL}?key=${API_KEY.substring(0, 10)}...`);
 
       const response = await fetch(`${GEMINI_API_URL}?key=${API_KEY}`, {
         method: 'POST',
@@ -80,33 +77,25 @@ export class GeminiService {
         body: JSON.stringify(requestBody),
       });
 
-      console.log('📥 Response status:', response.status);
-      console.log('📥 Response headers:', response.headers);
-
       if (!response.ok) {
         const errorData = await response.text();
-        console.error('❌ Gemini API Error Response:', errorData);
-        throw new Error(`Gemini API Error: ${response.status} ${response.statusText} - ${errorData}`);
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
       }
 
       const data: GeminiResponse = await response.json();
-      console.log('📦 Gemini API Response:', JSON.stringify(data, null, 2));
       
       if (!data.candidates || data.candidates.length === 0) {
-        console.error('❌ No candidates in response:', data);
-        throw new Error('No response from Gemini API');
+        throw new Error('No response from AI service');
       }
 
       if (!data.candidates[0].content || !data.candidates[0].content.parts || data.candidates[0].content.parts.length === 0) {
-        console.error('❌ Invalid response structure:', data.candidates[0]);
-        throw new Error('Invalid response structure from Gemini API');
+        throw new Error('Invalid response structure from AI service');
       }
 
       const responseText = data.candidates[0].content.parts[0].text;
-      console.log('✅ Successfully extracted response text:', responseText);
       return responseText;
     } catch (error) {
-      console.error('🔥 Error calling Gemini API:', error);
+      console.error('Error calling AI service:', error);
       throw error;
     }
   }

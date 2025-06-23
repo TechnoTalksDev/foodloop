@@ -37,21 +37,13 @@ export const ChatProvider: React.FC<PropsWithChildren> = ({ children }) => {
     };
 
     // Add user message immediately
-    setMessages(prevMessages => {
-      const newMessages = [...prevMessages, userMessage];
-      console.log('Added user message, total messages:', newMessages.length);
-      return newMessages;
-    });
-    
+    setMessages(prevMessages => [...prevMessages, userMessage]);
     setIsLoading(true);
 
     try {
       // Get current messages for API call
       const currentMessages = [...messages, userMessage];
-      console.log('Sending to API, message count:', currentMessages.length);
-      
       const response = await geminiService.sendMessage(currentMessages);
-      console.log('API response received:', response.substring(0, 50) + '...');
       
       const assistantMessage: ChatMessage = {
         id: nanoid(),
@@ -61,12 +53,7 @@ export const ChatProvider: React.FC<PropsWithChildren> = ({ children }) => {
       };
 
       // Add assistant message
-      setMessages(prevMessages => {
-        const newMessages = [...prevMessages, assistantMessage];
-        console.log('Added assistant message, total messages:', newMessages.length);
-        console.log('All messages:', newMessages.map(m => ({ role: m.role, content: m.content.substring(0, 30) })));
-        return newMessages;
-      });
+      setMessages(prevMessages => [...prevMessages, assistantMessage]);
       
     } catch (error) {
       console.error('Error sending message:', error);
@@ -74,7 +61,7 @@ export const ChatProvider: React.FC<PropsWithChildren> = ({ children }) => {
       const errorMessage: ChatMessage = {
         id: nanoid(),
         role: 'assistant',
-        content: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        content: 'Sorry, I encountered an error. Please try again.',
         timestamp: new Date(),
       };
 
@@ -82,7 +69,7 @@ export const ChatProvider: React.FC<PropsWithChildren> = ({ children }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [isLoading, geminiService]); // Removed messages dependency to avoid stale closure
+  }, [messages, isLoading, geminiService]);
 
   const generateRecipes = useCallback(async (ingredients: string[]) => {
     if (ingredients.length === 0 || isLoading) return;
