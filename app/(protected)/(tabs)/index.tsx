@@ -153,13 +153,6 @@ export default function Home() {
 					</TouchableOpacity>
 				</View>
 
-				{/* Large Hey {username} text, not in a card */}
-				{/* <View className="px-4 mt-2 mb-4">
-					<Text className="text-4xl font-semibold mb-2">
-						Hey {loadingUser ? "..." : username}!
-					</Text>
-				</View> */}
-
 				{/* Daily Check-In Widget - Redesigned */}
 				<TouchableOpacity 
 					className="mx-4 mb-6 p-5 bg-secondary/30 rounded-2xl shadow border border-border"
@@ -273,12 +266,12 @@ export default function Home() {
 					</View>
 				</View>
 				
-				{/* SmartPlate AI section - Redesigned */}
+				{/* SmartPlate AI section - Updated with navigation */}
 				<View className="mx-4 mb-6 rounded-2xl border border-border overflow-hidden">
 					<View className="bg-green-900 p-5 pb-6">
 						<View className="flex-row items-center mb-3">
 							<View className="w-12 h-12 bg-green-600 rounded-full items-center justify-center mr-3">
-								<Text className="text-2xl">🍽️</Text>
+								<Text className="text-2xl">🧠</Text>
 							</View>
 							<View>
 								<H3 className="text-white">SmartPlate AI</H3>
@@ -287,7 +280,7 @@ export default function Home() {
 						</View>
 						
 						<Text className="text-green-50 mb-4">
-							Get personalized recipes based on ingredients you already have at home
+							Get personalized recipes and sustainability tips from our AI assistant
 						</Text>
 					</View>
 					
@@ -296,10 +289,11 @@ export default function Home() {
 							className="w-full"
 							variant="default"
 							size="default"
+							onPress={() => router.push("/(protected)/smartplate-ai")}
 						>
 							<View className="flex-row items-center">
 								<Text className="text-xl mr-2">🧠</Text>
-								<Text className="text-primary-foreground font-medium">Generate Recipes</Text>
+								<Text className="text-primary-foreground font-medium">Chat with AI</Text>
 							</View>
 						</Button>
 						
@@ -338,7 +332,6 @@ export default function Home() {
 				</View>
 				
 			</ScrollView>
-
 
 			{/* Tab navigation is handled by the parent layout */}
 		</SafeAreaView>
