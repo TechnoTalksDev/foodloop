@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, PropsWithChildren } from 'react';
-import { ChatMessage, GeminiService } from '@/lib/gemini';
+import { ChatMessage, GeminiService, ProductSuggestion } from '@/lib/gemini';
 import { nanoid } from 'nanoid';
 
 interface ChatContextType {
@@ -10,6 +10,7 @@ interface ChatContextType {
   generateRecipes: (ingredients: string[]) => Promise<void>;
   getSustainabilityTips: () => Promise<void>;
   analyzeImage: (imageBase64: string, context?: string) => Promise<void>;
+  searchProducts: (query: string) => Promise<ProductSuggestion[]>;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -45,13 +46,14 @@ export const ChatProvider: React.FC<PropsWithChildren> = ({ children }) => {
     try {
       // Get current messages for API call
       const currentMessages = [...messages, userMessage];
-      const response = await geminiService.sendMessage(currentMessages);
+      const result = await geminiService.sendMessage(currentMessages);
       
       const assistantMessage: ChatMessage = {
         id: nanoid(),
         role: 'assistant',
-        content: response,
+        content: result.response,
         timestamp: new Date(),
+        productSuggestions: result.productSuggestions
       };
 
       // Add assistant message
@@ -79,13 +81,14 @@ export const ChatProvider: React.FC<PropsWithChildren> = ({ children }) => {
     setIsLoading(true);
 
     try {
-      const response = await geminiService.generateRecipes(ingredients);
+      const result = await geminiService.generateRecipes(ingredients);
       
       const assistantMessage: ChatMessage = {
         id: nanoid(),
         role: 'assistant',
-        content: response,
+        content: result.response,
         timestamp: new Date(),
+        productSuggestions: result.productSuggestions
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -111,13 +114,14 @@ export const ChatProvider: React.FC<PropsWithChildren> = ({ children }) => {
     setIsLoading(true);
 
     try {
-      const response = await geminiService.getSustainabilityTips();
+      const result = await geminiService.getSustainabilityTips();
       
       const assistantMessage: ChatMessage = {
         id: nanoid(),
         role: 'assistant',
-        content: response,
+        content: result.response,
         timestamp: new Date(),
+        productSuggestions: result.productSuggestions
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -154,13 +158,14 @@ export const ChatProvider: React.FC<PropsWithChildren> = ({ children }) => {
     setMessages(prev => [...prev, userMessage]);
 
     try {
-      const response = await geminiService.analyzeImage(imageBase64, context);
+      const result = await geminiService.analyzeImage(imageBase64, context);
       
       const assistantMessage: ChatMessage = {
         id: nanoid(),
         role: 'assistant',
-        content: response,
+        content: result.response,
         timestamp: new Date(),
+        productSuggestions: result.productSuggestions
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -180,6 +185,15 @@ export const ChatProvider: React.FC<PropsWithChildren> = ({ children }) => {
     }
   }, [isLoading, geminiService]);
 
+  const searchProducts = useCallback(async (query: string): Promise<ProductSuggestion[]> => {
+    try {
+      return await geminiService.searchProducts(query);
+    } catch (error) {
+      console.error('Error searching products:', error);
+      return [];
+    }
+  }, [geminiService]);
+
   const clearChat = useCallback(() => {
     setMessages([]);
   }, []);
@@ -194,6 +208,7 @@ export const ChatProvider: React.FC<PropsWithChildren> = ({ children }) => {
         generateRecipes,
         getSustainabilityTips,
         analyzeImage,
+        searchProducts,
       }}
     >
       {children}

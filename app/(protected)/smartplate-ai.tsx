@@ -10,7 +10,6 @@ import {
   ActivityIndicator,
   Image,
   Alert,
-  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +22,7 @@ import { colors } from '@/constants/colors';
 import { format } from 'date-fns';
 import Markdown from 'react-native-markdown-display';
 import { useChatContext } from '@/context/chat-provider';
+import { ProductSuggestion } from '@/lib/gemini';
 
 const SUGGESTED_PROMPTS = [
   "What can I make with leftover vegetables?",
@@ -73,7 +73,6 @@ export default function SmartPlateAI() {
 
   const handleSuggestedPrompt = (prompt: string) => {
     if (prompt.includes('📸')) {
-      // This is the photo prompt, show image picker options
       showImagePickerOptions();
     } else {
       setInputText(prompt);
@@ -148,6 +147,65 @@ export default function SmartPlateAI() {
 
   const removeImage = (index: number) => {
     setSelectedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleProductPress = (productId: string) => {
+    router.push({
+      pathname: "/(protected)/product/[id]",
+      params: { id: productId },
+    });
+  };
+
+  const renderProductSuggestions = (productSuggestions: ProductSuggestion[]) => {
+    if (!productSuggestions || productSuggestions.length === 0) return null;
+
+    return (
+      <View className="mt-4">
+        <View className="flex-row items-center mb-3">
+          <Ionicons name="storefront" size={16} color="#10b981" />
+          <Text className="ml-2 font-semibold text-green-600 text-sm">
+            Available on FoodLoop
+          </Text>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {productSuggestions.map((product, index) => (
+            <TouchableOpacity
+              key={product.id}
+              onPress={() => handleProductPress(product.id)}
+              className="mr-3 w-40 bg-card rounded-lg border border-border overflow-hidden"
+              style={{ backgroundColor: secondaryBg + '40' }}
+            >
+              {product.image_url && (
+                <Image
+                  source={{ uri: product.image_url }}
+                  className="w-full h-24"
+                  resizeMode="cover"
+                />
+              )}
+              <View className="p-3">
+                <Text className="font-medium text-sm" style={{ color: textColor }} numberOfLines={2}>
+                  {product.name}
+                </Text>
+                <Text className="text-xs mt-1" style={{ color: mutedTextColor }}>
+                  {product.business}
+                </Text>
+                <View className="flex-row items-center justify-between mt-2">
+                  <Text className="font-bold text-green-600">
+                    ${product.price.toFixed(2)}
+                  </Text>
+                  <View className="bg-green-100 px-2 py-1 rounded">
+                    <Text className="text-green-700 text-xs font-medium">Buy</Text>
+                  </View>
+                </View>
+                <Text className="text-xs mt-1" style={{ color: mutedTextColor }} numberOfLines={2}>
+                  {product.relevance_reason}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
+    );
   };
 
   const renderMessage = (message: any, index: number) => {
@@ -259,6 +317,9 @@ export default function SmartPlateAI() {
                 {message.content}
               </Markdown>
             )}
+
+            {/* Product suggestions for AI messages */}
+            {!isUser && message.productSuggestions && renderProductSuggestions(message.productSuggestions)}
             
             {/* Timestamp */}
             <Text 
@@ -325,7 +386,7 @@ export default function SmartPlateAI() {
                       style={{ backgroundColor: secondaryBg + '80' }}
                     >
                       <Text style={{ color: textColor }}>
-                        Hello! I'm SmartPlate AI, your sustainable food assistant. I can help you with recipes, reduce food waste, give eco-friendly cooking tips, and analyze images of plants and food. What would you like to know?
+                        Hello! I'm SmartPlate AI, your sustainable food assistant. I can help you with recipes, reduce food waste, give eco-friendly cooking tips, and analyze images of plants and food. I can also recommend products from the FoodLoop marketplace! What would you like to know?
                       </Text>
                       <Text className="text-xs mt-2" style={{ color: mutedTextColor }}>
                         {format(new Date(), 'h:mm a')}
