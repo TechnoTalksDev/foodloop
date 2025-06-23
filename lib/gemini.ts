@@ -32,6 +32,7 @@ export interface MarketplaceProduct {
   user_id: string;
   tags: any[];
   amount: number;
+  business?: string;
 }
 
 export interface GeminiResponse {

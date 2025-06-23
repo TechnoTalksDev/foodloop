@@ -8,13 +8,14 @@ import {
 	TextInput,
 	ActivityIndicator,
 	RefreshControl,
+	Modal,
+	Alert,
 } from "react-native";
 import Animated, {
 	useSharedValue,
 	useAnimatedStyle,
 	withTiming,
 	withSequence,
-	withDelay,
 	Easing,
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
@@ -27,10 +28,9 @@ import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
 import { H1, H3, Muted } from "@/components/ui/typography";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ProductCard } from "@/components/ui/product-card";
 
-// Define the product interface based on our database schema
+// Enhanced Product interface
 interface Product {
 	id: number;
 	name: string;
@@ -43,141 +43,74 @@ interface Product {
 	trash?: number;
 	tags?: { label: string; icon: string }[];
 	user_id: string;
-	// Fields for UI display
+	location: string;
+	amount: number;
 	business?: string;
 	discount?: string;
 	eco?: string;
+	distance?: number;
 }
 
-// Food categories (same as Home)
+interface FilterOptions {
+	category: string[];
+	priceRange: [number, number];
+	location: string;
+	tags: string[];
+	sortBy: 'newest' | 'price_low' | 'price_high' | 'expiry' | 'distance';
+	searchQuery: string;
+}
+
+// Food categories with enhanced filtering
 const foodCategories = [
-	{ id: 1, name: "Fruits", icon: "🍎" },
-	{ id: 2, name: "Veggies", icon: "🥦" },
-	{ id: 3, name: "Bakery", icon: "🍞" },
-	{ id: 4, name: "Dairy", icon: "🥛" },
-	{ id: 5, name: "Meals", icon: "🍲" },
+	{ id: "all", name: "All", icon: "🍽️" },
+	{ id: "fruits", name: "Fruits", icon: "🍎" },
+	{ id: "vegetables", name: "Veggies", icon: "🥦" },
+	{ id: "bakery", name: "Bakery", icon: "🍞" },
+	{ id: "dairy", name: "Dairy", icon: "🥛" },
+	{ id: "meals", name: "Meals", icon: "🍲" },
+	{ id: "beverages", name: "Drinks", icon: "🧃" },
+	{ id: "snacks", name: "Snacks", icon: "🍪" },
+];
+
+const sortOptions = [
+	{ id: 'newest', label: 'Newest First', icon: 'time' },
+	{ id: 'price_low', label: 'Price: Low to High', icon: 'arrow-up' },
+	{ id: 'price_high', label: 'Price: High to Low', icon: 'arrow-down' },
+	{ id: 'expiry', label: 'Expiring Soon', icon: 'hourglass' },
+	{ id: 'distance', label: 'Nearest First', icon: 'location' },
+];
+
+const commonTags = [
+	'Organic', 'Local', 'Vegetarian', 'Vegan', 'Gluten Free', 
+	'Fresh', 'Sustainable', 'Farm Fresh', 'Artisan', 'Seasonal'
 ];
 
 export default function Marketplace() {
-	// Get search params to check if we should focus the search input
 	const { focusSearch, timestamp } = useLocalSearchParams();
-	// Reference to the input element
 	const searchInputRef = useRef<React.ElementRef<typeof TextInput>>(null);
-
-	// Theme
 	const { colorScheme } = useColorScheme();
 
-	// State for products from Supabase
+	// State for products and filtering
 	const [products, setProducts] = useState<Product[]>([]);
+	const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [refreshing, setRefreshing] = useState(false);
+	const [showFilters, setShowFilters] = useState(false);
+
+	// Filter state
+	const [filters, setFilters] = useState<FilterOptions>({
+		category: [],
+		priceRange: [0, 100],
+		location: '',
+		tags: [],
+		sortBy: 'newest',
+		searchQuery: ''
+	});
 
 	// Cart functionality
 	const { getTotalItems } = useCart();
 
-	// Move fetchProducts outside useEffect for reuse
-	const fetchProducts = async () => {
-		try {
-			setLoading(true);
-
-			// Fetch the 4 most recently created products
-			const { data, error } = await supabase
-				.from("product")
-				.select("*")
-				.order("created_at", { ascending: false })
-				.limit(40);
-
-			if (error) {
-				console.error("Error fetching products:", error);
-				return;
-			}
-
-			if (data) {
-				// Create a map to store user details for each user_id
-				const userIds = data
-					.map((product) => product.user_id)
-					.filter((id) => id !== null && id !== undefined);
-
-				// Fetch user information for all products in one query
-				const { data: users, error: usersError } = await supabase
-					.from("users")
-					.select("id, username, name")
-					.in("id", userIds);
-
-				if (usersError) {
-					console.error("Error fetching users:", usersError);
-				}
-
-				// Create a lookup map for quick user data access
-				const userMap = new Map();
-				if (users) {
-					users.forEach((user) => {
-						userMap.set(user.id, user);
-					});
-				}
-
-				// Process the data to format it for UI
-				const formattedProducts: Product[] = await Promise.all(
-					data.map(async (product) => {
-						// Calculate discount percentage
-						let discountPercentage = "";
-						if (product.original_price && product.price) {
-							const originalPrice = parseFloat(product.original_price);
-							const savings = originalPrice - product.price;
-							const percentage = Math.round((savings / originalPrice) * 100);
-							discountPercentage = `${percentage}% off`;
-						}
-
-						// Format eco-friendly info based on trash saved
-						const eco = product.trash
-							? `Saves ${product.trash}kg CO₂`
-							: undefined;
-
-						// Get business name from user data
-						let business = "Local Business"; // Default
-
-						if (product.user_id) {
-							const user = userMap.get(product.user_id);
-
-							if (user) {
-								// Use username or name, whichever is available
-								business = user.username || user.name || business;
-							}
-						}
-
-						return {
-							...product,
-							discount: discountPercentage,
-							eco,
-							business,
-						};
-					}),
-				);
-
-				setProducts(formattedProducts);
-			}
-		} catch (error) {
-			console.error("Error fetching products:", error);
-		} finally {
-			setLoading(false);
-		}
-	};
-
-	useEffect(() => {
-		fetchProducts();
-	}, []);
-
-	// Handler for pull-to-refresh
-	const onRefresh = async () => {
-		setRefreshing(true);
-		try {
-			await fetchProducts();
-		} finally {
-			setRefreshing(false);
-		}
-	};
-
-	// Animation values for the search bar - always start with initial values
+	// Animation values for the search bar
 	const searchBgColor = useSharedValue(0);
 	const searchScale = useSharedValue(0.9);
 
@@ -189,29 +122,236 @@ export default function Marketplace() {
 			transform: [{ scale: searchScale.value }],
 		};
 	});
-	// Run animation whenever component mounts or when timestamp changes
+
+	const fetchProducts = async () => {
+		try {
+			setLoading(true);
+
+			const { data, error } = await supabase
+				.from("product")
+				.select("*")
+				.gt('amount', 0)
+				.order("created_at", { ascending: false });
+
+			if (error) {
+				console.error("Error fetching products:", error);
+				return;
+			}
+
+			if (data) {
+				const userIds = data
+					.map((product) => product.user_id)
+					.filter((id) => id !== null && id !== undefined);
+
+				const { data: users, error: usersError } = await supabase
+					.from("users")
+					.select("id, username, name")
+					.in("id", userIds);
+
+				if (usersError) {
+					console.error("Error fetching users:", usersError);
+				}
+
+				const userMap = new Map();
+				if (users) {
+					users.forEach((user) => {
+						userMap.set(user.id, user);
+					});
+				}
+
+				const formattedProducts: Product[] = data.map((product) => {
+					let discountPercentage = "";
+					if (product.original_price && product.price) {
+						const originalPrice = parseFloat(product.original_price);
+						const savings = originalPrice - product.price;
+						const percentage = Math.round((savings / originalPrice) * 100);
+						discountPercentage = `${percentage}% off`;
+					}
+
+					const eco = product.trash
+						? `Saves ${product.trash}kg CO₂`
+						: "Eco-friendly";
+
+					let business = "Local Business";
+					if (product.user_id) {
+						const user = userMap.get(product.user_id);
+						if (user) {
+							business = user.username || user.name || business;
+						}
+					}
+
+					return {
+						...product,
+						discount: discountPercentage,
+						eco,
+						business,
+					};
+				});
+
+				setProducts(formattedProducts);
+				setFilteredProducts(formattedProducts);
+			}
+		} catch (error) {
+			console.error("Error fetching products:", error);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const applyFilters = () => {
+		let filtered = [...products];
+
+		// Search query filter
+		if (filters.searchQuery.trim()) {
+			const query = filters.searchQuery.toLowerCase();
+			filtered = filtered.filter(product =>
+				product.name.toLowerCase().includes(query) ||
+				product.description?.toLowerCase().includes(query) ||
+				product.business?.toLowerCase().includes(query) ||
+				product.tags?.some(tag => tag.label.toLowerCase().includes(query))
+			);
+		}
+
+		// Category filter
+		if (filters.category.length > 0 && !filters.category.includes('all')) {
+			filtered = filtered.filter(product => {
+				const productCategory = categorizeProduct(product);
+				return filters.category.includes(productCategory);
+			});
+		}
+
+		// Price range filter
+		filtered = filtered.filter(product =>
+			product.price >= filters.priceRange[0] && product.price <= filters.priceRange[1]
+		);
+
+		// Tags filter
+		if (filters.tags.length > 0) {
+			filtered = filtered.filter(product =>
+				product.tags?.some(tag => filters.tags.includes(tag.label))
+			);
+		}
+
+		// Location filter
+		if (filters.location.trim()) {
+			const locationQuery = filters.location.toLowerCase();
+			filtered = filtered.filter(product =>
+				product.location.toLowerCase().includes(locationQuery)
+			);
+		}
+
+		// Sort products
+		switch (filters.sortBy) {
+			case 'price_low':
+				filtered.sort((a, b) => a.price - b.price);
+				break;
+			case 'price_high':
+				filtered.sort((a, b) => b.price - a.price);
+				break;
+			case 'expiry':
+				filtered.sort((a, b) => {
+					if (!a.expiry && !b.expiry) return 0;
+					if (!a.expiry) return 1;
+					if (!b.expiry) return -1;
+					return new Date(a.expiry).getTime() - new Date(b.expiry).getTime();
+				});
+				break;
+			case 'distance':
+				// Would implement with user location
+				break;
+			case 'newest':
+			default:
+				filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+				break;
+		}
+
+		setFilteredProducts(filtered);
+	};
+
+	const categorizeProduct = (product: Product): string => {
+		const name = product.name.toLowerCase();
+		const description = product.description?.toLowerCase() || '';
+		const tags = product.tags?.map(t => t.label.toLowerCase()).join(' ') || '';
+		const content = `${name} ${description} ${tags}`;
+
+		if (content.includes('fruit') || content.includes('apple') || content.includes('banana')) return 'fruits';
+		if (content.includes('vegetable') || content.includes('veggie') || content.includes('lettuce')) return 'vegetables';
+		if (content.includes('bread') || content.includes('pastry') || content.includes('cake')) return 'bakery';
+		if (content.includes('milk') || content.includes('cheese') || content.includes('yogurt')) return 'dairy';
+		if (content.includes('meal') || content.includes('lunch') || content.includes('dinner')) return 'meals';
+		if (content.includes('drink') || content.includes('juice') || content.includes('water')) return 'beverages';
+		if (content.includes('snack') || content.includes('chip') || content.includes('cookie')) return 'snacks';
+		
+		return 'all';
+	};
+
+	const handleSearch = (query: string) => {
+		setFilters(prev => ({ ...prev, searchQuery: query }));
+	};
+
+	const handleCategoryFilter = (categoryId: string) => {
+		setFilters(prev => ({
+			...prev,
+			category: categoryId === 'all' ? [] : [categoryId]
+		}));
+	};
+
+	const clearFilters = () => {
+		setFilters({
+			category: [],
+			priceRange: [0, 100],
+			location: '',
+			tags: [],
+			sortBy: 'newest',
+			searchQuery: ''
+		});
+	};
+
+	const getActiveFiltersCount = (): number => {
+		let count = 0;
+		if (filters.category.length > 0) count++;
+		if (filters.priceRange[0] > 0 || filters.priceRange[1] < 100) count++;
+		if (filters.location.trim()) count++;
+		if (filters.tags.length > 0) count++;
+		if (filters.sortBy !== 'newest') count++;
+		return count;
+	};
+
+	const onRefresh = async () => {
+		setRefreshing(true);
+		try {
+			await fetchProducts();
+		} finally {
+			setRefreshing(false);
+		}
+	};
+
+	// Apply filters whenever filter state changes
 	useEffect(() => {
-		// Check if we should animate (coming from home page search)
+		applyFilters();
+	}, [filters, products]);
+
+	useEffect(() => {
+		fetchProducts();
+	}, []);
+
+	// Animation effect for search focus
+	useEffect(() => {
 		if (focusSearch === "true" && timestamp) {
-			// Reset values to initial state explicitly
 			searchScale.value = 0.9;
 			searchBgColor.value = 0;
 
-			// Small delay to ensure values are reset before animating
 			setTimeout(() => {
-				// Run scale animation
 				searchScale.value = withSequence(
 					withTiming(1.05, { duration: 200, easing: Easing.out(Easing.quad) }),
 					withTiming(1, { duration: 150 }),
 				);
 
-				// Run background color animation
 				searchBgColor.value = withSequence(
 					withTiming(0.3, { duration: 300 }),
 					withTiming(0, { duration: 700 }),
 				);
 
-				// Focus the input after animation starts
 				setTimeout(() => {
 					if (searchInputRef.current) {
 						searchInputRef.current.focus();
@@ -220,6 +360,110 @@ export default function Marketplace() {
 			}, 50);
 		}
 	}, [focusSearch, timestamp]);
+
+	const renderFilterModal = () => (
+		<Modal
+			visible={showFilters}
+			animationType="slide"
+			presentationStyle="pageSheet"
+		>
+			<SafeAreaView className="flex-1 bg-background">
+				<View className="flex-row items-center justify-between p-4 border-b border-border">
+					<TouchableOpacity onPress={() => setShowFilters(false)}>
+						<Text className="text-primary text-lg">Cancel</Text>
+					</TouchableOpacity>
+					<Text className="text-lg font-semibold">Filters</Text>
+					<TouchableOpacity onPress={clearFilters}>
+						<Text className="text-red-500 text-lg">Clear</Text>
+					</TouchableOpacity>
+				</View>
+
+				<ScrollView className="flex-1 p-4">
+					{/* Sort Options */}
+					<View className="mb-6">
+						<Text className="text-lg font-semibold mb-3">Sort By</Text>
+						{sortOptions.map(option => (
+							<TouchableOpacity
+								key={option.id}
+								onPress={() => setFilters(prev => ({ ...prev, sortBy: option.id as any }))}
+								className={`flex-row items-center p-3 rounded-lg mb-2 ${
+									filters.sortBy === option.id ? 'bg-primary/10 border border-primary' : 'bg-secondary'
+								}`}
+							>
+								<Ionicons name={option.icon as any} size={20} color="#666" />
+								<Text className="ml-3 flex-1">{option.label}</Text>
+								{filters.sortBy === option.id && (
+									<Ionicons name="checkmark" size={20} color="#10b981" />
+								)}
+							</TouchableOpacity>
+						))}
+					</View>
+
+					{/* Price Range */}
+					<View className="mb-6">
+						<Text className="text-lg font-semibold mb-3">Price Range</Text>
+						<View className="flex-row items-center justify-between">
+							<Text>${filters.priceRange[0]}</Text>
+							<Text>to</Text>
+							<Text>${filters.priceRange[1]}</Text>
+						</View>
+						{/* Price range slider would be implemented here */}
+					</View>
+
+					{/* Tags Filter */}
+					<View className="mb-6">
+						<Text className="text-lg font-semibold mb-3">Tags</Text>
+						<View className="flex-row flex-wrap">
+							{commonTags.map(tag => (
+								<TouchableOpacity
+									key={tag}
+									onPress={() => {
+										setFilters(prev => ({
+											...prev,
+											tags: prev.tags.includes(tag)
+												? prev.tags.filter(t => t !== tag)
+												: [...prev.tags, tag]
+										}));
+									}}
+									className={`mr-2 mb-2 px-3 py-2 rounded-full border ${
+										filters.tags.includes(tag)
+											? 'bg-primary border-primary'
+											: 'bg-secondary border-border'
+									}`}
+								>
+									<Text className={`text-sm ${
+										filters.tags.includes(tag) ? 'text-white' : 'text-foreground'
+									}`}>
+										{tag}
+									</Text>
+								</TouchableOpacity>
+							))}
+						</View>
+					</View>
+
+					{/* Location Filter */}
+					<View className="mb-6">
+						<Text className="text-lg font-semibold mb-3">Location</Text>
+						<TextInput
+							value={filters.location}
+							onChangeText={(text) => setFilters(prev => ({ ...prev, location: text }))}
+							placeholder="Enter location or zip code"
+							className="border border-border rounded-lg p-3 text-base"
+						/>
+					</View>
+				</ScrollView>
+
+				<View className="p-4 border-t border-border">
+					<Button
+						onPress={() => setShowFilters(false)}
+						className="w-full"
+					>
+						<Text>Show {filteredProducts.length} Results</Text>
+					</Button>
+				</View>
+			</SafeAreaView>
+		</Modal>
+	);
 
 	return (
 		<SafeAreaView className="flex-1 bg-background">
@@ -235,7 +479,7 @@ export default function Marketplace() {
 					/>
 				}
 			>
-				{/* Header with notification and cart icons, and Marketplace title */}
+				{/* Header */}
 				<View className="flex-row justify-between items-center px-4 py-3">
 					<TouchableOpacity
 						onPress={() => router.push("/(protected)/notification-modal")}
@@ -261,129 +505,210 @@ export default function Marketplace() {
 					</TouchableOpacity>
 				</View>
 
-				{/* Search bar with improved animation and Home's style */}
-				<View className="mb-5" style={{ marginHorizontal: -4 }}>
+				{/* Search bar */}
+				<View className="mb-5 px-4">
 					<Animated.View style={[{ borderRadius: 28 }, animatedSearchStyle]}>
-						<View className="flex-row items-center bg-secondary rounded-full px-4 py-2 border border-secondary/50 shadow-sm w-full">
+						<View className="flex-row items-center bg-secondary rounded-full px-4 py-2 border border-secondary/50 shadow-sm">
 							<Text className="text-foreground/60 mr-2">🔍</Text>
-							<Input
+							<TextInput
 								ref={searchInputRef}
-								placeholder="Search products"
-								className="flex-1 bg-transparent border-0 p-0 text-foreground text-base w-full"
+								value={filters.searchQuery}
+								onChangeText={handleSearch}
+								placeholder="Search products, businesses, tags..."
+								className="flex-1 bg-transparent border-0 p-0 text-foreground text-base"
 								placeholderTextColor="#A0A0A0"
 							/>
-							<Text className="text-primary text-sm font-medium">Search</Text>
+							<TouchableOpacity
+								onPress={() => setShowFilters(true)}
+								className="ml-2 p-1"
+							>
+								<View className="flex-row items-center">
+									<Ionicons name="options" size={18} color="#10b981" />
+									{getActiveFiltersCount() > 0 && (
+										<View className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full items-center justify-center">
+											<Text className="text-white text-xs font-bold">
+												{getActiveFiltersCount()}
+											</Text>
+										</View>
+									)}
+								</View>
+							</TouchableOpacity>
 						</View>
 					</Animated.View>
 				</View>
 
-				{/* Food categories (icon row) */}
+				{/* Active Filters Display */}
+				{(filters.searchQuery || getActiveFiltersCount() > 0) && (
+					<View className="px-4 mb-4">
+						<ScrollView horizontal showsHorizontalScrollIndicator={false}>
+							{filters.searchQuery && (
+								<View className="bg-primary/10 border border-primary rounded-full px-3 py-1 mr-2 flex-row items-center">
+									<Text className="text-primary text-sm">"{filters.searchQuery}"</Text>
+									<TouchableOpacity
+										onPress={() => handleSearch('')}
+										className="ml-2"
+									>
+										<Ionicons name="close" size={14} color="#10b981" />
+									</TouchableOpacity>
+								</View>
+							)}
+							{filters.category.map(cat => (
+								<View key={cat} className="bg-secondary rounded-full px-3 py-1 mr-2 flex-row items-center">
+									<Text className="text-foreground text-sm">
+										{foodCategories.find(c => c.id === cat)?.name}
+									</Text>
+									<TouchableOpacity
+										onPress={() => setFilters(prev => ({
+											...prev,
+											category: prev.category.filter(c => c !== cat)
+										}))}
+										className="ml-2"
+									>
+										<Ionicons name="close" size={14} color="#666" />
+									</TouchableOpacity>
+								</View>
+							))}
+							{filters.tags.map(tag => (
+								<View key={tag} className="bg-green-100 rounded-full px-3 py-1 mr-2 flex-row items-center">
+									<Text className="text-green-700 text-sm">{tag}</Text>
+									<TouchableOpacity
+										onPress={() => setFilters(prev => ({
+											...prev,
+											tags: prev.tags.filter(t => t !== tag)
+										}))}
+										className="ml-2"
+									>
+										<Ionicons name="close" size={14} color="#059669" />
+									</TouchableOpacity>
+								</View>
+							))}
+						</ScrollView>
+					</View>
+				)}
+
+				{/* Results Summary */}
+				<View className="px-4 mb-4 flex-row items-center justify-between">
+					<Text className="text-muted-foreground">
+						{filteredProducts.length} {filteredProducts.length === 1 ? 'result' : 'results'} found
+					</Text>
+					<TouchableOpacity 
+						onPress={() => setShowFilters(true)}
+						className="flex-row items-center"
+					>
+						<Ionicons name="swap-vertical" size={16} color="#666" />
+						<Text className="text-muted-foreground ml-1 capitalize">
+							{sortOptions.find(s => s.id === filters.sortBy)?.label.split(':')[0] || 'Sort'}
+						</Text>
+					</TouchableOpacity>
+				</View>
+
+				{/* Food categories */}
 				<ScrollView
 					horizontal
 					showsHorizontalScrollIndicator={false}
 					className="pl-4 mb-6"
 				>
 					{foodCategories.map((category) => (
-						<TouchableOpacity key={category.id} className="items-center mr-6">
-							<View className="w-16 h-16 rounded-full bg-secondary items-center justify-center mb-2">
+						<TouchableOpacity 
+							key={category.id} 
+							className="items-center mr-6"
+							onPress={() => handleCategoryFilter(category.id)}
+						>
+							<View className={`w-16 h-16 rounded-full items-center justify-center mb-2 ${
+								filters.category.includes(category.id) || (category.id === 'all' && filters.category.length === 0)
+									? 'bg-primary' 
+									: 'bg-secondary'
+							}`}>
 								<Text className="text-3xl">{category.icon}</Text>
 							</View>
-							<Text className="text-sm text-center font-medium">
+							<Text className={`text-sm text-center font-medium ${
+								filters.category.includes(category.id) || (category.id === 'all' && filters.category.length === 0)
+									? 'text-primary' 
+									: 'text-foreground'
+							}`}>
 								{category.name}
 							</Text>
 						</TouchableOpacity>
 					))}
 				</ScrollView>
 
-				{/* Businesses and products section (keep existing logic) */}
+				{/* Products section */}
 				<View className="px-4 mb-6">
-					<View className="flex-row justify-between items-center mb-4">
-						<H3>Local Businesses</H3>
-					</View>
-					<ScrollView
-						horizontal
-						showsHorizontalScrollIndicator={false}
-						className="mb-4"
-					>
-						{loading ? (
-							<View className="items-center justify-center p-4 w-full">
-								<ActivityIndicator size="small" color="#10b981" />
+					{loading ? (
+						<View className="items-center justify-center py-8">
+							<ActivityIndicator size="large" color="#10b981" />
+							<Text className="mt-4 text-muted-foreground">
+								Loading products...
+							</Text>
+						</View>
+					) : filteredProducts.length === 0 ? (
+						<View className="items-center justify-center py-8">
+							<Text className="text-6xl mb-4">🔍</Text>
+							<Text className="text-xl font-semibold mb-2">No products found</Text>
+							<Text className="text-muted-foreground text-center mb-4">
+								Try adjusting your search or filters to find what you're looking for
+							</Text>
+							<Button
+								onPress={clearFilters}
+								variant="outline"
+							>
+								<Text>Clear All Filters</Text>
+							</Button>
+						</View>
+					) : (
+						<>
+							{/* Quick stats */}
+							<View className="flex-row justify-between mb-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+								<View className="items-center">
+									<Text className="font-bold text-green-600">
+										${filteredProducts.reduce((sum, p) => sum + (parseFloat(p.original_price || '0') - p.price), 0).toFixed(0)}
+									</Text>
+									<Text className="text-xs text-green-600">Total Savings</Text>
+								</View>
+								<View className="items-center">
+									<Text className="font-bold text-green-600">
+										{filteredProducts.reduce((sum, p) => sum + (p.trash || 0), 0).toFixed(1)}kg
+									</Text>
+									<Text className="text-xs text-green-600">CO₂ Saved</Text>
+								</View>
+								<View className="items-center">
+									<Text className="font-bold text-green-600">
+										{Array.from(new Set(filteredProducts.map(p => p.business))).length}
+									</Text>
+									<Text className="text-xs text-green-600">Local Businesses</Text>
+								</View>
 							</View>
-						) : products.length === 0 ? (
-							<View className="p-4">
-								<Text className="text-muted-foreground">
-									No businesses available
-								</Text>
-							</View>
-						) : (
-							Array.from(new Set(products.map((p) => p.business)))
-								.filter(Boolean)
-								.map((business, index) => (
-									<TouchableOpacity
-										key={index}
-										className="mr-4 bg-card rounded-xl overflow-hidden shadow-sm"
-										style={{ width: 150, elevation: 2 }}
-									>
-										<View className="h-20 bg-primary/20 items-center justify-center">
-											<Text className="text-2xl">🏪</Text>
-										</View>
-										<View className="p-3">
-											<Text className="font-medium">{business}</Text>
-											<Text className="text-xs text-muted-foreground">
-												Local business
-											</Text>
-										</View>
-									</TouchableOpacity>
-								))
-						)}
-					</ScrollView>
 
-					<View className="flex-row justify-between items-center mb-4">
-						<H3>Available Today</H3>
-					</View>
-					<View className="flex-row flex-wrap justify-between">
-						{loading ? (
-							<View className="w-full items-center justify-center py-8">
-								<ActivityIndicator size="large" color="#10b981" />
-								<Text className="mt-4 text-muted-foreground">
-									Loading products...
-								</Text>
+							<View className="flex-row flex-wrap justify-between">
+								{filteredProducts.map((product) => (
+									<ProductCard
+										key={product.id}
+										image={
+											product.image_url && product.image_url.length > 0
+												? { uri: product.image_url[0] }
+												: require("@/assets/foodloop.png")
+										}
+										name={product.name}
+										business={product.business || "Local Business"}
+										price={product.price}
+										originalPrice={
+											product.original_price
+												? parseFloat(product.original_price)
+												: 0
+										}
+										discount={product.discount || ""}
+										eco={product.eco || "Eco-friendly"}
+										onPress={() =>
+											router.push({
+												pathname: "/(protected)/product/[id]",
+												params: { id: product.id },
+											})
+										}
+									/>
+								))}
 							</View>
-						) : products.length === 0 ? (
-							<View className="w-full items-center justify-center py-8">
-								<Text className="text-muted-foreground">
-									No products available at the moment
-								</Text>
-							</View>
-						) : (
-							products.map((product) => (
-								<ProductCard
-									key={product.id}
-									image={
-										product.image_url && product.image_url.length > 0
-											? { uri: product.image_url[0] }
-											: require("@/assets/foodloop.png")
-									}
-									name={product.name}
-									business={product.business || "Local Business"}
-									price={product.price}
-									originalPrice={
-										product.original_price
-											? parseFloat(product.original_price)
-											: 0
-									}
-									discount={product.discount || ""}
-									eco={product.eco || "Eco-friendly"}
-									onPress={() =>
-										router.push({
-											pathname: "/(protected)/product/[id]",
-											params: { id: product.id },
-										})
-									}
-								/>
-							))
-						)}
-					</View>
+						</>
+					)}
 				</View>
 			</ScrollView>
 
@@ -405,6 +730,9 @@ export default function Marketplace() {
 					<Ionicons name="add" size={28} color="#FFFFFF" />
 				</View>
 			</TouchableOpacity>
+
+			{/* Filter Modal */}
+			{renderFilterModal()}
 		</SafeAreaView>
 	);
 }
