@@ -62,6 +62,15 @@
 		"experiments": {
 			"typedRoutes": true
 		},
-		"plugins": ["expo-router", "expo-secure-store"]
+		"plugins": [
+			"expo-router", 
+			"expo-secure-store",
+			[
+				"expo-location",
+				{
+					"locationAlwaysAndWhenInUsePermission": "Allow FoodLoop to use your location to show you local food options nearby and fetch relevant weather and plant information."
+				}
+			]
+		]
 	}
 }

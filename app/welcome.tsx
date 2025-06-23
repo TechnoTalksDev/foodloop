@@ -28,7 +28,9 @@ export default function WelcomeScreen() {
 				</Muted>
 
 				<View className="mt-4">
-					<Text className="text-center font-medium mb-2 text-xl">Join us in:</Text>
+					<Text className="text-center font-medium mb-2 text-xl">
+						Join us in:
+					</Text>
 					<View className="flex flex-col gap-y-2">
 						<Text className="text-center">🌱 Reducing food waste</Text>
 						<Text className="text-center">💰 Saving money on quality food</Text>
@@ -41,9 +43,7 @@ export default function WelcomeScreen() {
 				<Button size="default" variant="default" onPress={signInWithGoogle}>
 					<Text>Continue with Google</Text>
 				</Button>
-				<Muted className="text-center text-xs mt-2">
-					TSA Nationals 2025
-				</Muted>
+				<Muted className="text-center text-xs mt-2">TSA Nationals 2025</Muted>
 			</View>
 		</SafeAreaView>
 	);

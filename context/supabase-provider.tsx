@@ -156,14 +156,43 @@ export function AuthProvider({ children }: PropsWithChildren) {
 			console.log("🚀 App initialized. Routing...");
 			SplashScreen.hideAsync();
 			if (session) {
-				console.log("🔐 User authenticated, redirecting to home...");
-				router.replace("/");
+				console.log("🔐 User authenticated, checking onboarding status...");
+				checkOnboardingStatus();
 			} else {
 				console.log("👋 No session found, redirecting to welcome...");
 				router.replace("/welcome");
 			}
 		}
 	}, [initialized, session]);
+
+	const checkOnboardingStatus = async () => {
+		if (!session?.user?.id) return;
+		
+		try {
+			const { data, error } = await supabase
+				.from("users")
+				.select("onboarding_complete")
+				.eq("id", session.user.id)
+				.single();
+			
+			if (error) {
+				console.error("Error checking onboarding status:", error);
+				router.replace("/");
+				return;
+			}
+			
+			if (data?.onboarding_complete === false) {
+				console.log("🎯 User needs to complete onboarding");
+				router.replace("/onboarding");
+			} else {
+				console.log("✅ User has completed onboarding, redirecting to home");
+				router.replace("/");
+			}
+		} catch (error) {
+			console.error("Error checking onboarding status:", error);
+			router.replace("/");
+		}
+	};
 
 	return (
 		<AuthContext.Provider
