@@ -172,6 +172,76 @@ export const usePosts = (filters?: { groupId?: number; postType?: string }) => {
   return { posts, loading, error, refetch: fetchPosts };
 };
 
+// Popular posts hook - top 3 by view count
+export const usePopularPosts = () => {
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchPopularPosts = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('posts')
+        .select(`
+          *,
+          author:users!posts_author_id_fkey(id, name, username, avatar),
+          group:groups!posts_group_id_fkey(id, name, category)
+        `)
+        .order('view_count', { ascending: false })
+        .limit(3);
+
+      if (error) throw error;
+      setPosts(data || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error fetching popular posts');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPopularPosts();
+  }, []);
+
+  return { posts, loading, error, refetch: fetchPopularPosts };
+};
+
+// Popular groups hook - top 3 by member count
+export const usePopularGroups = () => {
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchPopularGroups = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('groups')
+        .select(`
+          *,
+          creator:users!groups_creator_id_fkey(id, name, username, avatar)
+        `)
+        .eq('is_public', true)
+        .order('member_count', { ascending: false })
+        .limit(3);
+
+      if (error) throw error;
+      setGroups(data || []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error fetching popular groups');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPopularGroups();
+  }, []);
+
+  return { groups, loading, error, refetch: fetchPopularGroups };
+};
+
 export const usePost = (postId: number) => {
   const [post, setPost] = useState<Post | null>(null);
   const [loading, setLoading] = useState(true);

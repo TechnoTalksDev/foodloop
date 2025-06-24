@@ -22,7 +22,13 @@ import { colors } from "@/constants/colors";
 import { useColorScheme } from "@/lib/useColorScheme";
 
 // Import community hooks and types
-import { useGroups, usePosts, usePostVoting } from "@/hooks/useCommunity";
+import {
+	useGroups,
+	usePosts,
+	usePostVoting,
+	usePopularPosts,
+	usePopularGroups,
+} from "@/hooks/useCommunity";
 import { Group, Post } from "@/types/community";
 
 // Tab categories for the community
@@ -320,6 +326,20 @@ export default function Community() {
 	} = usePosts();
 	const { votePost, loading: voteLoading } = usePostVoting();
 
+	// Popular content hooks
+	const {
+		posts: popularPosts,
+		loading: popularPostsLoading,
+		error: popularPostsError,
+		refetch: refetchPopularPosts,
+	} = usePopularPosts();
+	const {
+		groups: popularGroups,
+		loading: popularGroupsLoading,
+		error: popularGroupsError,
+		refetch: refetchPopularGroups,
+	} = usePopularGroups();
+
 	useEffect(() => {
 		const fetchUser = async () => {
 			if (session?.user?.id) {
@@ -345,7 +365,12 @@ export default function Community() {
 	// Handler for pull-to-refresh
 	const onRefresh = async () => {
 		setRefreshing(true);
-		await Promise.all([refetchGroups(), refetchPosts()]);
+		await Promise.all([
+			refetchGroups(),
+			refetchPosts(),
+			refetchPopularPosts(),
+			refetchPopularGroups(),
+		]);
 		setRefreshing(false);
 	};
 
@@ -353,6 +378,7 @@ export default function Community() {
 		const success = await votePost(postId, voteType);
 		if (success) {
 			refetchPosts(); // Refresh posts to show updated vote counts
+			refetchPopularPosts(); // Also refresh popular posts
 		}
 	};
 
@@ -612,12 +638,12 @@ export default function Community() {
 	const renderTabContent = () => {
 		switch (activeTab) {
 			case "popular":
-				if (postsLoading) {
+				if (popularPostsLoading || popularGroupsLoading) {
 					return (
 						<View className="px-4 py-8 items-center">
 							<ActivityIndicator size="large" color="#10b981" />
 							<Text className="text-muted-foreground mt-2">
-								Loading popular posts...
+								Loading popular content...
 							</Text>
 						</View>
 					);
@@ -625,26 +651,55 @@ export default function Community() {
 
 				return (
 					<View className="px-4">
+						{/* Popular Posts Section */}
 						<Text className="text-xl font-semibold mb-4 text-foreground">
-							Popular Posts
+							🔥 Most Viewed Posts
 						</Text>
-						{postsError ? (
-							<View className="py-8 items-center">
+						{popularPostsError ? (
+							<View className="py-4 items-center mb-6">
 								<Text className="text-muted-foreground">
-									Error loading posts
+									Error loading popular posts
 								</Text>
 							</View>
-						) : posts.length === 0 ? (
-							<View className="py-8 items-center">
+						) : popularPosts.length === 0 ? (
+							<View className="py-4 items-center mb-6">
 								<Text className="text-muted-foreground">No posts yet</Text>
 								<Text className="text-muted-foreground text-sm mt-1">
 									Be the first to create one!
 								</Text>
 							</View>
 						) : (
+							<View className="mb-8">
+								<FlatList
+									data={popularPosts}
+									renderItem={renderPost}
+									keyExtractor={(item) => item.id.toString()}
+									scrollEnabled={false}
+								/>
+							</View>
+						)}
+
+						{/* Popular Groups Section */}
+						<Text className="text-xl font-semibold mb-4 text-foreground">
+							👥 Top Communities
+						</Text>
+						{popularGroupsError ? (
+							<View className="py-4 items-center">
+								<Text className="text-muted-foreground">
+									Error loading popular groups
+								</Text>
+							</View>
+						) : popularGroups.length === 0 ? (
+							<View className="py-4 items-center">
+								<Text className="text-muted-foreground">No groups yet</Text>
+								<Text className="text-muted-foreground text-sm mt-1">
+									Be the first to create one!
+								</Text>
+							</View>
+						) : (
 							<FlatList
-								data={posts.slice(0, 5)} // Show top 5 popular posts
-								renderItem={renderPost}
+								data={popularGroups}
+								renderItem={renderGroup}
 								keyExtractor={(item) => item.id.toString()}
 								scrollEnabled={false}
 							/>
