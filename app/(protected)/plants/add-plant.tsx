@@ -1,4 +1,4 @@
-// app/(protected)/plants/add-plant.tsx - NEW FILE
+// app/(protected)/plants/add-plant.tsx - FIXED VERSION
 
 import React, { useState, useEffect } from "react";
 import {
@@ -12,6 +12,7 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
@@ -20,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/supabase-provider";
 import { supabase } from "@/config/supabase";
 import { format } from "date-fns";
+import { decode } from "base64-arraybuffer";
 
 interface PlantType {
 	id: string;
@@ -29,10 +31,23 @@ interface PlantType {
 	harvest_time_days: number;
 }
 
+const DEFAULT_PLANT_TYPES: PlantType[] = [
+	{ id: 'tomatoes', name: 'Tomatoes', emoji: '🍅', season: 'spring', harvest_time_days: 80 },
+	{ id: 'lettuce', name: 'Lettuce', emoji: '🥬', season: 'spring', harvest_time_days: 45 },
+	{ id: 'carrots', name: 'Carrots', emoji: '🥕', season: 'spring', harvest_time_days: 70 },
+	{ id: 'peppers', name: 'Peppers', emoji: '🌶️', season: 'spring', harvest_time_days: 90 },
+	{ id: 'herbs', name: 'Herbs', emoji: '🌿', season: 'year-round', harvest_time_days: 30 },
+	{ id: 'strawberries', name: 'Strawberries', emoji: '🍓', season: 'spring', harvest_time_days: 60 },
+	{ id: 'spinach', name: 'Spinach', emoji: '🥬', season: 'spring', harvest_time_days: 40 },
+	{ id: 'radishes', name: 'Radishes', emoji: '🔴', season: 'spring', harvest_time_days: 25 },
+	{ id: 'beans', name: 'Beans', emoji: '🫘', season: 'spring', harvest_time_days: 55 },
+	{ id: 'cucumbers', name: 'Cucumbers', emoji: '🥒', season: 'spring', harvest_time_days: 55 },
+];
+
 export default function AddPlantScreen() {
 	const router = useRouter();
 	const { session } = useAuth();
-	const [plantTypes, setPlantTypes] = useState<PlantType[]>([]);
+	const [plantTypes, setPlantTypes] = useState<PlantType[]>(DEFAULT_PLANT_TYPES);
 	const [selectedType, setSelectedType] = useState<string>("");
 	const [plantName, setPlantName] = useState("");
 	const [plantedDate, setPlantedDate] = useState(new Date());
@@ -54,12 +69,16 @@ export default function AddPlantScreen() {
 
 			if (error) {
 				console.error("Error fetching plant types:", error);
+				// Use default plant types if database fetch fails
 				return;
 			}
 
-			setPlantTypes(data || []);
+			if (data && data.length > 0) {
+				setPlantTypes(data);
+			}
 		} catch (error) {
 			console.error("Error in fetchPlantTypes:", error);
+			// Keep using default plant types
 		}
 	};
 
@@ -90,29 +109,56 @@ export default function AddPlantScreen() {
 
 	const uploadImage = async (imageUri: string): Promise<string | null> => {
 		try {
-			const response = await fetch(imageUri);
-			const blob = await response.blob();
+			console.log("Starting image upload...");
+			
+			// Read the file as base64
+			const base64 = await FileSystem.readAsStringAsync(imageUri, {
+				encoding: FileSystem.EncodingType.Base64,
+			});
+
+			// Generate unique filename
 			const fileExt = imageUri.split('.').pop()?.toLowerCase() || 'jpg';
 			const fileName = `plants/${session?.user?.id}/${Date.now()}.${fileExt}`;
 
+			console.log("Uploading to:", fileName);
+
+			// Convert base64 to ArrayBuffer and upload
 			const { data, error } = await supabase.storage
 				.from('plant-images')
-				.upload(fileName, blob);
+				.upload(fileName, decode(base64), {
+					contentType: `image/${fileExt}`,
+					upsert: false,
+				});
 
 			if (error) {
 				console.error('Error uploading image:', error);
-				return null;
+				throw error;
 			}
 
+			console.log("Upload successful:", data);
+
+			// Get public URL
 			const { data: urlData } = supabase.storage
 				.from('plant-images')
 				.getPublicUrl(fileName);
 
+			console.log("Public URL:", urlData.publicUrl);
 			return urlData.publicUrl;
+
 		} catch (error) {
 			console.error('Error in uploadImage:', error);
+			Alert.alert("Upload Error", "Failed to upload image. Please try again.");
 			return null;
 		}
+	};
+
+	const calculateExpectedHarvest = (plantedDate: Date, plantType: string): string => {
+		const selectedPlantType = plantTypes.find(p => p.id === plantType);
+		if (!selectedPlantType) return format(new Date(), 'yyyy-MM-dd');
+		
+		const harvestDate = new Date(plantedDate);
+		harvestDate.setDate(harvestDate.getDate() + selectedPlantType.harvest_time_days);
+		return format(harvestDate, 'yyyy-MM-dd');
 	};
 
 	const handleSavePlant = async () => {
@@ -128,11 +174,21 @@ export default function AddPlantScreen() {
 
 		setLoading(true);
 		try {
+			console.log("Starting plant save process...");
+			
 			let imageUrl = null;
 			if (image) {
+				console.log("Uploading image...");
 				imageUrl = await uploadImage(image);
+				if (!imageUrl) {
+					// Image upload failed, but we can still save the plant without image
+					console.log("Image upload failed, proceeding without image");
+				}
 			}
 
+			const expectedHarvest = calculateExpectedHarvest(plantedDate, selectedType);
+
+			console.log("Saving plant to database...");
 			const { error } = await supabase
 				.from("user_plants")
 				.insert({
@@ -140,6 +196,7 @@ export default function AddPlantScreen() {
 					plant_name: plantName.trim(),
 					plant_type: selectedType,
 					planted_date: format(plantedDate, 'yyyy-MM-dd'),
+					expected_harvest: expectedHarvest,
 					notes: notes.trim() || null,
 					image_url: imageUrl,
 					status: 'seedling'
@@ -147,10 +204,11 @@ export default function AddPlantScreen() {
 
 			if (error) {
 				console.error("Error adding plant:", error);
-				Alert.alert("Error", "Failed to add plant. Please try again.");
+				Alert.alert("Database Error", "Failed to add plant. Please try again.");
 				return;
 			}
 
+			console.log("Plant saved successfully!");
 			Alert.alert(
 				"Plant Added!",
 				"Your plant has been added successfully. Check your AI calendar for care reminders!",
@@ -200,6 +258,9 @@ export default function AddPlantScreen() {
 									selectedType === type.id ? "text-primary" : "text-foreground"
 								}`}>
 									{type.name}
+								</Text>
+								<Text className="text-xs text-center text-muted-foreground mt-1">
+									{type.harvest_time_days} days
 								</Text>
 							</TouchableOpacity>
 						))}
@@ -282,6 +343,19 @@ export default function AddPlantScreen() {
 						textAlignVertical="top"
 					/>
 				</View>
+
+				{/* Expected Harvest Info */}
+				{selectedType && (
+					<View className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+						<Text className="text-green-700 dark:text-green-300 font-medium mb-2">
+							🌱 Expected Harvest
+						</Text>
+						<Text className="text-green-600 dark:text-green-400 text-sm">
+							Based on typical growing time, you can expect to harvest around{' '}
+							{format(new Date(calculateExpectedHarvest(plantedDate, selectedType)), 'MMMM d, yyyy')}
+						</Text>
+					</View>
+				)}
 
 				{/* Save Button */}
 				<Button

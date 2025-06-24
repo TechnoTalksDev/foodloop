@@ -1,4 +1,4 @@
-// app/(protected)/plants/plant-detail/[id].tsx - NEW FILE
+// app/(protected)/plants/plant-detail/[id].tsx - UPDATED WITH DELETE OPTION
 
 import React, { useState, useEffect } from "react";
 import {
@@ -8,6 +8,7 @@ import {
 	Image,
 	Alert,
 	TextInput,
+	Modal,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -72,6 +73,8 @@ export default function PlantDetailScreen() {
 	const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [showCheckInModal, setShowCheckInModal] = useState(false);
+	const [showDeleteModal, setShowDeleteModal] = useState(false);
+	const [deleting, setDeleting] = useState(false);
 	
 	// Check-in form state
 	const [checkInImage, setCheckInImage] = useState<string | null>(null);
@@ -134,6 +137,85 @@ export default function PlantDetailScreen() {
 		} catch (error) {
 			console.error("Error in fetchCheckIns:", error);
 		}
+	};
+
+	const handleDeletePlant = async () => {
+		if (!id || !session?.user?.id) return;
+
+		setDeleting(true);
+		try {
+			// First, delete all check-ins for this plant
+			const { error: checkinsError } = await supabase
+				.from("plant_checkins")
+				.delete()
+				.eq("plant_id", id)
+				.eq("user_id", session.user.id);
+
+			if (checkinsError) {
+				console.error("Error deleting check-ins:", checkinsError);
+				Alert.alert("Error", "Failed to delete plant check-ins. Please try again.");
+				return;
+			}
+
+			// Delete any calendar events for this plant
+			const { error: eventsError } = await supabase
+				.from("plant_calendar_events")
+				.delete()
+				.eq("plant_id", id)
+				.eq("user_id", session.user.id);
+
+			if (eventsError) {
+				console.error("Error deleting calendar events:", eventsError);
+				// Continue with plant deletion even if calendar events fail
+			}
+
+			// Finally, delete the plant itself
+			const { error: plantError } = await supabase
+				.from("user_plants")
+				.delete()
+				.eq("id", id)
+				.eq("user_id", session.user.id);
+
+			if (plantError) {
+				console.error("Error deleting plant:", plantError);
+				Alert.alert("Error", "Failed to delete plant. Please try again.");
+				return;
+			}
+
+			// Success - navigate back with success message
+			Alert.alert(
+				"Plant Deleted",
+				`${plant?.plant_name || "Your plant"} has been successfully removed from your garden.`,
+				[
+					{
+						text: "OK",
+						onPress: () => router.back()
+					}
+				]
+			);
+
+		} catch (error) {
+			console.error("Error in handleDeletePlant:", error);
+			Alert.alert("Error", "Failed to delete plant. Please try again.");
+		} finally {
+			setDeleting(false);
+			setShowDeleteModal(false);
+		}
+	};
+
+	const confirmDeletePlant = () => {
+		Alert.alert(
+			"Delete Plant",
+			`Are you sure you want to delete "${plant?.plant_name}"? This will permanently remove the plant and all its check-ins from your garden. This action cannot be undone.`,
+			[
+				{ text: "Cancel", style: "cancel" },
+				{ 
+					text: "Delete", 
+					style: "destructive",
+					onPress: () => setShowDeleteModal(true)
+				}
+			]
+		);
 	};
 
 	const takePhoto = async () => {
@@ -346,8 +428,8 @@ export default function PlantDetailScreen() {
 					<Ionicons name="chevron-back" size={24} color="#666" />
 				</TouchableOpacity>
 				<H1 className="flex-1 text-center">{plant.plant_name}</H1>
-				<TouchableOpacity onPress={() => {/* TODO: Edit plant */}}>
-					<Ionicons name="pencil" size={24} color="#666" />
+				<TouchableOpacity onPress={confirmDeletePlant}>
+					<Ionicons name="trash-outline" size={24} color="#ef4444" />
 				</TouchableOpacity>
 			</View>
 
@@ -636,6 +718,50 @@ export default function PlantDetailScreen() {
 					</View>
 				</View>
 			)}
+
+			{/* Delete Confirmation Modal */}
+			<Modal
+				visible={showDeleteModal}
+				transparent={true}
+				animationType="fade"
+				onRequestClose={() => setShowDeleteModal(false)}
+			>
+				<View className="flex-1 bg-black/50 items-center justify-center p-4">
+					<View className="bg-background rounded-2xl p-6 w-full max-w-sm">
+						<View className="items-center mb-6">
+							<View className="w-16 h-16 bg-red-100 rounded-full items-center justify-center mb-4">
+								<Ionicons name="warning" size={32} color="#ef4444" />
+							</View>
+							<Text className="text-xl font-bold text-center mb-2">Delete Plant?</Text>
+							<Text className="text-center text-muted-foreground">
+								This will permanently delete "{plant.plant_name}" and all its check-ins. 
+								This action cannot be undone.
+							</Text>
+						</View>
+
+						<View className="space-y-3">
+							<Button
+								onPress={handleDeletePlant}
+								disabled={deleting}
+								className="w-full bg-red-500"
+							>
+								<Text className="text-white font-semibold">
+									{deleting ? "Deleting..." : "Yes, Delete Plant"}
+								</Text>
+							</Button>
+							
+							<Button
+								onPress={() => setShowDeleteModal(false)}
+								disabled={deleting}
+								variant="outline"
+								className="w-full"
+							>
+								<Text>Cancel</Text>
+							</Button>
+						</View>
+					</View>
+				</View>
+			</Modal>
 		</SafeAreaView>
 	);
 }
