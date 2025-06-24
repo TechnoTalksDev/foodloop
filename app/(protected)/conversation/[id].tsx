@@ -150,7 +150,6 @@ export default function ConversationScreen() {
 			console.error("Error marking messages as read:", error);
 		}
 	};
-
 	const sendMessage = async (
 		content: string,
 		messageType: "text" | "offer" = "text",
@@ -158,12 +157,14 @@ export default function ConversationScreen() {
 	) => {
 		if (!session?.user?.id || !id || !content.trim()) return;
 
+		console.log(`📤 [Conversation ${id}] Sending message:`, { content, messageType, metadata });
+
 		// Filter profanity from the message content
 		const originalContent = content.trim();
 		const filteredContent = filterProfanity(originalContent);
-
 		// Warn user if profanity was detected and filtered
 		if (containsProfanity(originalContent)) {
+			console.log(`🚫 [Conversation ${id}] Profanity detected and filtered`);
 			Alert.alert(
 				"Message Filtered",
 				"Your message contained inappropriate language and has been filtered to maintain a professional environment.",
@@ -171,8 +172,14 @@ export default function ConversationScreen() {
 			);
 		}
 
+		// Clear input immediately for better UX (optimistic update)
+		setNewMessage("");
+		setOfferAmount("");
+		setShowOfferInput(false);
+
 		setSending(true);
 		try {
+			console.log(`💾 [Conversation ${id}] Inserting message into database`);
 			const { error } = await supabase.from("messages").insert({
 				conversation_id: id,
 				sender_id: session.user.id,
@@ -182,20 +189,22 @@ export default function ConversationScreen() {
 			});
 
 			if (error) {
+				console.error(`❌ [Conversation ${id}] Failed to send message:`, error);
 				Alert.alert("Error", "Failed to send message");
+				// Restore input if there was an error
+				setNewMessage(originalContent);
 				return;
-			}
-
+			}console.log(`✅ [Conversation ${id}] Message sent successfully`);
+			console.log(`📅 [Conversation ${id}] Updating conversation last_message_at`);
 			await supabase
 				.from("conversations")
 				.update({ last_message_at: new Date().toISOString() })
-				.eq("id", id);
+				.eq("id", id);			// Don't fetch conversation data - realtime will handle adding the message
+			// await fetchConversationData(); // REMOVED - this was the bottleneck!
+			
+			// Input fields already cleared optimistically above
 
-			await fetchConversationData();
-			setNewMessage("");
-			setOfferAmount("");
-			setShowOfferInput(false);
-
+			// Scroll to bottom after a brief delay to allow realtime message to appear
 			setTimeout(() => {
 				scrollViewRef.current?.scrollToEnd({ animated: true });
 			}, 100);
@@ -277,15 +286,14 @@ export default function ConversationScreen() {
 			// Send acceptance message
 			const acceptanceContent = `✅ Offer accepted! $${offerAmount.toFixed(2)} for ${quantity}x ${conversation.product.name}. Transaction completed. Please coordinate pickup/delivery details.`;
 			await sendMessage(acceptanceContent, "text");
-			
-			Alert.alert(
+					Alert.alert(
 				"Transaction Completed!",
 				`You've accepted the offer of $${offerAmount.toFixed(2)} for ${quantity}x ${conversation.product.name}. The transaction has been recorded.`,
 				[{ text: "OK" }]
 			);
 			
-			// Refresh conversation to update product amount
-			await fetchConversationData();
+			// Don't refresh conversation - realtime will handle the message update
+			// await fetchConversationData(); // REMOVED - this was another bottleneck!
 			
 		} catch (error) {
 			console.error("Error accepting offer:", error);
@@ -313,20 +321,97 @@ export default function ConversationScreen() {
 			setProcessingOffer(null);
 		}
 	};
-
 	useEffect(() => {
 		fetchConversationData();
 	}, [id, session?.user?.id]);
-
-	// Auto-refresh messages every 5 seconds
+	// Set up realtime subscriptions for messages and conversations
 	useEffect(() => {
 		if (!id || !session?.user?.id || loading) return;
 
-		const interval = setInterval(() => {
-			fetchConversationData();
-		}, 1000); // 1 seconds
+		console.log(`📡 [Conversation ${id}] Setting up realtime subscriptions for user:`, session.user.id);
 
-		return () => clearInterval(interval);
+		// Subscribe to new messages in this conversation
+		const messagesChannel = supabase
+			.channel(`messages-${id}`)
+			.on(
+				'postgres_changes',
+				{
+					event: 'INSERT',
+					schema: 'public',
+					table: 'messages',
+					filter: `conversation_id=eq.${id}`,
+				},
+				(payload) => {
+					console.log(`✉️ [Conversation ${id}] New message received:`, payload.new);
+					const newMessage = payload.new as Message;
+					setMessages((prev) => {
+						// Avoid duplicates by checking if message already exists
+						if (prev.some(msg => msg.id === newMessage.id)) {
+							console.log(`⚠️ [Conversation ${id}] Duplicate message detected, skipping`);
+							return prev;
+						}
+						console.log(`✅ [Conversation ${id}] Adding new message to state`);
+						return [...prev, newMessage];
+					});
+					
+					// Mark new messages as read if they're not from the current user
+					if (newMessage.sender_id !== session.user.id) {
+						console.log(`👁️ [Conversation ${id}] Marking new message as read`);
+						markMessagesAsRead();
+					}
+				}
+			)
+			.on(
+				'postgres_changes',
+				{
+					event: 'UPDATE',
+					schema: 'public',
+					table: 'messages',
+					filter: `conversation_id=eq.${id}`,
+				},
+				(payload) => {
+					console.log(`📝 [Conversation ${id}] Message updated:`, payload.new);
+					const updatedMessage = payload.new as Message;
+					setMessages((prev) =>
+						prev.map((msg) =>
+							msg.id === updatedMessage.id ? updatedMessage : msg
+						)
+					);
+				}
+			)
+			.subscribe((status) => {
+				console.log(`📡 [Conversation ${id}] Messages channel status:`, status);
+			});
+
+		// Subscribe to conversation updates (for status changes, etc.)
+		const conversationChannel = supabase
+			.channel(`conversation-${id}`)
+			.on(
+				'postgres_changes',
+				{
+					event: 'UPDATE',
+					schema: 'public',
+					table: 'conversations',
+					filter: `id=eq.${id}`,
+				},
+				(payload) => {
+					console.log(`💬 [Conversation ${id}] Conversation updated:`, payload.new);
+					// Refresh conversation data when conversation is updated
+					fetchConversationData();
+				}
+			)
+			.subscribe((status) => {
+				console.log(`📡 [Conversation ${id}] Conversation channel status:`, status);
+			});
+
+		console.log(`🚀 [Conversation ${id}] Realtime subscriptions active`);
+
+		// Cleanup subscriptions on unmount
+		return () => {
+			console.log(`🧹 [Conversation ${id}] Cleaning up realtime subscriptions`);
+			supabase.removeChannel(messagesChannel);
+			supabase.removeChannel(conversationChannel);
+		};
 	}, [id, session?.user?.id, loading]);
 
 	useEffect(() => {

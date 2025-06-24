@@ -176,21 +176,93 @@ export default function MessagesScreen() {
 		await fetchConversations();
 		setRefreshing(false);
 	};
-
 	useEffect(() => {
 		fetchConversations();
-	}, [session?.user?.id]);
-
-	// Auto-refresh conversations every 1 second
+	}, [session?.user?.id]);	// Set up realtime subscriptions for conversations and messages
 	useEffect(() => {
 		if (!session?.user?.id || loading) return;
 
-		const interval = setInterval(() => {
-			fetchConversations();
-		}, 1000); // 1 second
+		console.log('📡 [Messages] Setting up realtime subscriptions for user:', session.user.id);
 
-		return () => clearInterval(interval);
-	}, [session?.user?.id, loading]);
+		let refreshTimeout: ReturnType<typeof setTimeout> | null = null;
+
+		// Debounced refresh function to avoid too many API calls
+		const debouncedRefresh = () => {
+			if (refreshTimeout) {
+				clearTimeout(refreshTimeout);
+			}
+			refreshTimeout = setTimeout(() => {
+				console.log('🔄 [Messages] Debounced refresh triggered');
+				fetchConversations();
+			}, 500); // Wait 500ms before refreshing
+		};
+
+		// Subscribe to new messages (to update last message and unread counts)
+		const messagesChannel = supabase
+			.channel('messages-updates')
+			.on(
+				'postgres_changes',
+				{
+					event: 'INSERT',
+					schema: 'public',
+					table: 'messages',
+				},
+				(payload) => {
+					console.log('✉️ [Messages] New message received:', payload.new);
+					// Always refresh when a new message is received
+					// We'll filter relevance during the fetch process
+					debouncedRefresh();
+				}
+			)
+			.on(
+				'postgres_changes',
+				{
+					event: 'UPDATE',
+					schema: 'public',
+					table: 'messages',
+				},
+				(payload) => {
+					console.log('📝 [Messages] Message updated:', payload.new);
+					// Refresh when messages are read (affects unread counts)
+					debouncedRefresh();
+				}
+			)
+			.subscribe((status) => {
+				console.log('📡 [Messages] Messages channel status:', status);
+			});
+
+		// Subscribe to conversation changes
+		const conversationsChannel = supabase
+			.channel('conversations-updates')
+			.on(
+				'postgres_changes',
+				{
+					event: '*',
+					schema: 'public',
+					table: 'conversations',
+				},
+				(payload) => {
+					console.log('💬 [Messages] Conversation changed:', payload);
+					// Always refresh when conversations change
+					debouncedRefresh();
+				}
+			)
+			.subscribe((status) => {
+				console.log('📡 [Messages] Conversations channel status:', status);
+			});
+
+		console.log('🚀 [Messages] Realtime subscriptions active');
+
+		// Cleanup subscriptions and timeout on unmount
+		return () => {
+			console.log('🧹 [Messages] Cleaning up realtime subscriptions');
+			if (refreshTimeout) {
+				clearTimeout(refreshTimeout);
+			}
+			supabase.removeChannel(messagesChannel);
+			supabase.removeChannel(conversationsChannel);
+		};
+	}, [session?.user?.id, loading]); // Removed 'conversations' from dependency array
 
 	const renderConversationItem = (conversation: Conversation) => {
 		const otherUser = conversation.other_user;
