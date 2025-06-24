@@ -1,3 +1,5 @@
+// app/(protected)/(tabs)/_layout.tsx - UPDATED VERSION
+
 import React from "react";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -59,9 +61,17 @@ export default function TabsLayout() {
 			<Tabs.Screen
 				name="index"
 				options={{
-					title: "Home",
+					title: "Garden",
 					tabBarIcon: ({ color, focused }) =>
 						createTabBarIcon("home", focused, color),
+				}}
+			/>
+			<Tabs.Screen
+				name="plants"
+				options={{
+					title: "Plants",
+					tabBarIcon: ({ color, focused }) =>
+						createTabBarIcon("leaf", focused, color),
 				}}
 			/>
 			<Tabs.Screen

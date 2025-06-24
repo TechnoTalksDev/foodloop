@@ -1,0 +1,641 @@
+// app/(protected)/plants/plant-detail/[id].tsx - NEW FILE
+
+import React, { useState, useEffect } from "react";
+import {
+	View,
+	ScrollView,
+	TouchableOpacity,
+	Image,
+	Alert,
+	TextInput,
+} from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import { SafeAreaView } from "@/components/safe-area-view";
+import { Text } from "@/components/ui/text";
+import { H1, H3 } from "@/components/ui/typography";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/context/supabase-provider";
+import { supabase } from "@/config/supabase";
+import { format, differenceInDays } from "date-fns";
+
+interface PlantDetail {
+	id: string;
+	plant_name: string;
+	plant_type: string;
+	planted_date: string;
+	expected_harvest: string;
+	status: string;
+	last_checkin: string | null;
+	image_url: string | null;
+	notes: string | null;
+}
+
+interface CheckIn {
+	id: string;
+	image_url: string | null;
+	notes: string | null;
+	height_cm: number | null;
+	health_status: string;
+	created_at: string;
+}
+
+const HEALTH_STATUS_OPTIONS = [
+	{ value: 'healthy', label: 'Healthy', icon: '🌱', color: 'text-green-600' },
+	{ value: 'needs_attention', label: 'Needs Attention', icon: '⚠️', color: 'text-yellow-600' },
+	{ value: 'sick', label: 'Sick', icon: '🤒', color: 'text-red-600' },
+	{ value: 'dying', label: 'Dying', icon: '💀', color: 'text-red-800' },
+];
+
+const STATUS_COLORS = {
+	seedling: 'text-yellow-600',
+	growing: 'text-green-600',
+	flowering: 'text-purple-600',
+	ready_to_harvest: 'text-orange-600',
+	harvested: 'text-gray-600',
+};
+
+const STATUS_ICONS = {
+	seedling: '🌱',
+	growing: '🌿',
+	flowering: '🌸',
+	ready_to_harvest: '🍅',
+	harvested: '📦',
+};
+
+export default function PlantDetailScreen() {
+	const { id } = useLocalSearchParams<{ id: string }>();
+	const router = useRouter();
+	const { session } = useAuth();
+	const [plant, setPlant] = useState<PlantDetail | null>(null);
+	const [checkIns, setCheckIns] = useState<CheckIn[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [showCheckInModal, setShowCheckInModal] = useState(false);
+	
+	// Check-in form state
+	const [checkInImage, setCheckInImage] = useState<string | null>(null);
+	const [checkInNotes, setCheckInNotes] = useState("");
+	const [checkInHeight, setCheckInHeight] = useState("");
+	const [checkInHealth, setCheckInHealth] = useState("healthy");
+	const [submittingCheckIn, setSubmittingCheckIn] = useState(false);
+
+	useEffect(() => {
+		if (id) {
+			fetchPlantDetail();
+			fetchCheckIns();
+		}
+	}, [id]);
+
+	const fetchPlantDetail = async () => {
+		if (!id || !session?.user?.id) return;
+
+		try {
+			const { data, error } = await supabase
+				.from("user_plants")
+				.select("*")
+				.eq("id", id)
+				.eq("user_id", session.user.id)
+				.single();
+
+			if (error) {
+				console.error("Error fetching plant:", error);
+				Alert.alert("Error", "Plant not found");
+				router.back();
+				return;
+			}
+
+			setPlant(data);
+		} catch (error) {
+			console.error("Error in fetchPlantDetail:", error);
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	const fetchCheckIns = async () => {
+		if (!id || !session?.user?.id) return;
+
+		try {
+			const { data, error } = await supabase
+				.from("plant_checkins")
+				.select("*")
+				.eq("plant_id", id)
+				.eq("user_id", session.user.id)
+				.order("created_at", { ascending: false })
+				.limit(10);
+
+			if (error) {
+				console.error("Error fetching check-ins:", error);
+				return;
+			}
+
+			setCheckIns(data || []);
+		} catch (error) {
+			console.error("Error in fetchCheckIns:", error);
+		}
+	};
+
+	const takePhoto = async () => {
+		try {
+			const { status } = await ImagePicker.requestCameraPermissionsAsync();
+			
+			if (status !== "granted") {
+				Alert.alert("Permission needed", "Please grant camera permissions to take photos.");
+				return;
+			}
+
+			const result = await ImagePicker.launchCameraAsync({
+				allowsEditing: true,
+				aspect: [4, 3],
+				quality: 0.7,
+			});
+
+			if (!result.canceled) {
+				setCheckInImage(result.assets[0].uri);
+			}
+		} catch (error) {
+			console.error("Error taking photo:", error);
+			Alert.alert("Error", "Failed to take photo. Please try again.");
+		}
+	};
+
+	const pickImage = async () => {
+		try {
+			const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+			
+			if (status !== "granted") {
+				Alert.alert("Permission needed", "Please grant camera roll permissions.");
+				return;
+			}
+
+			const result = await ImagePicker.launchImageLibraryAsync({
+				mediaTypes: ImagePicker.MediaTypeOptions.Images,
+				allowsEditing: true,
+				aspect: [4, 3],
+				quality: 0.7,
+			});
+
+			if (!result.canceled) {
+				setCheckInImage(result.assets[0].uri);
+			}
+		} catch (error) {
+			console.error("Error picking image:", error);
+		}
+	};
+
+	const uploadCheckInImage = async (imageUri: string): Promise<string | null> => {
+		try {
+			const response = await fetch(imageUri);
+			const blob = await response.blob();
+			const fileExt = imageUri.split('.').pop()?.toLowerCase() || 'jpg';
+			const fileName = `checkins/${session?.user?.id}/${id}/${Date.now()}.${fileExt}`;
+
+			const { data, error } = await supabase.storage
+				.from('plant-images')
+				.upload(fileName, blob);
+
+			if (error) {
+				console.error('Error uploading check-in image:', error);
+				return null;
+			}
+
+			const { data: urlData } = supabase.storage
+				.from('plant-images')
+				.getPublicUrl(fileName);
+
+			return urlData.publicUrl;
+		} catch (error) {
+			console.error('Error in uploadCheckInImage:', error);
+			return null;
+		}
+	};
+
+	const submitCheckIn = async () => {
+		if (!session?.user?.id || !id) return;
+
+		setSubmittingCheckIn(true);
+		try {
+			let imageUrl = null;
+			if (checkInImage) {
+				imageUrl = await uploadCheckInImage(checkInImage);
+			}
+
+			const heightValue = checkInHeight ? parseFloat(checkInHeight) : null;
+
+			const { error } = await supabase
+				.from("plant_checkins")
+				.insert({
+					user_id: session.user.id,
+					plant_id: id,
+					image_url: imageUrl,
+					notes: checkInNotes.trim() || null,
+					height_cm: heightValue,
+					health_status: checkInHealth,
+				});
+
+			if (error) {
+				console.error("Error submitting check-in:", error);
+				Alert.alert("Error", "Failed to submit check-in. Please try again.");
+				return;
+			}
+
+			// Update plant's last check-in time
+			await supabase
+				.from("user_plants")
+				.update({ last_checkin: new Date().toISOString() })
+				.eq("id", id);
+
+			// Reset form
+			setCheckInImage(null);
+			setCheckInNotes("");
+			setCheckInHeight("");
+			setCheckInHealth("healthy");
+			setShowCheckInModal(false);
+
+			// Refresh data
+			await Promise.all([fetchPlantDetail(), fetchCheckIns()]);
+
+			Alert.alert("Check-in Complete!", "Your daily check-in has been recorded! 📸");
+		} catch (error) {
+			console.error("Error in submitCheckIn:", error);
+			Alert.alert("Error", "Failed to submit check-in. Please try again.");
+		} finally {
+			setSubmittingCheckIn(false);
+		}
+	};
+
+	const updatePlantStatus = async (newStatus: string) => {
+		if (!id) return;
+
+		try {
+			const { error } = await supabase
+				.from("user_plants")
+				.update({ status: newStatus })
+				.eq("id", id);
+
+			if (error) {
+				console.error("Error updating plant status:", error);
+				Alert.alert("Error", "Failed to update plant status.");
+				return;
+			}
+
+			setPlant(prev => prev ? { ...prev, status: newStatus } : null);
+			
+			if (newStatus === 'ready_to_harvest') {
+				Alert.alert(
+					"Ready to Harvest! 🎉",
+					"Your plant is ready for harvest! Consider selling your produce on the marketplace.",
+					[
+						{ text: "Later", style: "cancel" },
+						{ 
+							text: "Sell on Marketplace", 
+							onPress: () => router.push("/(protected)/create-product-modal")
+						}
+					]
+				);
+			}
+		} catch (error) {
+			console.error("Error in updatePlantStatus:", error);
+		}
+	};
+
+	const getDaysGrowing = () => {
+		if (!plant) return 0;
+		return differenceInDays(new Date(), new Date(plant.planted_date));
+	};
+
+	const getDaysUntilHarvest = () => {
+		if (!plant?.expected_harvest) return null;
+		return differenceInDays(new Date(plant.expected_harvest), new Date());
+	};
+
+	const canCheckIn = () => {
+		if (!plant?.last_checkin) return true;
+		const lastCheckIn = new Date(plant.last_checkin);
+		const now = new Date();
+		const hoursSince = Math.floor((now.getTime() - lastCheckIn.getTime()) / (1000 * 60 * 60));
+		return hoursSince >= 20; // Allow check-in after 20 hours
+	};
+
+	if (loading) {
+		return (
+			<SafeAreaView className="flex-1 bg-background">
+				<View className="flex-1 items-center justify-center">
+					<Text className="text-muted-foreground">Loading plant details...</Text>
+				</View>
+			</SafeAreaView>
+		);
+	}
+
+	if (!plant) {
+		return (
+			<SafeAreaView className="flex-1 bg-background">
+				<View className="flex-1 items-center justify-center">
+					<Text className="text-muted-foreground">Plant not found</Text>
+				</View>
+			</SafeAreaView>
+		);
+	}
+
+	return (
+		<SafeAreaView className="flex-1 bg-background">
+			{/* Header */}
+			<View className="flex-row items-center justify-between px-4 py-3 border-b border-border">
+				<TouchableOpacity onPress={() => router.back()}>
+					<Ionicons name="chevron-back" size={24} color="#666" />
+				</TouchableOpacity>
+				<H1 className="flex-1 text-center">{plant.plant_name}</H1>
+				<TouchableOpacity onPress={() => {/* TODO: Edit plant */}}>
+					<Ionicons name="pencil" size={24} color="#666" />
+				</TouchableOpacity>
+			</View>
+
+			<ScrollView className="flex-1">
+				{/* Plant Image & Status */}
+				<View className="relative">
+					{plant.image_url ? (
+						<Image
+							source={{ uri: plant.image_url }}
+							className="w-full h-64"
+							resizeMode="cover"
+						/>
+					) : (
+						<View className="w-full h-64 bg-muted items-center justify-center">
+							<Text className="text-6xl">
+								{STATUS_ICONS[plant.status as keyof typeof STATUS_ICONS] || '🌱'}
+							</Text>
+						</View>
+					)}
+					
+					<View className="absolute top-4 right-4 bg-black/70 px-3 py-1 rounded-full">
+						<Text className={`font-medium ${STATUS_COLORS[plant.status as keyof typeof STATUS_COLORS]}`}>
+							{STATUS_ICONS[plant.status as keyof typeof STATUS_ICONS]} {plant.status.replace('_', ' ')}
+						</Text>
+					</View>
+				</View>
+
+				{/* Plant Info */}
+				<View className="p-4">
+					<View className="flex-row justify-between items-center mb-4">
+						<View>
+							<Text className="text-2xl font-bold">{plant.plant_name}</Text>
+							<Text className="text-muted-foreground capitalize">{plant.plant_type}</Text>
+						</View>
+						
+						{canCheckIn() && (
+							<TouchableOpacity
+								onPress={() => setShowCheckInModal(true)}
+								className="bg-primary px-4 py-2 rounded-full"
+							>
+								<Text className="text-primary-foreground font-medium">📸 Check-in</Text>
+							</TouchableOpacity>
+						)}
+					</View>
+
+					{/* Stats */}
+					<View className="flex-row justify-between mb-6">
+						<View className="items-center flex-1">
+							<Text className="text-2xl font-bold text-primary">{getDaysGrowing()}</Text>
+							<Text className="text-sm text-muted-foreground">Days Growing</Text>
+						</View>
+						<View className="items-center flex-1">
+							<Text className="text-2xl font-bold text-primary">
+								{getDaysUntilHarvest() !== null ? getDaysUntilHarvest() : '--'}
+							</Text>
+							<Text className="text-sm text-muted-foreground">Days to Harvest</Text>
+						</View>
+						<View className="items-center flex-1">
+							<Text className="text-2xl font-bold text-primary">{checkIns.length}</Text>
+							<Text className="text-sm text-muted-foreground">Check-ins</Text>
+						</View>
+					</View>
+
+					{/* Quick Actions */}
+					<View className="flex-row gap-3 mb-6">
+						<TouchableOpacity
+							className="flex-1 bg-blue-600 p-3 rounded-lg"
+							onPress={() => router.push("/(protected)/plants/ai-calendar" as any)}
+						>
+							<Text className="text-white text-center font-medium">📅 Calendar</Text>
+						</TouchableOpacity>
+						
+						<TouchableOpacity
+							className="flex-1 bg-green-600 p-3 rounded-lg"
+							onPress={() => router.push("/(protected)/(tabs)/community" as any)}
+						>
+							<Text className="text-white text-center font-medium">💬 Community</Text>
+						</TouchableOpacity>
+						
+						{plant.status === 'ready_to_harvest' && (
+							<TouchableOpacity
+								className="flex-1 bg-orange-600 p-3 rounded-lg"
+								onPress={() => router.push("/(protected)/create-product-modal")}
+							>
+								<Text className="text-white text-center font-medium">🛒 Sell</Text>
+							</TouchableOpacity>
+						)}
+					</View>
+
+					{/* Status Update */}
+					{plant.status !== 'harvested' && (
+						<View className="bg-secondary/30 p-4 rounded-xl mb-6">
+							<Text className="font-semibold mb-3">Update Plant Status</Text>
+							<View className="flex-row flex-wrap gap-2">
+								{Object.entries(STATUS_ICONS).map(([status, icon]) => (
+									<TouchableOpacity
+										key={status}
+										onPress={() => updatePlantStatus(status)}
+										disabled={plant.status === status}
+										className={`px-3 py-2 rounded-lg border ${
+											plant.status === status 
+												? 'bg-primary border-primary' 
+												: 'bg-background border-border'
+										}`}
+									>
+										<Text className={`text-sm ${
+											plant.status === status ? 'text-primary-foreground' : 'text-foreground'
+										}`}>
+											{icon} {status.replace('_', ' ')}
+										</Text>
+									</TouchableOpacity>
+								))}
+							</View>
+						</View>
+					)}
+
+					{/* Recent Check-ins */}
+					<View>
+						<H3 className="mb-4">Recent Check-ins</H3>
+						{checkIns.length === 0 ? (
+							<View className="items-center py-8 bg-secondary/30 rounded-xl">
+								<Text className="text-4xl mb-2">📸</Text>
+								<Text className="font-semibold mb-1">No check-ins yet</Text>
+								<Text className="text-center text-muted-foreground">
+									Take your first photo to track your plant's progress
+								</Text>
+							</View>
+						) : (
+							<View className="space-y-4">
+								{checkIns.map((checkIn) => (
+									<View key={checkIn.id} className="bg-card p-4 rounded-xl border border-border">
+										<View className="flex-row items-center justify-between mb-3">
+											<Text className="font-medium">
+												{format(new Date(checkIn.created_at), 'MMM d, yyyy')}
+											</Text>
+											<View className="flex-row items-center">
+												<Text className="mr-2">
+													{HEALTH_STATUS_OPTIONS.find(h => h.value === checkIn.health_status)?.icon}
+												</Text>
+												<Text className={`text-sm font-medium ${
+													HEALTH_STATUS_OPTIONS.find(h => h.value === checkIn.health_status)?.color
+												}`}>
+													{HEALTH_STATUS_OPTIONS.find(h => h.value === checkIn.health_status)?.label}
+												</Text>
+											</View>
+										</View>
+
+										{checkIn.image_url && (
+											<Image
+												source={{ uri: checkIn.image_url }}
+												className="w-full h-48 rounded-lg mb-3"
+												resizeMode="cover"
+											/>
+										)}
+
+										{checkIn.height_cm && (
+											<Text className="text-sm text-muted-foreground mb-2">
+												📏 Height: {checkIn.height_cm} cm
+											</Text>
+										)}
+
+										{checkIn.notes && (
+											<Text className="text-sm">{checkIn.notes}</Text>
+										)}
+									</View>
+								))}
+							</View>
+						)}
+					</View>
+				</View>
+
+				{/* Bottom spacing */}
+				<View className="h-20" />
+			</ScrollView>
+
+			{/* Check-in Modal */}
+			{showCheckInModal && (
+				<View className="absolute inset-0 bg-black/50 items-center justify-center p-4">
+					<View className="bg-background rounded-2xl p-6 w-full max-w-md">
+						<View className="flex-row items-center justify-between mb-4">
+							<Text className="text-xl font-bold">Daily Check-in</Text>
+							<TouchableOpacity onPress={() => setShowCheckInModal(false)}>
+								<Ionicons name="close" size={24} color="#666" />
+							</TouchableOpacity>
+						</View>
+
+						<ScrollView className="max-h-96">
+							{/* Photo */}
+							<View className="mb-4">
+								<Text className="font-medium mb-2">Take a photo</Text>
+								{checkInImage ? (
+									<View className="relative">
+										<Image
+											source={{ uri: checkInImage }}
+											className="w-full h-48 rounded-lg"
+											resizeMode="cover"
+										/>
+										<TouchableOpacity
+											onPress={() => setCheckInImage(null)}
+											className="absolute top-2 right-2 bg-red-500 rounded-full p-1"
+										>
+											<Ionicons name="close" size={16} color="white" />
+										</TouchableOpacity>
+									</View>
+								) : (
+									<View className="flex-row gap-2">
+										<TouchableOpacity
+											onPress={takePhoto}
+											className="flex-1 border-2 border-dashed border-border rounded-lg p-4 items-center"
+										>
+											<Ionicons name="camera" size={32} color="#999" />
+											<Text className="text-sm text-muted-foreground mt-2">Camera</Text>
+										</TouchableOpacity>
+										<TouchableOpacity
+											onPress={pickImage}
+											className="flex-1 border-2 border-dashed border-border rounded-lg p-4 items-center"
+										>
+											<Ionicons name="image" size={32} color="#999" />
+											<Text className="text-sm text-muted-foreground mt-2">Gallery</Text>
+										</TouchableOpacity>
+									</View>
+								)}
+							</View>
+
+							{/* Health Status */}
+							<View className="mb-4">
+								<Text className="font-medium mb-2">How's your plant doing?</Text>
+								<View className="flex-row flex-wrap gap-2">
+									{HEALTH_STATUS_OPTIONS.map((option) => (
+										<TouchableOpacity
+											key={option.value}
+											onPress={() => setCheckInHealth(option.value)}
+											className={`px-3 py-2 rounded-lg border ${
+												checkInHealth === option.value
+													? 'bg-primary border-primary'
+													: 'bg-background border-border'
+											}`}
+										>
+											<Text className={`text-sm ${
+												checkInHealth === option.value ? 'text-primary-foreground' : 'text-foreground'
+											}`}>
+												{option.icon} {option.label}
+											</Text>
+										</TouchableOpacity>
+									))}
+								</View>
+							</View>
+
+							{/* Height */}
+							<View className="mb-4">
+								<Text className="font-medium mb-2">Height (cm) - Optional</Text>
+								<TextInput
+									value={checkInHeight}
+									onChangeText={setCheckInHeight}
+									placeholder="e.g., 15.5"
+									keyboardType="decimal-pad"
+									className="border border-border rounded-lg px-3 py-2 text-foreground"
+								/>
+							</View>
+
+							{/* Notes */}
+							<View className="mb-6">
+								<Text className="font-medium mb-2">Notes - Optional</Text>
+								<TextInput
+									value={checkInNotes}
+									onChangeText={setCheckInNotes}
+									placeholder="Any observations about your plant..."
+									multiline
+									numberOfLines={3}
+									className="border border-border rounded-lg px-3 py-2 text-foreground"
+									textAlignVertical="top"
+								/>
+							</View>
+						</ScrollView>
+
+						{/* Submit Button */}
+						<Button
+							onPress={submitCheckIn}
+							disabled={submittingCheckIn}
+							className="w-full"
+						>
+							<Text className="text-primary-foreground font-semibold">
+								{submittingCheckIn ? "Saving..." : "Save Check-in"}
+							</Text>
+						</Button>
+					</View>
+				</View>
+			)}
+		</SafeAreaView>
+	);
+}
