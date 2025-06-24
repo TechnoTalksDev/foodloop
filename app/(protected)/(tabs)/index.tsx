@@ -3,6 +3,7 @@ import { Image, ScrollView, TouchableOpacity, View } from "react-native";
 import { useSharedValue } from "react-native-reanimated";
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from "react";
+import * as Location from "expo-location";
 
 import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
@@ -75,6 +76,86 @@ interface RealImpactData {
 	loading: boolean;
 }
 
+// Weather interfaces
+interface WeatherData {
+	temp: string;
+	condition: string;
+	icon: string;
+	forecast: Array<{
+		day: string;
+		icon: string;
+		temp: string;
+		high: number;
+		low: number;
+	}>;
+	loading: boolean;
+	error: string | null;
+	location: string;
+}
+
+// Weather code to emoji mapping
+const getWeatherIcon = (weatherCode: number, isDay: boolean = true): string => {
+	const weatherIcons: { [key: number]: { day: string; night: string } } = {
+		0: { day: "☀️", night: "🌙" }, // Clear sky
+		1: { day: "🌤️", night: "🌙" }, // Mainly clear
+		2: { day: "⛅", night: "☁️" }, // Partly cloudy
+		3: { day: "☁️", night: "☁️" }, // Overcast
+		45: { day: "🌫️", night: "🌫️" }, // Fog
+		48: { day: "🌫️", night: "🌫️" }, // Depositing rime fog
+		51: { day: "🌦️", night: "🌧️" }, // Light drizzle
+		53: { day: "🌦️", night: "🌧️" }, // Moderate drizzle
+		55: { day: "🌧️", night: "🌧️" }, // Dense drizzle
+		61: { day: "🌦️", night: "🌧️" }, // Slight rain
+		63: { day: "🌧️", night: "🌧️" }, // Moderate rain
+		65: { day: "🌧️", night: "🌧️" }, // Heavy rain
+		71: { day: "🌨️", night: "🌨️" }, // Slight snow
+		73: { day: "❄️", night: "❄️" }, // Moderate snow
+		75: { day: "❄️", night: "❄️" }, // Heavy snow
+		77: { day: "❄️", night: "❄️" }, // Snow grains
+		80: { day: "🌦️", night: "🌧️" }, // Slight rain showers
+		81: { day: "🌧️", night: "🌧️" }, // Moderate rain showers
+		82: { day: "⛈️", night: "⛈️" }, // Violent rain showers
+		85: { day: "🌨️", night: "🌨️" }, // Slight snow showers
+		86: { day: "❄️", night: "❄️" }, // Heavy snow showers
+		95: { day: "⛈️", night: "⛈️" }, // Thunderstorm
+		96: { day: "⛈️", night: "⛈️" }, // Thunderstorm with slight hail
+		99: { day: "⛈️", night: "⛈️" }, // Thunderstorm with heavy hail
+	};
+
+	const iconSet = weatherIcons[weatherCode] || { day: "🌤️", night: "☁️" };
+	return isDay ? iconSet.day : iconSet.night;
+};
+
+const getWeatherCondition = (weatherCode: number): string => {
+	const conditions: { [key: number]: string } = {
+		0: "Clear sky",
+		1: "Mainly clear",
+		2: "Partly cloudy",
+		3: "Overcast",
+		45: "Foggy",
+		48: "Foggy",
+		51: "Light drizzle",
+		53: "Drizzle",
+		55: "Heavy drizzle",
+		61: "Light rain",
+		63: "Rain",
+		65: "Heavy rain",
+		71: "Light snow",
+		73: "Snow",
+		75: "Heavy snow",
+		77: "Snow grains",
+		80: "Rain showers",
+		81: "Rain showers",
+		82: "Heavy rain",
+		85: "Snow showers",
+		86: "Heavy snow",
+		95: "Thunderstorm",
+		96: "Thunderstorm",
+		99: "Thunderstorm",
+	};
+	return conditions[weatherCode] || "Unknown";
+};
+
 export default function Home() {
 	const { session } = useAuth();
 	const [username, setUsername] = useState<string | null>(null);
@@ -86,6 +167,17 @@ export default function Home() {
 		totalItemsRescued: 0,
 		hasData: false,
 		loading: true
+	});
+
+	// Weather state
+	const [weather, setWeather] = useState<WeatherData>({
+		temp: "--°",
+		condition: "Loading...",
+		icon: "🌤️",
+		forecast: [],
+		loading: true,
+		error: null,
+		location: "Getting location..."
 	});
 	
 	useEffect(() => {
@@ -109,6 +201,95 @@ export default function Home() {
 		};
 		fetchUser();
 	}, [session?.user?.id]);
+
+	// Fetch weather data
+	const fetchWeather = async () => {
+		try {
+			setWeather(prev => ({ ...prev, loading: true, error: null }));
+
+			// Get user's location
+			let { status } = await Location.requestForegroundPermissionsAsync();
+			
+			let latitude = 47.6062; // Default to Seattle
+			let longitude = -122.3321;
+			let locationName = "Seattle, WA";
+
+			if (status === 'granted') {
+				try {
+					const location = await Location.getCurrentPositionAsync({
+						accuracy: Location.Accuracy.Balanced,
+					});
+					latitude = location.coords.latitude;
+					longitude = location.coords.longitude;
+
+					// Reverse geocode to get location name
+					const reverseGeocode = await Location.reverseGeocodeAsync({
+						latitude,
+						longitude,
+					});
+
+					if (reverseGeocode.length > 0) {
+						const place = reverseGeocode[0];
+						locationName = `${place.city || place.subregion || 'Unknown'}, ${place.region || place.country || ''}`;
+					}
+				} catch (locationError) {
+					console.log('Failed to get precise location, using default');
+				}
+			}
+
+			// Fetch weather data from Open-Meteo API
+			const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=auto&forecast_days=4`;
+			
+			const response = await fetch(weatherUrl);
+			const data = await response.json();
+
+			if (!response.ok) {
+				throw new Error('Weather API request failed');
+			}
+
+			// Process current weather
+			const currentTemp = Math.round(data.current.temperature_2m);
+			const currentWeatherCode = data.current.weather_code;
+			const isDay = data.current.is_day === 1;
+			
+			// Process forecast
+			const forecastDays = ['Today', 'Tue', 'Wed', 'Thu'];
+			const forecast = data.daily.weather_code.slice(0, 4).map((code: number, index: number) => ({
+				day: forecastDays[index],
+				icon: getWeatherIcon(code, true),
+				temp: `${Math.round(data.daily.temperature_2m_max[index])}°`,
+				high: Math.round(data.daily.temperature_2m_max[index]),
+				low: Math.round(data.daily.temperature_2m_min[index])
+			}));
+
+			setWeather({
+				temp: `${currentTemp}°F`,
+				condition: getWeatherCondition(currentWeatherCode),
+				icon: getWeatherIcon(currentWeatherCode, isDay),
+				forecast,
+				loading: false,
+				error: null,
+				location: locationName
+			});
+
+		} catch (error) {
+			console.error('Weather fetch error:', error);
+			setWeather(prev => ({
+				...prev,
+				loading: false,
+				error: 'Failed to load weather',
+				temp: "--°",
+				condition: "Unavailable",
+				icon: "🌤️",
+				location: "Location unavailable"
+			}));
+		}
+	};
+
+	// Fetch weather on component mount
+	useEffect(() => {
+		fetchWeather();
+	}, []);
 
 	// Fetch real impact data
 	useEffect(() => {
@@ -188,19 +369,6 @@ export default function Home() {
 	// Daily check-in state (placeholder logic)
 	const [checkedIn, setCheckedIn] = useState(false);
 	
-	// Weather data state (placeholder)
-	const [weather, setWeather] = useState({
-		temp: "22°C",
-		condition: "Sunny",
-		icon: "☀️",
-		forecast: [
-			{ day: "Today", icon: "☀️", temp: "22°" },
-			{ day: "Tue", icon: "☀️", temp: "24°" },
-			{ day: "Wed", icon: "🌤️", temp: "21°" },
-			{ day: "Thu", icon: "🌧️", temp: "18°" },
-		]
-	});
-
 	// Achievements data (placeholder)
 	const [achievements, setAchievements] = useState({
 		completed: 3,
@@ -299,36 +467,58 @@ export default function Home() {
 					</Text>
 				</View>
 
-				{/* Local Weather Widget */}
+				{/* Local Weather Widget - REAL API INTEGRATION */}
 				<View className="mx-4 mb-6 p-5 bg-secondary/30 rounded-2xl border border-border">
 					<View className="flex-row justify-between items-center mb-3">
 						<View className="flex-row items-center">
 							<Text className="text-xl mr-2">☁️</Text>
 							<Text className="text-lg font-semibold">Local Weather</Text>
 						</View>
-						<Text className="text-muted-foreground">Your Area</Text>
+						<TouchableOpacity onPress={fetchWeather}>
+							<Text className="text-primary text-sm">Refresh</Text>
+						</TouchableOpacity>
 					</View>
 					
-					<View className="flex-row items-center justify-between mb-3">
-						<View className="flex-row items-center">
-							<Text className="text-4xl mr-3">{weather.icon}</Text>
-							<View>
-								<Text className="text-2xl font-bold">{weather.temp}</Text>
-								<Text className="text-muted-foreground">{weather.condition}</Text>
-							</View>
+					{weather.loading ? (
+						<View className="items-center py-4">
+							<Text className="text-muted-foreground">Loading weather...</Text>
 						</View>
-						<Text className="text-green-500">Good for harvesting</Text>
-					</View>
-					
-					<View className="flex-row justify-between mt-2">
-						{weather.forecast.map((day, index) => (
-							<View key={index} className="items-center">
-								<Text className="text-muted-foreground text-xs">{day.day}</Text>
-								<Text className="text-xl my-1">{day.icon}</Text>
-								<Text className="font-medium">{day.temp}</Text>
+					) : weather.error ? (
+						<View className="items-center py-4">
+							<Text className="text-red-500 text-sm">{weather.error}</Text>
+							<TouchableOpacity onPress={fetchWeather} className="mt-2">
+								<Text className="text-primary text-sm">Try Again</Text>
+							</TouchableOpacity>
+						</View>
+					) : (
+						<>
+							<Text className="text-muted-foreground text-sm mb-3">{weather.location}</Text>
+							
+							<View className="flex-row items-center justify-between mb-3">
+								<View className="flex-row items-center">
+									<Text className="text-4xl mr-3">{weather.icon}</Text>
+									<View>
+										<Text className="text-2xl font-bold">{weather.temp}</Text>
+										<Text className="text-muted-foreground">{weather.condition}</Text>
+									</View>
+								</View>
+								<Text className="text-green-500">Good for harvesting</Text>
 							</View>
-						))}
-					</View>
+							
+							<View className="flex-row justify-between mt-2">
+								{weather.forecast.map((day, index) => (
+									<View key={index} className="items-center flex-1">
+										<Text className="text-muted-foreground text-xs">{day.day}</Text>
+										<Text className="text-xl my-1">{day.icon}</Text>
+										<Text className="font-medium text-sm">{day.temp}</Text>
+										<Text className="text-xs text-muted-foreground">
+											{day.high}°/{day.low}°
+										</Text>
+									</View>
+								))}
+							</View>
+						</>
+					)}
 				</View>
 
 				{/* Recommendations Widget with ProductCard component */}
