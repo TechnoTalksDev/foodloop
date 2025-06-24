@@ -17,14 +17,14 @@ import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/supabase-provider";
 import { supabase } from "@/config/supabase";
-import { format } from 'date-fns';
+import { format } from "date-fns";
 
 interface Message {
 	id: string;
 	conversation_id: string;
 	sender_id: string;
 	content: string;
-	message_type: 'text' | 'offer' | 'location' | 'image' | 'payment_info';
+	message_type: "text" | "offer" | "location" | "image" | "payment_info";
 	metadata?: any;
 	created_at: string;
 	read_at?: string;
@@ -57,8 +57,10 @@ export default function ConversationScreen() {
 	const router = useRouter();
 	const { session } = useAuth();
 	const scrollViewRef = useRef<ScrollView>(null);
-	
-	const [conversation, setConversation] = useState<ConversationDetails | null>(null);
+
+	const [conversation, setConversation] = useState<ConversationDetails | null>(
+		null,
+	);
 	const [messages, setMessages] = useState<Message[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [sending, setSending] = useState(false);
@@ -71,9 +73,9 @@ export default function ConversationScreen() {
 
 		try {
 			const { data: convData, error: convError } = await supabase
-				.from('conversations')
-				.select('*')
-				.eq('id', id)
+				.from("conversations")
+				.select("*")
+				.eq("id", id)
 				.single();
 
 			if (convError || !convData) {
@@ -82,44 +84,49 @@ export default function ConversationScreen() {
 				return;
 			}
 
-			if (convData.buyer_id !== session.user.id && convData.seller_id !== session.user.id) {
+			if (
+				convData.buyer_id !== session.user.id &&
+				convData.seller_id !== session.user.id
+			) {
 				Alert.alert("Error", "You don't have access to this conversation");
 				router.back();
 				return;
 			}
 
-			const otherUserId = convData.buyer_id === session.user.id ? convData.seller_id : convData.buyer_id;
+			const otherUserId =
+				convData.buyer_id === session.user.id
+					? convData.seller_id
+					: convData.buyer_id;
 			const { data: otherUser } = await supabase
-				.from('users')
-				.select('id, name, username, avatar')
-				.eq('id', otherUserId)
+				.from("users")
+				.select("id, name, username, avatar")
+				.eq("id", otherUserId)
 				.single();
 
 			const { data: product } = await supabase
-				.from('product')
-				.select('id, name, price, image_url, location, amount')
-				.eq('id', convData.product_id)
+				.from("product")
+				.select("id, name, price, image_url, location, amount")
+				.eq("id", convData.product_id)
 				.single();
 
 			setConversation({
 				...convData,
 				other_user: otherUser,
-				product: product
+				product: product,
 			});
 
 			const { data: messagesData, error: messagesError } = await supabase
-				.from('messages')
-				.select('*')
-				.eq('conversation_id', id)
-				.order('created_at', { ascending: true });
+				.from("messages")
+				.select("*")
+				.eq("conversation_id", id)
+				.order("created_at", { ascending: true });
 
 			if (!messagesError && messagesData) {
 				setMessages(messagesData);
 				await markMessagesAsRead();
 			}
-
 		} catch (error) {
-			console.error('Error fetching conversation data:', error);
+			console.error("Error fetching conversation data:", error);
 		} finally {
 			setLoading(false);
 		}
@@ -129,30 +136,32 @@ export default function ConversationScreen() {
 		if (!session?.user?.id || !id) return;
 		try {
 			await supabase
-				.from('messages')
+				.from("messages")
 				.update({ read_at: new Date().toISOString() })
-				.eq('conversation_id', id)
-				.neq('sender_id', session.user.id)
-				.is('read_at', null);
+				.eq("conversation_id", id)
+				.neq("sender_id", session.user.id)
+				.is("read_at", null);
 		} catch (error) {
-			console.error('Error marking messages as read:', error);
+			console.error("Error marking messages as read:", error);
 		}
 	};
 
-	const sendMessage = async (content: string, messageType: 'text' | 'offer' = 'text', metadata?: any) => {
+	const sendMessage = async (
+		content: string,
+		messageType: "text" | "offer" = "text",
+		metadata?: any,
+	) => {
 		if (!session?.user?.id || !id || !content.trim()) return;
 
 		setSending(true);
 		try {
-			const { error } = await supabase
-				.from('messages')
-				.insert({
-					conversation_id: id,
-					sender_id: session.user.id,
-					content: content.trim(),
-					message_type: messageType,
-					metadata: metadata
-				});
+			const { error } = await supabase.from("messages").insert({
+				conversation_id: id,
+				sender_id: session.user.id,
+				content: content.trim(),
+				message_type: messageType,
+				metadata: metadata,
+			});
 
 			if (error) {
 				Alert.alert("Error", "Failed to send message");
@@ -160,9 +169,9 @@ export default function ConversationScreen() {
 			}
 
 			await supabase
-				.from('conversations')
+				.from("conversations")
 				.update({ last_message_at: new Date().toISOString() })
-				.eq('id', id);
+				.eq("id", id);
 
 			await fetchConversationData();
 			setNewMessage("");
@@ -172,7 +181,6 @@ export default function ConversationScreen() {
 			setTimeout(() => {
 				scrollViewRef.current?.scrollToEnd({ animated: true });
 			}, 100);
-
 		} catch (error) {
 			Alert.alert("Error", "Failed to send message");
 		} finally {
@@ -191,10 +199,10 @@ export default function ConversationScreen() {
 		const metadata = {
 			amount: amount,
 			product_id: conversation?.product_id,
-			type: 'price_offer'
+			type: "price_offer",
 		};
 
-		await sendMessage(offerContent, 'offer', metadata);
+		await sendMessage(offerContent, "offer", metadata);
 	};
 
 	useEffect(() => {
@@ -211,40 +219,44 @@ export default function ConversationScreen() {
 
 	const renderMessage = (message: Message) => {
 		const isOwnMessage = message.sender_id === session?.user?.id;
-		const messageTime = format(new Date(message.created_at), 'h:mm a');
+		const messageTime = format(new Date(message.created_at), "h:mm a");
 
 		return (
 			<View
 				key={message.id}
-				className={`mb-4 ${isOwnMessage ? 'items-end' : 'items-start'}`}
+				className={`mb-4 ${isOwnMessage ? "items-end" : "items-start"}`}
 			>
 				<View
 					className={`max-w-[80%] p-3 rounded-2xl ${
 						isOwnMessage
-							? 'bg-primary rounded-tr-sm'
-							: 'bg-secondary rounded-tl-sm'
+							? "bg-primary rounded-tr-sm"
+							: "bg-secondary rounded-tl-sm"
 					}`}
 				>
-					{message.message_type === 'offer' && (
+					{message.message_type === "offer" && (
 						<View className="flex-row items-center mb-2">
 							<Text className="text-lg mr-2">💰</Text>
-							<Text className={`font-semibold ${isOwnMessage ? 'text-primary-foreground' : 'text-foreground'}`}>
-								{isOwnMessage ? 'Your Offer' : 'Price Offer'}
+							<Text
+								className={`font-semibold ${isOwnMessage ? "text-primary-foreground" : "text-foreground"}`}
+							>
+								{isOwnMessage ? "Your Offer" : "Price Offer"}
 							</Text>
 						</View>
 					)}
-					
+
 					<Text
 						className={`text-base ${
-							isOwnMessage ? 'text-primary-foreground' : 'text-foreground'
+							isOwnMessage ? "text-primary-foreground" : "text-foreground"
 						}`}
 					>
 						{message.content}
 					</Text>
-					
+
 					<Text
 						className={`text-xs mt-2 ${
-							isOwnMessage ? 'text-primary-foreground/70' : 'text-muted-foreground'
+							isOwnMessage
+								? "text-primary-foreground/70"
+								: "text-muted-foreground"
 						}`}
 					>
 						{messageTime}
@@ -283,25 +295,27 @@ export default function ConversationScreen() {
 				<TouchableOpacity onPress={() => router.back()} className="mr-3">
 					<Ionicons name="chevron-back" size={24} color="#666" />
 				</TouchableOpacity>
-				
+
 				<View className="flex-1 flex-row items-center">
 					<View className="w-10 h-10 rounded-full bg-secondary items-center justify-center mr-3">
 						{otherUser?.avatar ? (
-							<Image 
-								source={{ uri: otherUser.avatar }} 
+							<Image
+								source={{ uri: otherUser.avatar }}
 								className="w-10 h-10 rounded-full"
 								resizeMode="cover"
 							/>
 						) : (
 							<Text className="text-sm font-bold">
-								{(otherUser?.name || otherUser?.username || 'U').charAt(0).toUpperCase()}
+								{(otherUser?.name || otherUser?.username || "U")
+									.charAt(0)
+									.toUpperCase()}
 							</Text>
 						)}
 					</View>
-					
+
 					<View className="flex-1">
 						<Text className="font-semibold text-base">
-							{otherUser?.name || otherUser?.username || 'Unknown User'}
+							{otherUser?.name || otherUser?.username || "Unknown User"}
 						</Text>
 						{product && (
 							<Text className="text-sm text-muted-foreground">
@@ -316,10 +330,10 @@ export default function ConversationScreen() {
 						onPress={() => router.push(`/(protected)/product/${product.id}`)}
 					>
 						<Image
-							source={{ 
-								uri: Array.isArray(product.image_url) 
-									? product.image_url[0] 
-									: product.image_url 
+							source={{
+								uri: Array.isArray(product.image_url)
+									? product.image_url[0]
+									: product.image_url,
 							}}
 							className="w-10 h-10 rounded-lg"
 							resizeMode="cover"
@@ -328,9 +342,9 @@ export default function ConversationScreen() {
 				)}
 			</View>
 
-			<KeyboardAvoidingView 
+			<KeyboardAvoidingView
 				className="flex-1"
-				behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+				behavior={Platform.OS === "ios" ? "padding" : "height"}
 			>
 				<ScrollView
 					ref={scrollViewRef}
@@ -350,7 +364,7 @@ export default function ConversationScreen() {
 								onChangeText={setOfferAmount}
 								placeholder="0.00"
 								keyboardType="decimal-pad"
-								className="flex-1 border border-border rounded-lg px-3 py-2 mr-2"
+								className="flex-1 border border-border rounded-lg px-3 py-2 mr-2 text-foreground"
 							/>
 							<Button onPress={sendOffer} className="mr-2">
 								<Text>Send</Text>
@@ -369,13 +383,12 @@ export default function ConversationScreen() {
 					>
 						<Ionicons name="cash" size={24} color="#10b981" />
 					</TouchableOpacity>
-
 					<View className="flex-1 flex-row items-center border border-border rounded-full px-4 py-2">
 						<TextInput
 							value={newMessage}
 							onChangeText={setNewMessage}
 							placeholder="Type a message..."
-							className="flex-1 text-base"
+							className="flex-1 text-base text-foreground"
 							multiline
 							maxLength={500}
 						/>
@@ -387,10 +400,10 @@ export default function ConversationScreen() {
 							{sending ? (
 								<ActivityIndicator size="small" color="#10b981" />
 							) : (
-								<Ionicons 
-									name="send" 
-									size={20} 
-									color={newMessage.trim() ? "#10b981" : "#ccc"} 
+								<Ionicons
+									name="send"
+									size={20}
+									color={newMessage.trim() ? "#10b981" : "#ccc"}
 								/>
 							)}
 						</TouchableOpacity>
