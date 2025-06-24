@@ -1,3 +1,5 @@
+// app/(protected)/(tabs)/plants.tsx - NO SUPABASE FUNCTIONS
+
 import React, { useState, useEffect } from "react";
 import {
 	ScrollView,
@@ -64,6 +66,7 @@ export default function PlantsScreen() {
 		if (!session?.user?.id) return;
 
 		try {
+			// Direct table query - no functions
 			const { data, error } = await supabase
 				.from('user_plants')
 				.select('*')
@@ -194,6 +197,27 @@ export default function PlantsScreen() {
 		return daysSince >= 1;
 	};
 
+	// Navigation functions with type casting
+	const navigateToAddPlant = () => {
+		router.push("/(protected)/plants/add-plant" as any);
+	};
+
+	const navigateToAICalendar = () => {
+		router.push("/(protected)/plants/ai-calendar" as any);
+	};
+
+	const navigateToWeatherDetails = () => {
+		router.push("/(protected)/plants/weather-details" as any);
+	};
+
+	const navigateToPlantList = () => {
+		router.push("/(protected)/plants/plant-list" as any);
+	};
+
+	const navigateToPlantDetail = (plantId: string) => {
+		router.push(`/(protected)/plants/plant-detail/${plantId}` as any);
+	};
+
 	return (
 		<SafeAreaView className="flex-1 bg-background">
 			<ScrollView
@@ -245,7 +269,7 @@ export default function PlantsScreen() {
 								</View>
 							</View>
 							<TouchableOpacity
-								onPress={() => router.push("/(protected)/plants/weather-details" as any)}
+								onPress={navigateToWeatherDetails}
 							>
 								<Text className="text-primary text-sm">5-Day Forecast</Text>
 							</TouchableOpacity>
@@ -283,7 +307,7 @@ export default function PlantsScreen() {
 					<View className="flex-row gap-3">
 						<TouchableOpacity
 							className="flex-1 bg-primary p-4 rounded-xl items-center"
-							onPress={() => router.push("/(protected)/plants/add-plant" as any)}
+							onPress={navigateToAddPlant}
 						>
 							<Text className="text-2xl mb-2">🌱</Text>
 							<Text className="text-primary-foreground font-medium">Add Plant</Text>
@@ -291,7 +315,7 @@ export default function PlantsScreen() {
 
 						<TouchableOpacity
 							className="flex-1 bg-green-600 p-4 rounded-xl items-center"
-							onPress={() => router.push("/(protected)/plants/ai-calendar" as any)}
+							onPress={navigateToAICalendar}
 						>
 							<Text className="text-2xl mb-2">📅</Text>
 							<Text className="text-white font-medium">AI Calendar</Text>
@@ -299,7 +323,7 @@ export default function PlantsScreen() {
 
 						<TouchableOpacity
 							className="flex-1 bg-blue-600 p-4 rounded-xl items-center"
-							onPress={() => router.push("/(protected)/(tabs)/community" as any)}
+							onPress={() => router.push("/(protected)/(tabs)/community")}
 						>
 							<Text className="text-2xl mb-2">💬</Text>
 							<Text className="text-white font-medium">Community</Text>
@@ -313,7 +337,7 @@ export default function PlantsScreen() {
 						<H3>My Plants ({userPlants.length})</H3>
 						{userPlants.length > 0 && (
 							<TouchableOpacity
-								onPress={() => router.push("/(protected)/plants/plant-list" as any)}
+								onPress={navigateToPlantList}
 							>
 								<Text className="text-primary font-medium">View All</Text>
 							</TouchableOpacity>
@@ -332,7 +356,7 @@ export default function PlantsScreen() {
 								Add your first plant to begin tracking your garden journey
 							</Text>
 							<Button
-								onPress={() => router.push("/(protected)/plants/add-plant" as any)}
+								onPress={navigateToAddPlant}
 							>
 								<Text>Add Your First Plant</Text>
 							</Button>
@@ -343,9 +367,7 @@ export default function PlantsScreen() {
 								<TouchableOpacity
 									key={plant.id}
 									className="bg-card p-4 rounded-xl border border-border"
-									onPress={() =>
-										router.push(`/(protected)/plants/plant-detail/${plant.id}` as any)
-									}
+									onPress={() => navigateToPlantDetail(plant.id)}
 								>
 									<View className="flex-row items-center">
 										<View className="w-16 h-16 rounded-lg bg-muted items-center justify-center mr-4">
@@ -394,7 +416,7 @@ export default function PlantsScreen() {
 													<TouchableOpacity
 														className="bg-green-100 px-2 py-1 rounded"
 														onPress={() =>
-															router.push("/(protected)/(tabs)/marketplace" as any)
+															router.push("/(protected)/(tabs)/marketplace")
 														}
 													>
 														<Text className="text-green-700 text-xs font-medium">
