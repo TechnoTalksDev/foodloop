@@ -68,6 +68,10 @@ export default function ConversationScreen() {
 	const [newMessage, setNewMessage] = useState("");
 	const [showOfferInput, setShowOfferInput] = useState(false);
 	const [offerAmount, setOfferAmount] = useState("");
+	const [processingOffer, setProcessingOffer] = useState<string | null>(null);
+
+	// Check if current user is the seller
+	const isSeller = conversation?.seller_id === session?.user?.id;
 
 	const fetchConversationData = async () => {
 		if (!id || !session?.user?.id) return;
@@ -146,6 +150,7 @@ export default function ConversationScreen() {
 			console.error("Error marking messages as read:", error);
 		}
 	};
+
 	const sendMessage = async (
 		content: string,
 		messageType: "text" | "offer" = "text",
@@ -218,6 +223,97 @@ export default function ConversationScreen() {
 		await sendMessage(offerContent, "offer", metadata);
 	};
 
+	const handleAcceptOffer = async (message: Message) => {
+		if (!message.metadata || !conversation?.product) return;
+		
+		setProcessingOffer(message.id);
+		
+		try {
+			const offerAmount = message.metadata.amount;
+			const quantity = message.metadata.quantity || 1; // Default to 1 if not specified
+			
+			// Update product quantity in database
+			const newAmount = conversation.product.amount - quantity;
+			
+			if (newAmount < 0) {
+				Alert.alert("Error", "This product is no longer available");
+				return;
+			}
+
+			// Start a transaction-like operation
+			const { error: productError } = await supabase
+				.from("product")
+				.update({ amount: newAmount })
+				.eq("id", conversation.product.id);
+
+			if (productError) {
+				console.error("Error updating product:", productError);
+				Alert.alert("Error", "Failed to update product. Please try again.");
+				return;
+			}
+
+			// Create order history record
+			const { error: orderError } = await supabase
+				.from("order_history")
+				.insert({
+					seller_id: conversation.seller_id,
+					buyer_id: conversation.buyer_id,
+					product_id: conversation.product.id,
+					price: offerAmount,
+					quantity: quantity,
+				});
+
+			if (orderError) {
+				console.error("Error creating order history:", orderError);
+				// Rollback product update if order creation fails
+				await supabase
+					.from("product")
+					.update({ amount: conversation.product.amount })
+					.eq("id", conversation.product.id);
+				Alert.alert("Error", "Failed to complete transaction. Please try again.");
+				return;
+			}
+
+			// Send acceptance message
+			const acceptanceContent = `✅ Offer accepted! $${offerAmount.toFixed(2)} for ${quantity}x ${conversation.product.name}. Transaction completed. Please coordinate pickup/delivery details.`;
+			await sendMessage(acceptanceContent, "text");
+			
+			Alert.alert(
+				"Transaction Completed!",
+				`You've accepted the offer of $${offerAmount.toFixed(2)} for ${quantity}x ${conversation.product.name}. The transaction has been recorded.`,
+				[{ text: "OK" }]
+			);
+			
+			// Refresh conversation to update product amount
+			await fetchConversationData();
+			
+		} catch (error) {
+			console.error("Error accepting offer:", error);
+			Alert.alert("Error", "Failed to accept offer. Please try again.");
+		} finally {
+			setProcessingOffer(null);
+		}
+	};
+
+	const handleDeclineOffer = async (message: Message) => {
+		if (!message.metadata || !conversation?.product) return;
+		
+		setProcessingOffer(message.id);
+		
+		try {
+			const offerAmount = message.metadata.amount;
+			const declineContent = `❌ Offer declined. The offer of $${offerAmount.toFixed(2)} for ${conversation.product.name} was not accepted.`;
+			
+			await sendMessage(declineContent, "text");
+			
+		} catch (error) {
+			console.error("Error declining offer:", error);
+			Alert.alert("Error", "Failed to decline offer. Please try again.");
+		} finally {
+			setProcessingOffer(null);
+		}
+	};
+
 	useEffect(() => {
 		fetchConversationData();
 	}, [id, session?.user?.id]);
@@ -267,6 +363,7 @@ export default function ConversationScreen() {
 							</Text>
 						</View>
 					)}
+
 					<Text
 						className={`text-base ${
 							isOwnMessage ? "text-primary-foreground" : "text-foreground"
@@ -274,6 +371,39 @@ export default function ConversationScreen() {
 					>
 						{filterProfanity(message.content)}
 					</Text>
+
+					{/* Add Accept/Decline buttons for sellers receiving offers */}
+					{message.message_type === "offer" && 
+					 !isOwnMessage && 
+					 isSeller && (
+						<View className="flex-row gap-2 mt-3">
+							<Button
+								onPress={() => handleDeclineOffer(message)}
+								disabled={processingOffer === message.id}
+								className="flex-1 bg-red-500"
+								size="sm"
+							>
+								{processingOffer === message.id ? (
+									<ActivityIndicator size="small" color="white" />
+								) : (
+									<Text className="text-white text-sm">Decline</Text>
+								)}
+							</Button>
+							<Button
+								onPress={() => handleAcceptOffer(message)}
+								disabled={processingOffer === message.id}
+								className="flex-1 bg-green-500"
+								size="sm"
+							>
+								{processingOffer === message.id ? (
+									<ActivityIndicator size="small" color="white" />
+								) : (
+									<Text className="text-white text-sm">Accept</Text>
+								)}
+							</Button>
+						</View>
+					)}
+
 					<Text
 						className={`text-xs mt-2 ${
 							isOwnMessage
@@ -341,7 +471,7 @@ export default function ConversationScreen() {
 						</Text>
 						{product && (
 							<Text className="text-sm text-muted-foreground">
-								{product.name} • ${product.price.toFixed(2)}
+								{product.name} • ${product.price.toFixed(2)} • {product.amount} left
 							</Text>
 						)}
 					</View>
@@ -376,7 +506,16 @@ export default function ConversationScreen() {
 					{messages.map(renderMessage)}
 				</ScrollView>
 
-				{showOfferInput && (
+				{/* Show out of stock warning */}
+				{product && product.amount <= 0 && (
+					<View className="px-4 py-3 bg-red-50 border-t border-red-200">
+						<Text className="text-red-600 text-center">
+							⚠️ This product is now out of stock
+						</Text>
+					</View>
+				)}
+
+				{showOfferInput && !isSeller && (
 					<View className="px-4 py-3 border-t border-border bg-secondary/30">
 						<Text className="font-semibold mb-2">Make an Offer</Text>
 						<View className="flex-row items-center">
@@ -399,12 +538,16 @@ export default function ConversationScreen() {
 				)}
 
 				<View className="flex-row items-center px-4 py-3 border-t border-border">
-					<TouchableOpacity
-						onPress={() => setShowOfferInput(!showOfferInput)}
-						className="mr-3 p-2"
-					>
-						<Ionicons name="cash" size={24} color="#10b981" />
-					</TouchableOpacity>
+					{/* Only show offer button for buyers, not sellers */}
+					{!isSeller && product && product.amount > 0 && (
+						<TouchableOpacity
+							onPress={() => setShowOfferInput(!showOfferInput)}
+							className="mr-3 p-2"
+						>
+							<Ionicons name="cash" size={24} color="#10b981" />
+						</TouchableOpacity>
+					)}
+					
 					<View className="flex-1 flex-row items-center border border-border rounded-full px-4 py-2">
 						<TextInput
 							value={newMessage}
