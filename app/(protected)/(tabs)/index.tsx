@@ -3,7 +3,6 @@ import { Image, ScrollView, TouchableOpacity, View } from "react-native";
 import { useSharedValue } from "react-native-reanimated";
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from "react";
-import * as Location from "expo-location";
 
 import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
@@ -14,6 +13,7 @@ import { ProductCard } from "@/components/ui/product-card";
 import { useAuth } from "@/context/supabase-provider";
 import { supabase } from "@/config/supabase";
 import { format, subMonths } from 'date-fns';
+import { weatherService, WeatherData } from "@/lib/weather-service";
 
 // Sample food categories with eco-friendly icons
 const foodCategories = [
@@ -76,8 +76,8 @@ interface RealImpactData {
 	loading: boolean;
 }
 
-// Weather interfaces
-interface WeatherData {
+// Simplified weather display interface
+interface WeatherDisplay {
 	temp: string;
 	condition: string;
 	icon: string;
@@ -85,76 +85,12 @@ interface WeatherData {
 		day: string;
 		icon: string;
 		temp: string;
-		high: number;
-		low: number;
 	}>;
 	loading: boolean;
 	error: string | null;
 	location: string;
+	advice: string;
 }
-
-// Weather code to emoji mapping
-const getWeatherIcon = (weatherCode: number, isDay: boolean = true): string => {
-	const weatherIcons: { [key: number]: { day: string; night: string } } = {
-		0: { day: "☀️", night: "🌙" }, // Clear sky
-		1: { day: "🌤️", night: "🌙" }, // Mainly clear
-		2: { day: "⛅", night: "☁️" }, // Partly cloudy
-		3: { day: "☁️", night: "☁️" }, // Overcast
-		45: { day: "🌫️", night: "🌫️" }, // Fog
-		48: { day: "🌫️", night: "🌫️" }, // Depositing rime fog
-		51: { day: "🌦️", night: "🌧️" }, // Light drizzle
-		53: { day: "🌦️", night: "🌧️" }, // Moderate drizzle
-		55: { day: "🌧️", night: "🌧️" }, // Dense drizzle
-		61: { day: "🌦️", night: "🌧️" }, // Slight rain
-		63: { day: "🌧️", night: "🌧️" }, // Moderate rain
-		65: { day: "🌧️", night: "🌧️" }, // Heavy rain
-		71: { day: "🌨️", night: "🌨️" }, // Slight snow
-		73: { day: "❄️", night: "❄️" }, // Moderate snow
-		75: { day: "❄️", night: "❄️" }, // Heavy snow
-		77: { day: "❄️", night: "❄️" }, // Snow grains
-		80: { day: "🌦️", night: "🌧️" }, // Slight rain showers
-		81: { day: "🌧️", night: "🌧️" }, // Moderate rain showers
-		82: { day: "⛈️", night: "⛈️" }, // Violent rain showers
-		85: { day: "🌨️", night: "🌨️" }, // Slight snow showers
-		86: { day: "❄️", night: "❄️" }, // Heavy snow showers
-		95: { day: "⛈️", night: "⛈️" }, // Thunderstorm
-		96: { day: "⛈️", night: "⛈️" }, // Thunderstorm with slight hail
-		99: { day: "⛈️", night: "⛈️" }, // Thunderstorm with heavy hail
-	};
-
-	const iconSet = weatherIcons[weatherCode] || { day: "🌤️", night: "☁️" };
-	return isDay ? iconSet.day : iconSet.night;
-};
-
-const getWeatherCondition = (weatherCode: number): string => {
-	const conditions: { [key: number]: string } = {
-		0: "Clear sky",
-		1: "Mainly clear",
-		2: "Partly cloudy",
-		3: "Overcast",
-		45: "Foggy",
-		48: "Foggy",
-		51: "Light drizzle",
-		53: "Drizzle",
-		55: "Heavy drizzle",
-		61: "Light rain",
-		63: "Rain",
-		65: "Heavy rain",
-		71: "Light snow",
-		73: "Snow",
-		75: "Heavy snow",
-		77: "Snow grains",
-		80: "Rain showers",
-		81: "Rain showers",
-		82: "Heavy rain",
-		85: "Snow showers",
-		86: "Heavy snow",
-		95: "Thunderstorm",
-		96: "Thunderstorm",
-		99: "Thunderstorm",
-	};
-	return conditions[weatherCode] || "Unknown";
-};
 
 export default function Home() {
 	const { session } = useAuth();
@@ -169,15 +105,16 @@ export default function Home() {
 		loading: true
 	});
 
-	// Weather state
-	const [weather, setWeather] = useState<WeatherData>({
+	// Weather state using the service
+	const [weather, setWeather] = useState<WeatherDisplay>({
 		temp: "--°",
 		condition: "Loading...",
 		icon: "🌤️",
 		forecast: [],
 		loading: true,
 		error: null,
-		location: "Getting location..."
+		location: "Getting location...",
+		advice: ""
 	});
 	
 	useEffect(() => {
@@ -202,74 +139,35 @@ export default function Home() {
 		fetchUser();
 	}, [session?.user?.id]);
 
-	// Fetch weather data
+	// Fetch weather data using the service
 	const fetchWeather = async () => {
 		try {
 			setWeather(prev => ({ ...prev, loading: true, error: null }));
 
-			// Get user's location
-			let { status } = await Location.requestForegroundPermissionsAsync();
-			
-			let latitude = 47.6062; // Default to Seattle
-			let longitude = -122.3321;
-			let locationName = "Seattle, WA";
+			const weatherData: WeatherData = await weatherService.getWeatherData({
+				temperatureUnit: 'fahrenheit',
+				forecastDays: 4,
+				includeDetails: false
+			});
 
-			if (status === 'granted') {
-				try {
-					const location = await Location.getCurrentPositionAsync({
-						accuracy: Location.Accuracy.Balanced,
-					});
-					latitude = location.coords.latitude;
-					longitude = location.coords.longitude;
-
-					// Reverse geocode to get location name
-					const reverseGeocode = await Location.reverseGeocodeAsync({
-						latitude,
-						longitude,
-					});
-
-					if (reverseGeocode.length > 0) {
-						const place = reverseGeocode[0];
-						locationName = `${place.city || place.subregion || 'Unknown'}, ${place.region || place.country || ''}`;
-					}
-				} catch (locationError) {
-					console.log('Failed to get precise location, using default');
-				}
-			}
-
-			// Fetch weather data from Open-Meteo API
-			const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,weather_code,is_day&daily=weather_code,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=auto&forecast_days=4`;
-			
-			const response = await fetch(weatherUrl);
-			const data = await response.json();
-
-			if (!response.ok) {
-				throw new Error('Weather API request failed');
-			}
-
-			// Process current weather
-			const currentTemp = Math.round(data.current.temperature_2m);
-			const currentWeatherCode = data.current.weather_code;
-			const isDay = data.current.is_day === 1;
-			
-			// Process forecast
-			const forecastDays = ['Today', 'Tue', 'Wed', 'Thu'];
-			const forecast = data.daily.weather_code.slice(0, 4).map((code: number, index: number) => ({
-				day: forecastDays[index],
-				icon: getWeatherIcon(code, true),
-				temp: `${Math.round(data.daily.temperature_2m_max[index])}°`,
-				high: Math.round(data.daily.temperature_2m_max[index]),
-				low: Math.round(data.daily.temperature_2m_min[index])
+			// Convert service data to display format
+			const forecast = weatherData.forecast.map(day => ({
+				day: day.day,
+				icon: day.icon,
+				temp: `${day.temperatureMax}°`
 			}));
 
+			const advice = weatherService.getFarmingAdvice(weatherData);
+
 			setWeather({
-				temp: `${currentTemp}°F`,
-				condition: getWeatherCondition(currentWeatherCode),
-				icon: getWeatherIcon(currentWeatherCode, isDay),
+				temp: `${weatherData.temperature}°F`,
+				condition: weatherData.condition,
+				icon: weatherData.icon,
 				forecast,
 				loading: false,
 				error: null,
-				location: locationName
+				location: weatherData.location.name,
+				advice
 			});
 
 		} catch (error) {
@@ -281,7 +179,8 @@ export default function Home() {
 				temp: "--°",
 				condition: "Unavailable",
 				icon: "🌤️",
-				location: "Location unavailable"
+				location: "Location unavailable",
+				advice: ""
 			}));
 		}
 	};
@@ -467,7 +366,7 @@ export default function Home() {
 					</Text>
 				</View>
 
-				{/* Local Weather Widget - REAL API INTEGRATION */}
+				{/* Local Weather Widget - Using Weather Service */}
 				<View className="mx-4 mb-6 p-5 bg-secondary/30 rounded-2xl border border-border">
 					<View className="flex-row justify-between items-center mb-3">
 						<View className="flex-row items-center">
@@ -502,7 +401,11 @@ export default function Home() {
 										<Text className="text-muted-foreground">{weather.condition}</Text>
 									</View>
 								</View>
-								<Text className="text-green-500">Good for harvesting</Text>
+								<View className="flex-1 ml-4">
+									<Text className="text-green-500 text-sm font-medium text-right">
+										{weather.advice}
+									</Text>
+								</View>
 							</View>
 							
 							<View className="flex-row justify-between mt-2">
@@ -511,9 +414,6 @@ export default function Home() {
 										<Text className="text-muted-foreground text-xs">{day.day}</Text>
 										<Text className="text-xl my-1">{day.icon}</Text>
 										<Text className="font-medium text-sm">{day.temp}</Text>
-										<Text className="text-xs text-muted-foreground">
-											{day.high}°/{day.low}°
-										</Text>
 									</View>
 								))}
 							</View>
