@@ -197,7 +197,8 @@ export default function ProductDetailScreen() {
 
 		setAddingToCart(true);
 		try {
-			const success = await addToCart(id, quantity);			if (success) {
+			const success = await addToCart(id, quantity);
+			if (success) {
 				Alert.alert(
 					"Added to Cart",
 					`${quantity} ${quantity > 1 ? "items" : "item"} added to your cart successfully!`,
@@ -563,7 +564,8 @@ export default function ProductDetailScreen() {
 							>
 								<Ionicons name="trash" size={20} color="white" />
 							</Button>
-						</View>						<Button
+						</View>
+						<Button
 							variant="outline"
 							className="rounded-full"
 							onPress={() => router.push("/(protected)/cart-modal")}

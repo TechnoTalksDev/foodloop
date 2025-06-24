@@ -176,6 +176,17 @@ export default function MessagesScreen() {
 		fetchConversations();
 	}, [session?.user?.id]);
 
+	// Auto-refresh conversations every 1 second
+	useEffect(() => {
+		if (!session?.user?.id || loading) return;
+
+		const interval = setInterval(() => {
+			fetchConversations();
+		}, 1000); // 1 second
+
+		return () => clearInterval(interval);
+	}, [session?.user?.id, loading]);
+
 	const renderConversationItem = (conversation: Conversation) => {
 		const otherUser = conversation.other_user;
 		const product = conversation.product;
