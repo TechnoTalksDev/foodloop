@@ -209,6 +209,17 @@ export default function ConversationScreen() {
 		fetchConversationData();
 	}, [id, session?.user?.id]);
 
+	// Auto-refresh messages every 5 seconds
+	useEffect(() => {
+		if (!id || !session?.user?.id || loading) return;
+
+		const interval = setInterval(() => {
+			fetchConversationData();
+		}, 1000); // 1 seconds
+
+		return () => clearInterval(interval);
+	}, [id, session?.user?.id, loading]);
+
 	useEffect(() => {
 		if (messages.length > 0) {
 			setTimeout(() => {
