@@ -1,4 +1,4 @@
-// app/(protected)/plants/add-plant.tsx - FIXED VERSION
+// app/(protected)/plants/add-plant.tsx - FIXED IMAGE HANDLING
 
 import React, { useState, useEffect } from "react";
 import {
@@ -8,11 +8,11 @@ import {
 	TextInput,
 	Alert,
 	Image,
+	ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import * as FileSystem from "expo-file-system";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
@@ -21,7 +21,6 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/supabase-provider";
 import { supabase } from "@/config/supabase";
 import { format } from "date-fns";
-import { decode } from "base64-arraybuffer";
 
 interface PlantType {
 	id: string;
@@ -52,9 +51,10 @@ export default function AddPlantScreen() {
 	const [plantName, setPlantName] = useState("");
 	const [plantedDate, setPlantedDate] = useState(new Date());
 	const [notes, setNotes] = useState("");
-	const [image, setImage] = useState<string | null>(null);
+	const [imageUri, setImageUri] = useState<string | null>(null);
 	const [showDatePicker, setShowDatePicker] = useState(false);
 	const [loading, setLoading] = useState(false);
+	const [uploadingImage, setUploadingImage] = useState(false);
 
 	useEffect(() => {
 		fetchPlantTypes();
@@ -69,7 +69,6 @@ export default function AddPlantScreen() {
 
 			if (error) {
 				console.error("Error fetching plant types:", error);
-				// Use default plant types if database fetch fails
 				return;
 			}
 
@@ -78,76 +77,122 @@ export default function AddPlantScreen() {
 			}
 		} catch (error) {
 			console.error("Error in fetchPlantTypes:", error);
-			// Keep using default plant types
+		}
+	};
+
+	const requestPermissions = async () => {
+		const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
+		const { status: mediaStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+		
+		if (cameraStatus !== 'granted' || mediaStatus !== 'granted') {
+			Alert.alert(
+				"Permissions Required",
+				"Camera and photo library access are needed to add plant photos.",
+				[{ text: "OK" }]
+			);
+			return false;
+		}
+		return true;
+	};
+
+	const showImageOptions = async () => {
+		const hasPermissions = await requestPermissions();
+		if (!hasPermissions) return;
+
+		Alert.alert(
+			"Add Plant Photo",
+			"Choose how you'd like to add a photo of your plant",
+			[
+				{ text: "Take Photo", onPress: takePhoto },
+				{ text: "Choose from Library", onPress: pickImage },
+				{ text: "Cancel", style: "cancel" }
+			]
+		);
+	};
+
+	const takePhoto = async () => {
+		try {
+			setUploadingImage(true);
+			
+			const result = await ImagePicker.launchCameraAsync({
+				mediaTypes: ImagePicker.MediaTypeOptions.Images,
+				allowsEditing: true,
+				aspect: [1, 1],
+				quality: 0.8,
+			});
+
+			if (!result.canceled) {
+				setImageUri(result.assets[0].uri);
+			}
+		} catch (error) {
+			console.error("Error taking photo:", error);
+			Alert.alert("Error", "Failed to take photo. Please try again.");
+		} finally {
+			setUploadingImage(false);
 		}
 	};
 
 	const pickImage = async () => {
 		try {
-			const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+			setUploadingImage(true);
 			
-			if (status !== "granted") {
-				Alert.alert("Permission needed", "Please grant camera roll permissions to upload images.");
-				return;
-			}
-
 			const result = await ImagePicker.launchImageLibraryAsync({
 				mediaTypes: ImagePicker.MediaTypeOptions.Images,
 				allowsEditing: true,
 				aspect: [1, 1],
-				quality: 0.7,
+				quality: 0.8,
 			});
 
 			if (!result.canceled) {
-				setImage(result.assets[0].uri);
+				setImageUri(result.assets[0].uri);
 			}
 		} catch (error) {
 			console.error("Error picking image:", error);
 			Alert.alert("Error", "Failed to pick image. Please try again.");
+		} finally {
+			setUploadingImage(false);
 		}
 	};
 
-	const uploadImage = async (imageUri: string): Promise<string | null> => {
+	const uploadImageToSupabase = async (uri: string): Promise<string | null> => {
+		if (!session?.user?.id) return null;
+
 		try {
-			console.log("Starting image upload...");
-			
-			// Read the file as base64
-			const base64 = await FileSystem.readAsStringAsync(imageUri, {
-				encoding: FileSystem.EncodingType.Base64,
-			});
+			// Create a unique filename
+			const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
+			const fileName = `${session.user.id}_${Date.now()}.${fileExt}`;
+			const filePath = `plants/${fileName}`;
 
-			// Generate unique filename
-			const fileExt = imageUri.split('.').pop()?.toLowerCase() || 'jpg';
-			const fileName = `plants/${session?.user?.id}/${Date.now()}.${fileExt}`;
+			// Create FormData for upload
+			const formData = new FormData();
+			formData.append('file', {
+				uri: uri,
+				type: `image/${fileExt}`,
+				name: fileName,
+			} as any);
 
-			console.log("Uploading to:", fileName);
-
-			// Convert base64 to ArrayBuffer and upload
+			// Upload using fetch with FormData
 			const { data, error } = await supabase.storage
-				.from('plant-images')
-				.upload(fileName, decode(base64), {
-					contentType: `image/${fileExt}`,
+				.from('plants')
+				.upload(filePath, formData, {
+					cacheControl: '3600',
 					upsert: false,
 				});
 
 			if (error) {
-				console.error('Error uploading image:', error);
-				throw error;
+				console.error('Supabase upload error:', error);
+				return null;
 			}
-
-			console.log("Upload successful:", data);
 
 			// Get public URL
 			const { data: urlData } = supabase.storage
-				.from('plant-images')
-				.getPublicUrl(fileName);
+				.from('plants')
+				.getPublicUrl(filePath);
 
-			console.log("Public URL:", urlData.publicUrl);
 			return urlData.publicUrl;
 
 		} catch (error) {
-			console.error('Error in uploadImage:', error);
-			Alert.alert("Upload Error", "Failed to upload image. Please try again.");
+			console.error('Error uploading image:', error);
 			return null;
 		}
 	};
@@ -177,11 +222,13 @@ export default function AddPlantScreen() {
 			console.log("Starting plant save process...");
 			
 			let imageUrl = null;
-			if (image) {
+			if (imageUri) {
 				console.log("Uploading image...");
-				imageUrl = await uploadImage(image);
+				setUploadingImage(true);
+				imageUrl = await uploadImageToSupabase(imageUri);
+				setUploadingImage(false);
+				
 				if (!imageUrl) {
-					// Image upload failed, but we can still save the plant without image
 					console.log("Image upload failed, proceeding without image");
 				}
 			}
@@ -210,7 +257,7 @@ export default function AddPlantScreen() {
 
 			console.log("Plant saved successfully!");
 			Alert.alert(
-				"Plant Added!",
+				"Plant Added! 🌱",
 				"Your plant has been added successfully. Check your AI calendar for care reminders!",
 				[
 					{
@@ -224,6 +271,7 @@ export default function AddPlantScreen() {
 			Alert.alert("Error", "Failed to add plant. Please try again.");
 		} finally {
 			setLoading(false);
+			setUploadingImage(false);
 		}
 	};
 
@@ -238,7 +286,7 @@ export default function AddPlantScreen() {
 				<View className="w-6" />
 			</View>
 
-			<ScrollView className="flex-1 px-4 py-6">
+			<ScrollView className="flex-1 px-4 py-6" showsVerticalScrollIndicator={false}>
 				{/* Plant Type Selection */}
 				<View className="mb-6">
 					<Text className="text-lg font-semibold mb-3">What are you growing?</Text>
@@ -286,7 +334,7 @@ export default function AddPlantScreen() {
 						onPress={() => setShowDatePicker(true)}
 						className="flex-row items-center border border-border rounded-lg px-4 py-3"
 					>
-						<Ionicons name="calendar-outline" size={20} color="#666" className="mr-3" />
+						<Ionicons name="calendar-outline" size={20} color="#666" style={{ marginRight: 12 }} />
 						<Text className="text-base text-foreground">
 							{format(plantedDate, 'MMMM d, yyyy')}
 						</Text>
@@ -305,28 +353,56 @@ export default function AddPlantScreen() {
 					/>
 				</View>
 
-				{/* Photo */}
+				{/* Photo Section */}
 				<View className="mb-6">
 					<Text className="text-lg font-semibold mb-3">Add a photo (optional)</Text>
-					<TouchableOpacity
-						onPress={pickImage}
-						className="border-2 border-dashed border-border rounded-lg p-6 items-center"
-					>
-						{image ? (
+					
+					{imageUri ? (
+						<View className="relative">
 							<Image
-								source={{ uri: image }}
-								className="w-32 h-32 rounded-lg mb-3"
+								source={{ uri: imageUri }}
+								className="w-full h-64 rounded-lg"
 								resizeMode="cover"
 							/>
-						) : (
-							<>
-								<Ionicons name="camera" size={48} color="#999" className="mb-3" />
-								<Text className="text-center text-muted-foreground">
-									Tap to add a photo of your plant
-								</Text>
-							</>
-						)}
-					</TouchableOpacity>
+							<TouchableOpacity
+								onPress={() => setImageUri(null)}
+								className="absolute top-2 right-2 bg-red-500 rounded-full p-2"
+							>
+								<Ionicons name="close" size={16} color="white" />
+							</TouchableOpacity>
+							<TouchableOpacity
+								onPress={showImageOptions}
+								className="absolute bottom-2 right-2 bg-primary rounded-full p-2"
+							>
+								<Ionicons name="camera" size={16} color="white" />
+							</TouchableOpacity>
+						</View>
+					) : (
+						<TouchableOpacity
+							onPress={showImageOptions}
+							disabled={uploadingImage}
+							className="border-2 border-dashed border-border rounded-lg p-8 items-center"
+						>
+							{uploadingImage ? (
+								<>
+									<ActivityIndicator size="large" color="#10b981" />
+									<Text className="text-center text-muted-foreground mt-2">
+										Processing image...
+									</Text>
+								</>
+							) : (
+								<>
+									<Ionicons name="camera" size={48} color="#999" />
+									<Text className="text-center text-muted-foreground mt-2">
+										Tap to add a photo of your plant
+									</Text>
+									<Text className="text-center text-xs text-muted-foreground mt-1">
+										Photos help track growth progress
+									</Text>
+								</>
+							)}
+						</TouchableOpacity>
+					)}
 				</View>
 
 				{/* Notes */}
@@ -360,16 +436,25 @@ export default function AddPlantScreen() {
 				{/* Save Button */}
 				<Button
 					onPress={handleSavePlant}
-					disabled={loading || !selectedType || !plantName.trim()}
+					disabled={loading || uploadingImage || !selectedType || !plantName.trim()}
 					className="w-full mb-6"
 				>
-					<Text className="text-primary-foreground font-semibold">
-						{loading ? "Adding Plant..." : "Add Plant"}
-					</Text>
+					{loading || uploadingImage ? (
+						<View className="flex-row items-center">
+							<ActivityIndicator size="small" color="white" />
+							<Text className="text-primary-foreground font-semibold ml-2">
+								{uploadingImage ? "Uploading image..." : "Adding Plant..."}
+							</Text>
+						</View>
+					) : (
+						<Text className="text-primary-foreground font-semibold">
+							Add Plant
+						</Text>
+					)}
 				</Button>
 
 				{/* Help Text */}
-				<View className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+				<View className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg mb-6">
 					<Text className="text-blue-700 dark:text-blue-300 text-sm">
 						💡 After adding your plant, check the AI Calendar for automated care reminders 
 						based on your plant type and local weather conditions.

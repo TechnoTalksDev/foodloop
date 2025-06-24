@@ -1,4 +1,4 @@
-// app/(protected)/(tabs)/plants.tsx - NO SUPABASE FUNCTIONS
+// app/(protected)/(tabs)/plants.tsx - IMPROVED VERSION
 
 import React, { useState, useEffect } from "react";
 import {
@@ -8,6 +8,7 @@ import {
 	RefreshControl,
 	Image,
 	Alert,
+	ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -56,6 +57,8 @@ export default function PlantsScreen() {
 	const [refreshing, setRefreshing] = useState(false);
 	const [weatherRecommendations, setWeatherRecommendations] = useState<WeatherRecommendation[]>([]);
 	const [currentWeather, setCurrentWeather] = useState<any>(null);
+	const [weatherLoading, setWeatherLoading] = useState(true);
+	const [error, setError] = useState<string | null>(null);
 
 	useEffect(() => {
 		fetchUserPlants();
@@ -63,10 +66,14 @@ export default function PlantsScreen() {
 	}, [session?.user?.id]);
 
 	const fetchUserPlants = async () => {
-		if (!session?.user?.id) return;
+		if (!session?.user?.id) {
+			setLoading(false);
+			return;
+		}
 
 		try {
-			// Direct table query - no functions
+			setError(null);
+			
 			const { data, error } = await supabase
 				.from('user_plants')
 				.select('*')
@@ -75,12 +82,14 @@ export default function PlantsScreen() {
 
 			if (error) {
 				console.error('Error fetching plants:', error);
+				setError('Failed to load your plants. Please try again.');
 				return;
 			}
 
 			setUserPlants(data || []);
 		} catch (error) {
 			console.error('Error in fetchUserPlants:', error);
+			setError('An unexpected error occurred while loading your plants.');
 		} finally {
 			setLoading(false);
 		}
@@ -88,6 +97,8 @@ export default function PlantsScreen() {
 
 	const fetchWeatherRecommendations = async () => {
 		try {
+			setWeatherLoading(true);
+			
 			const weather = await weatherService.getWeatherData({
 				temperatureUnit: 'fahrenheit',
 				forecastDays: 5,
@@ -154,6 +165,11 @@ export default function PlantsScreen() {
 			setWeatherRecommendations(recommendations);
 		} catch (error) {
 			console.error('Error fetching weather:', error);
+			// Don't show error for weather, just set empty state
+			setCurrentWeather(null);
+			setWeatherRecommendations([]);
+		} finally {
+			setWeatherLoading(false);
 		}
 	};
 
@@ -183,6 +199,11 @@ export default function PlantsScreen() {
 			case 'harvested': return '📦';
 			default: return '🌱';
 		}
+	};
+
+	const getPlantTypeIcon = (plantType: string) => {
+		const type = PLANT_TYPES.find(p => p.id === plantType);
+		return type?.icon || '🌱';
 	};
 
 	const canHarvest = (plant: UserPlant) => {
@@ -216,6 +237,11 @@ export default function PlantsScreen() {
 
 	const navigateToPlantDetail = (plantId: string) => {
 		router.push(`/(protected)/plants/plant-detail/${plantId}` as any);
+	};
+
+	const handleImageError = (plantName: string) => {
+		console.log(`Failed to load image for plant: ${plantName}`);
+		// Image errors are handled gracefully by showing fallback icon
 	};
 
 	return (
@@ -254,7 +280,7 @@ export default function PlantsScreen() {
 				</View>
 
 				{/* Weather Section */}
-				{currentWeather && (
+				{!weatherLoading && currentWeather && (
 					<View className="mx-4 mb-6 p-4 bg-secondary/30 rounded-2xl border border-border">
 						<View className="flex-row items-center justify-between mb-3">
 							<View className="flex-row items-center">
@@ -265,7 +291,7 @@ export default function PlantsScreen() {
 									</Text>
 									<Text className="text-sm text-muted-foreground">
 										{currentWeather.location.name}
-									</Text>
+                                    </Text>
 								</View>
 							</View>
 							<TouchableOpacity
@@ -331,6 +357,29 @@ export default function PlantsScreen() {
 					</View>
 				</View>
 
+				{/* Error State */}
+				{error && (
+					<View className="mx-4 mb-6 p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
+						<View className="flex-row items-center">
+							<Ionicons name="warning" size={20} color="#ef4444" />
+							<Text className="ml-2 text-red-600 dark:text-red-400 font-medium">
+								{error}
+							</Text>
+						</View>
+						<TouchableOpacity
+							onPress={() => {
+								setError(null);
+								fetchUserPlants();
+							}}
+							className="mt-2"
+						>
+							<Text className="text-red-600 dark:text-red-400 text-sm underline">
+								Tap to retry
+							</Text>
+						</TouchableOpacity>
+					</View>
+				)}
+
 				{/* My Plants Section */}
 				<View className="px-4 mb-6">
 					<View className="flex-row items-center justify-between mb-4">
@@ -346,7 +395,8 @@ export default function PlantsScreen() {
 
 					{loading ? (
 						<View className="items-center py-8">
-							<Text className="text-muted-foreground">Loading your plants...</Text>
+							<ActivityIndicator size="large" color="#10b981" />
+							<Text className="text-muted-foreground mt-2">Loading your plants...</Text>
 						</View>
 					) : userPlants.length === 0 ? (
 						<View className="items-center py-8 bg-secondary/30 rounded-xl">
@@ -376,10 +426,12 @@ export default function PlantsScreen() {
 													source={{ uri: plant.image_url }}
 													className="w-16 h-16 rounded-lg"
 													resizeMode="cover"
+													onError={() => handleImageError(plant.plant_name)}
+													defaultSource={require("@/assets/foodloop.png")}
 												/>
 											) : (
 												<Text className="text-2xl">
-													{PLANT_TYPES.find(p => p.id === plant.plant_type)?.icon || '🌱'}
+													{getPlantTypeIcon(plant.plant_type)}
 												</Text>
 											)}
 										</View>
@@ -470,6 +522,88 @@ export default function PlantsScreen() {
 								</Text>
 							</TouchableOpacity>
 						</View>
+					</View>
+				</View>
+
+				{/* Garden Statistics - New Section */}
+				{userPlants.length > 0 && (
+					<View className="px-4 mb-6">
+						<View className="bg-secondary/30 p-4 rounded-xl border border-border">
+							<H3 className="mb-3">Garden Statistics</H3>
+							<View className="flex-row justify-between">
+								<View className="items-center flex-1">
+									<Text className="text-2xl font-bold text-green-600">
+										{userPlants.filter(p => p.status === 'ready_to_harvest').length}
+									</Text>
+									<Text className="text-xs text-muted-foreground text-center">
+										Ready to Harvest
+									</Text>
+								</View>
+								<View className="items-center flex-1">
+									<Text className="text-2xl font-bold text-blue-600">
+										{userPlants.filter(p => p.status === 'growing').length}
+									</Text>
+									<Text className="text-xs text-muted-foreground text-center">
+										Growing
+									</Text>
+								</View>
+								<View className="items-center flex-1">
+									<Text className="text-2xl font-bold text-yellow-600">
+										{userPlants.filter(p => needsCheckin(p)).length}
+									</Text>
+									<Text className="text-xs text-muted-foreground text-center">
+										Need Check-in
+									</Text>
+								</View>
+								<View className="items-center flex-1">
+									<Text className="text-2xl font-bold text-purple-600">
+										{userPlants.filter(p => p.status === 'flowering').length}
+									</Text>
+									<Text className="text-xs text-muted-foreground text-center">
+										Flowering
+									</Text>
+								</View>
+							</View>
+						</View>
+					</View>
+				)}
+
+				{/* Tips Section */}
+				<View className="px-4 mb-6">
+					<View className="bg-gradient-to-r from-purple-50 to-green-50 dark:from-purple-900/20 dark:to-green-900/20 p-4 rounded-xl border border-border">
+						<View className="flex-row items-center justify-between mb-3">
+							<View>
+								<Text className="font-semibold text-lg">💡 Garden Tips</Text>
+								<Text className="text-sm text-muted-foreground">
+									Smart advice for better growing
+								</Text>
+							</View>
+							<Text className="text-3xl">🌿</Text>
+						</View>
+
+						<View className="space-y-2">
+							<Text className="text-sm">
+								• Check your plants daily during growing season
+							</Text>
+							<Text className="text-sm">
+								• Water deeply but less frequently for stronger roots
+							</Text>
+							<Text className="text-sm">
+								• Use companion planting to naturally repel pests
+							</Text>
+							<Text className="text-sm">
+								• Track your harvest dates to plan future plantings
+							</Text>
+						</View>
+
+						<TouchableOpacity
+							className="mt-3 bg-primary px-4 py-2 rounded-lg self-start"
+							onPress={() => router.push("/(protected)/smartplate-ai")}
+						>
+							<Text className="text-primary-foreground font-medium text-sm">
+								🤖 Get AI Garden Advice
+							</Text>
+						</TouchableOpacity>
 					</View>
 				</View>
 

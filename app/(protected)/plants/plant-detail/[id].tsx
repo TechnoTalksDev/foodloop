@@ -1,4 +1,4 @@
-// app/(protected)/plants/plant-detail/[id].tsx - UPDATED WITH DELETE OPTION
+// app/(protected)/plants/plant-detail/[id].tsx - FIXED IMAGE HANDLING
 
 import React, { useState, useEffect } from "react";
 import {
@@ -9,6 +9,7 @@ import {
 	Alert,
 	TextInput,
 	Modal,
+	ActivityIndicator,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -65,6 +66,15 @@ const STATUS_ICONS = {
 	harvested: '📦',
 };
 
+const PLANT_TYPES = [
+	{ id: 'tomatoes', name: 'Tomatoes', icon: '🍅' },
+	{ id: 'lettuce', name: 'Lettuce', icon: '🥬' },
+	{ id: 'carrots', name: 'Carrots', icon: '🥕' },
+	{ id: 'peppers', name: 'Peppers', icon: '🌶️' },
+	{ id: 'herbs', name: 'Herbs', icon: '🌿' },
+	{ id: 'strawberries', name: 'Strawberries', icon: '🍓' },
+];
+
 export default function PlantDetailScreen() {
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const router = useRouter();
@@ -82,6 +92,7 @@ export default function PlantDetailScreen() {
 	const [checkInHeight, setCheckInHeight] = useState("");
 	const [checkInHealth, setCheckInHealth] = useState("healthy");
 	const [submittingCheckIn, setSubmittingCheckIn] = useState(false);
+	const [uploadingImage, setUploadingImage] = useState(false);
 
 	useEffect(() => {
 		if (id) {
@@ -144,7 +155,7 @@ export default function PlantDetailScreen() {
 
 		setDeleting(true);
 		try {
-			// First, delete all check-ins for this plant
+			// Delete check-ins first
 			const { error: checkinsError } = await supabase
 				.from("plant_checkins")
 				.delete()
@@ -153,11 +164,9 @@ export default function PlantDetailScreen() {
 
 			if (checkinsError) {
 				console.error("Error deleting check-ins:", checkinsError);
-				Alert.alert("Error", "Failed to delete plant check-ins. Please try again.");
-				return;
 			}
 
-			// Delete any calendar events for this plant
+			// Delete calendar events
 			const { error: eventsError } = await supabase
 				.from("plant_calendar_events")
 				.delete()
@@ -166,10 +175,9 @@ export default function PlantDetailScreen() {
 
 			if (eventsError) {
 				console.error("Error deleting calendar events:", eventsError);
-				// Continue with plant deletion even if calendar events fail
 			}
 
-			// Finally, delete the plant itself
+			// Delete the plant
 			const { error: plantError } = await supabase
 				.from("user_plants")
 				.delete()
@@ -182,16 +190,10 @@ export default function PlantDetailScreen() {
 				return;
 			}
 
-			// Success - navigate back with success message
 			Alert.alert(
 				"Plant Deleted",
 				`${plant?.plant_name || "Your plant"} has been successfully removed from your garden.`,
-				[
-					{
-						text: "OK",
-						onPress: () => router.back()
-					}
-				]
+				[{ text: "OK", onPress: () => router.back() }]
 			);
 
 		} catch (error) {
@@ -206,31 +208,48 @@ export default function PlantDetailScreen() {
 	const confirmDeletePlant = () => {
 		Alert.alert(
 			"Delete Plant",
-			`Are you sure you want to delete "${plant?.plant_name}"? This will permanently remove the plant and all its check-ins from your garden. This action cannot be undone.`,
+			`Are you sure you want to delete "${plant?.plant_name}"? This will permanently remove the plant and all its check-ins. This action cannot be undone.`,
 			[
 				{ text: "Cancel", style: "cancel" },
-				{ 
-					text: "Delete", 
-					style: "destructive",
-					onPress: () => setShowDeleteModal(true)
-				}
+				{ text: "Delete", style: "destructive", onPress: () => setShowDeleteModal(true) }
+			]
+		);
+	};
+
+	const requestPermissions = async () => {
+		const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
+		const { status: mediaStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+		
+		if (cameraStatus !== 'granted' || mediaStatus !== 'granted') {
+			Alert.alert("Permissions Required", "Camera and photo access are needed to take check-in photos.");
+			return false;
+		}
+		return true;
+	};
+
+	const showImageOptions = async () => {
+		const hasPermissions = await requestPermissions();
+		if (!hasPermissions) return;
+
+		Alert.alert(
+			"Add Check-in Photo",
+			"Choose how you'd like to add a photo",
+			[
+				{ text: "Take Photo", onPress: takePhoto },
+				{ text: "Choose from Library", onPress: pickImage },
+				{ text: "Cancel", style: "cancel" }
 			]
 		);
 	};
 
 	const takePhoto = async () => {
 		try {
-			const { status } = await ImagePicker.requestCameraPermissionsAsync();
+			setUploadingImage(true);
 			
-			if (status !== "granted") {
-				Alert.alert("Permission needed", "Please grant camera permissions to take photos.");
-				return;
-			}
-
 			const result = await ImagePicker.launchCameraAsync({
 				allowsEditing: true,
 				aspect: [4, 3],
-				quality: 0.7,
+				quality: 0.8,
 			});
 
 			if (!result.canceled) {
@@ -239,23 +258,20 @@ export default function PlantDetailScreen() {
 		} catch (error) {
 			console.error("Error taking photo:", error);
 			Alert.alert("Error", "Failed to take photo. Please try again.");
+		} finally {
+			setUploadingImage(false);
 		}
 	};
 
 	const pickImage = async () => {
 		try {
-			const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+			setUploadingImage(true);
 			
-			if (status !== "granted") {
-				Alert.alert("Permission needed", "Please grant camera roll permissions.");
-				return;
-			}
-
 			const result = await ImagePicker.launchImageLibraryAsync({
 				mediaTypes: ImagePicker.MediaTypeOptions.Images,
 				allowsEditing: true,
 				aspect: [4, 3],
-				quality: 0.7,
+				quality: 0.8,
 			});
 
 			if (!result.canceled) {
@@ -263,19 +279,33 @@ export default function PlantDetailScreen() {
 			}
 		} catch (error) {
 			console.error("Error picking image:", error);
+			Alert.alert("Error", "Failed to pick image. Please try again.");
+		} finally {
+			setUploadingImage(false);
 		}
 	};
 
 	const uploadCheckInImage = async (imageUri: string): Promise<string | null> => {
+		if (!session?.user?.id) return null;
+
 		try {
-			const response = await fetch(imageUri);
-			const blob = await response.blob();
 			const fileExt = imageUri.split('.').pop()?.toLowerCase() || 'jpg';
-			const fileName = `checkins/${session?.user?.id}/${id}/${Date.now()}.${fileExt}`;
+			const fileName = `${session.user.id}_${id}_${Date.now()}.${fileExt}`;
+			const filePath = `checkins/${fileName}`;
+
+			const formData = new FormData();
+			formData.append('file', {
+				uri: imageUri,
+				type: `image/${fileExt}`,
+				name: fileName,
+			} as any);
 
 			const { data, error } = await supabase.storage
-				.from('plant-images')
-				.upload(fileName, blob);
+				.from('plants')
+				.upload(filePath, formData, {
+					cacheControl: '3600',
+					upsert: false,
+				});
 
 			if (error) {
 				console.error('Error uploading check-in image:', error);
@@ -283,10 +313,11 @@ export default function PlantDetailScreen() {
 			}
 
 			const { data: urlData } = supabase.storage
-				.from('plant-images')
-				.getPublicUrl(fileName);
+				.from('plants')
+				.getPublicUrl(filePath);
 
 			return urlData.publicUrl;
+
 		} catch (error) {
 			console.error('Error in uploadCheckInImage:', error);
 			return null;
@@ -400,11 +431,17 @@ export default function PlantDetailScreen() {
 		return hoursSince >= 20; // Allow check-in after 20 hours
 	};
 
+	const getPlantTypeIcon = (plantType: string) => {
+		const type = PLANT_TYPES.find(t => t.id === plantType);
+		return type?.icon || '🌱';
+	};
+
 	if (loading) {
 		return (
 			<SafeAreaView className="flex-1 bg-background">
 				<View className="flex-1 items-center justify-center">
-					<Text className="text-muted-foreground">Loading plant details...</Text>
+					<ActivityIndicator size="large" color="#10b981" />
+					<Text className="text-muted-foreground mt-2">Loading plant details...</Text>
 				</View>
 			</SafeAreaView>
 		);
@@ -433,7 +470,7 @@ export default function PlantDetailScreen() {
 				</TouchableOpacity>
 			</View>
 
-			<ScrollView className="flex-1">
+			<ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
 				{/* Plant Image & Status */}
 				<View className="relative">
 					{plant.image_url ? (
@@ -445,13 +482,13 @@ export default function PlantDetailScreen() {
 					) : (
 						<View className="w-full h-64 bg-muted items-center justify-center">
 							<Text className="text-6xl">
-								{STATUS_ICONS[plant.status as keyof typeof STATUS_ICONS] || '🌱'}
+								{getPlantTypeIcon(plant.plant_type)}
 							</Text>
 						</View>
 					)}
 					
 					<View className="absolute top-4 right-4 bg-black/70 px-3 py-1 rounded-full">
-						<Text className={`font-medium ${STATUS_COLORS[plant.status as keyof typeof STATUS_COLORS]}`}>
+						<Text className="text-white font-medium">
 							{STATUS_ICONS[plant.status as keyof typeof STATUS_ICONS]} {plant.status.replace('_', ' ')}
 						</Text>
 					</View>
@@ -606,9 +643,14 @@ export default function PlantDetailScreen() {
 			</ScrollView>
 
 			{/* Check-in Modal */}
-			{showCheckInModal && (
-				<View className="absolute inset-0 bg-black/50 items-center justify-center p-4">
-					<View className="bg-background rounded-2xl p-6 w-full max-w-md">
+			<Modal
+				visible={showCheckInModal}
+				transparent={true}
+				animationType="slide"
+				onRequestClose={() => setShowCheckInModal(false)}
+			>
+				<View className="flex-1 bg-black/50 items-center justify-center p-4">
+					<View className="bg-background rounded-2xl p-6 w-full max-w-md max-h-[90%]">
 						<View className="flex-row items-center justify-between mb-4">
 							<Text className="text-xl font-bold">Daily Check-in</Text>
 							<TouchableOpacity onPress={() => setShowCheckInModal(false)}>
@@ -616,7 +658,7 @@ export default function PlantDetailScreen() {
 							</TouchableOpacity>
 						</View>
 
-						<ScrollView className="max-h-96">
+						<ScrollView className="max-h-96" showsVerticalScrollIndicator={false}>
 							{/* Photo */}
 							<View className="mb-4">
 								<Text className="font-medium mb-2">Take a photo</Text>
@@ -629,28 +671,33 @@ export default function PlantDetailScreen() {
 										/>
 										<TouchableOpacity
 											onPress={() => setCheckInImage(null)}
-											className="absolute top-2 right-2 bg-red-500 rounded-full p-1"
+											className="absolute top-2 right-2 bg-red-500 rounded-full p-2"
 										>
 											<Ionicons name="close" size={16} color="white" />
 										</TouchableOpacity>
 									</View>
 								) : (
-									<View className="flex-row gap-2">
-										<TouchableOpacity
-											onPress={takePhoto}
-											className="flex-1 border-2 border-dashed border-border rounded-lg p-4 items-center"
-										>
-											<Ionicons name="camera" size={32} color="#999" />
-											<Text className="text-sm text-muted-foreground mt-2">Camera</Text>
-										</TouchableOpacity>
-										<TouchableOpacity
-											onPress={pickImage}
-											className="flex-1 border-2 border-dashed border-border rounded-lg p-4 items-center"
-										>
-											<Ionicons name="image" size={32} color="#999" />
-											<Text className="text-sm text-muted-foreground mt-2">Gallery</Text>
-										</TouchableOpacity>
-									</View>
+									<TouchableOpacity
+										onPress={showImageOptions}
+										disabled={uploadingImage}
+										className="border-2 border-dashed border-border rounded-lg p-6 items-center"
+									>
+										{uploadingImage ? (
+											<>
+												<ActivityIndicator size="large" color="#10b981" />
+												<Text className="text-sm text-muted-foreground mt-2">
+													Processing image...
+												</Text>
+											</>
+										) : (
+											<>
+												<Ionicons name="camera" size={32} color="#999" />
+												<Text className="text-sm text-muted-foreground mt-2 text-center">
+													Tap to add a photo
+												</Text>
+											</>
+										)}
+									</TouchableOpacity>
 								)}
 							</View>
 
@@ -708,16 +755,25 @@ export default function PlantDetailScreen() {
 						{/* Submit Button */}
 						<Button
 							onPress={submitCheckIn}
-							disabled={submittingCheckIn}
+							disabled={submittingCheckIn || uploadingImage}
 							className="w-full"
 						>
-							<Text className="text-primary-foreground font-semibold">
-								{submittingCheckIn ? "Saving..." : "Save Check-in"}
-							</Text>
+							{submittingCheckIn || uploadingImage ? (
+								<View className="flex-row items-center">
+									<ActivityIndicator size="small" color="white" />
+									<Text className="text-primary-foreground font-semibold ml-2">
+										{uploadingImage ? "Processing..." : "Saving..."}
+									</Text>
+								</View>
+							) : (
+								<Text className="text-primary-foreground font-semibold">
+									Save Check-in
+								</Text>
+							)}
 						</Button>
 					</View>
 				</View>
-			)}
+			</Modal>
 
 			{/* Delete Confirmation Modal */}
 			<Modal
@@ -745,9 +801,18 @@ export default function PlantDetailScreen() {
 								disabled={deleting}
 								className="w-full bg-red-500"
 							>
-								<Text className="text-white font-semibold">
-									{deleting ? "Deleting..." : "Yes, Delete Plant"}
-								</Text>
+								{deleting ? (
+									<View className="flex-row items-center">
+										<ActivityIndicator size="small" color="white" />
+										<Text className="text-white font-semibold ml-2">
+											Deleting...
+										</Text>
+									</View>
+								) : (
+									<Text className="text-white font-semibold">
+										Yes, Delete Plant
+									</Text>
+								)}
 							</Button>
 							
 							<Button
