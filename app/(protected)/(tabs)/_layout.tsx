@@ -21,7 +21,6 @@ export default function TabsLayout() {
 			? colors.dark.mutedForeground
 			: colors.light.mutedForeground;
 
-	// Helper function to create a tab bar icon with proper spacing
 	const createTabBarIcon = (iconName: any, focused: boolean, color: string) => {
 		return (
 			<View className="items-center justify-center pt-0.5">
@@ -29,19 +28,6 @@ export default function TabsLayout() {
 					name={focused ? iconName : `${iconName}-outline`}
 					size={20}
 					color={color}
-				/>
-			</View>
-		);
-	};
-	
-	// Create a special tab bar icon for the create button
-	const createCenterTabBarIcon = (iconName: any, focused: boolean, color: string) => {
-		return (
-			<View className="items-center justify-center rounded-full bg-[#64AD64] w-16 h-16">
-				<Ionicons
-					name={iconName}
-					size={28}
-					color="#FFFFFF"
 				/>
 			</View>
 		);
@@ -55,9 +41,9 @@ export default function TabsLayout() {
 					backgroundColor: bgColor,
 					borderTopColor: borderColor,
 					borderTopWidth: 0.5,
-					height: 85, // Further increased height for better spacing
-					paddingBottom: 20, // Increased bottom padding to clear the navigation handle completely
-					paddingTop: 6, // Keep top padding the same
+					height: 85,
+					paddingBottom: 20,
+					paddingTop: 6,
 					marginTop: -34,
 				},
 				tabBarActiveTintColor: textColor,
@@ -66,7 +52,7 @@ export default function TabsLayout() {
 				tabBarLabelStyle: {
 					fontSize: 12,
 					fontWeight: "500",
-					marginTop: 0, // Reduced marginTop to prevent cutoff and better position labels
+					marginTop: 0,
 				},
 			}}
 		>
@@ -86,17 +72,14 @@ export default function TabsLayout() {
 						createTabBarIcon("basket", focused, color),
 				}}
 			/>
-			{/* <Tabs.Screen
-				name="create-product"
+			<Tabs.Screen
+				name="messages"
 				options={{
-					title: "Create",
-					tabBarIcon: ({ focused }) => createCenterTabBarIcon("add", focused, "#FFFFFF"),
-					tabBarItemStyle: {
-						marginTop: -10, // Lift the button slightly higher than other tabs
-					},
-					tabBarLabel: () => null, // This completely removes the label component
+					title: "Messages",
+					tabBarIcon: ({ color, focused }) =>
+						createTabBarIcon("chatbubbles", focused, color),
 				}}
-			/> */}
+			/>
 			<Tabs.Screen
 				name="community"
 				options={{

@@ -10,6 +10,9 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useCart } from "@/context/cart-provider";
+import { supabase } from "@/config/supabase";
+import { useAuth } from "@/context/supabase-provider";
+import { useState } from "react";
 
 import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
@@ -26,6 +29,8 @@ export default function Cart() {
 		getTotalPrice,
 		refreshCart,
 	} = useCart();
+	const { session } = useAuth();
+	const [confirming, setConfirming] = useState(false);
 
 	const handleQuantityChange = async (
 		cartItemId: string,
@@ -77,6 +82,150 @@ export default function Cart() {
 			],
 		);
 	};
+
+	const createConversationsAndMessages = async () => {
+		if (!session?.user?.id) {
+			Alert.alert("Error", "You must be logged in to proceed.");
+			return false;
+		}
+
+		try {
+			setConfirming(true);
+
+			// Group cart items by business owner (user_id)
+			const businessGroups = cartItems.reduce((groups, item) => {
+				const sellerId = item.product?.user_id;
+				if (!sellerId) return groups;
+
+				if (!groups[sellerId]) {
+					groups[sellerId] = [];
+				}
+				groups[sellerId].push(item);
+				return groups;
+			}, {} as Record<string, typeof cartItems>);
+
+			const createdConversations = [];
+
+			// Create conversation for each business owner
+			for (const [sellerId, items] of Object.entries(businessGroups)) {
+				try {
+					// Check if conversation already exists
+					const { data: existingConversation } = await supabase
+						.from('conversations')
+						.select('id')
+						.eq('buyer_id', session.user.id)
+						.eq('seller_id', sellerId)
+						.eq('product_id', items[0].product?.id)
+						.single();
+
+					let conversationId;
+
+					if (existingConversation) {
+						conversationId = existingConversation.id;
+					} else {
+						// Create new conversation
+						const { data: newConversation, error: conversationError } = await supabase
+							.from('conversations')
+							.insert({
+								buyer_id: session.user.id,
+								seller_id: sellerId,
+								product_id: items[0].product?.id, // Use first product as reference
+								status: 'active'
+							})
+							.select('id')
+							.single();
+
+						if (conversationError) {
+							console.error('Error creating conversation:', conversationError);
+							continue;
+						}
+
+						conversationId = newConversation.id;
+					}
+
+					// Create initial message with cart items details
+					const itemsList = items.map(item => 
+						`${item.quantity}x ${item.product?.name} - $${(item.product?.price || 0).toFixed(2)} each`
+					).join('\n');
+
+					const totalPrice = items.reduce((sum, item) => 
+						sum + (item.product?.price || 0) * item.quantity, 0
+					);
+
+					const messageContent = `Hi! I'm interested in purchasing the following items from your listing:
+
+${itemsList}
+
+Total: $${totalPrice.toFixed(2)}
+
+Could we discuss the details for pickup/delivery?`;
+
+					const { error: messageError } = await supabase
+						.from('messages')
+						.insert({
+							conversation_id: conversationId,
+							sender_id: session.user.id,
+							content: messageContent,
+							message_type: 'text'
+						});
+
+					if (!messageError) {
+						createdConversations.push({
+							conversationId,
+							sellerId,
+							businessName: items[0].product?.shop || 'Local Business'
+						});
+					}
+
+				} catch (error) {
+					console.error(`Error creating conversation with seller ${sellerId}:`, error);
+				}
+			}
+
+			if (createdConversations.length > 0) {
+				Alert.alert(
+					"Messages Sent!",
+					`Successfully started ${createdConversations.length} conversation(s) with business owners. You can now negotiate prices and arrange pickup details.`,
+					[
+						{ text: "View Messages", onPress: () => router.push("/messages" as any) },
+						{ text: "OK", style: "default" }
+					]
+				);
+				return true;
+			} else {
+				Alert.alert("Error", "Failed to create conversations. Please try again.");
+				return false;
+			}
+
+		} catch (error) {
+			console.error('Error in createConversationsAndMessages:', error);
+			Alert.alert("Error", "Failed to process your request. Please try again.");
+			return false;
+		} finally {
+			setConfirming(false);
+		}
+	};
+
+	const handleConfirmAndMessage = async () => {
+		Alert.alert(
+			"Confirm Cart Items",
+			"This will start conversations with business owners for each item. You can then negotiate prices and arrange pickup details.",
+			[
+				{ text: "Cancel", style: "cancel" },
+				{
+					text: "Confirm & Start Messages",
+					onPress: async () => {
+						const success = await createConversationsAndMessages();
+						if (success) {
+							// Optionally clear cart or navigate away
+							router.back();
+						}
+					}
+				}
+			]
+		);
+	};
+
 	if (loading) {
 		return (
 			<SafeAreaView className="flex-1 bg-background">
@@ -102,6 +251,7 @@ export default function Cart() {
 			</SafeAreaView>
 		);
 	}
+
 	return (
 		<SafeAreaView className="flex-1 bg-background">
 			{/* Modal Header */}
@@ -114,15 +264,12 @@ export default function Cart() {
 					<Ionicons name="close" size={20} color="#666" />
 				</TouchableOpacity>
 				<H1 className="flex-1 text-center">Your Cart</H1>
-				<View className="w-10 h-10 items-center justify-center">
-					{cartItems.length > 0 && (
-						<View className="w-6 h-6 bg-primary rounded-full items-center justify-center">
-							<Text className="text-black text-xs font-bold">
-								{cartItems.reduce((sum, item) => sum + item.quantity, 0)}
-							</Text>
-						</View>
-					)}
-				</View>
+				<TouchableOpacity
+					onPress={() => router.push("/messages" as any)}
+					className="w-10 h-10 items-center justify-center"
+				>
+					<Ionicons name="chatbubbles" size={20} color="#10b981" />
+				</TouchableOpacity>
 			</View>
 
 			<ScrollView
@@ -170,6 +317,21 @@ export default function Cart() {
 								{cartItems.length} {cartItems.length === 1 ? "item" : "items"}{" "}
 								in your cart
 							</Muted>
+
+							{/* Info Banner */}
+							<View className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+								<View className="flex-row items-center mb-2">
+									<Ionicons name="information-circle" size={20} color="#3b82f6" />
+									<Text className="ml-2 font-semibold text-blue-700 dark:text-blue-300">
+										How it works
+									</Text>
+								</View>
+								<Text className="text-blue-600 dark:text-blue-400 text-sm">
+									After confirming, we'll start conversations with each business owner. 
+									You can then negotiate prices, arrange pickup times, and finalize details directly with them.
+								</Text>
+							</View>
+
 							{/* Cart Items */}
 							<View className="gap-4 mb-6">
 								{cartItems.map((item) => {
@@ -296,9 +458,10 @@ export default function Cart() {
 									);
 								})}
 							</View>
+
 							{/* Cart Summary */}
 							<View className="bg-card p-4 rounded-xl border border-border mb-6">
-								<H3 className="mb-4">Order Summary</H3>
+								<H3 className="mb-4">Cart Summary</H3>
 								<View className="flex-row justify-between items-center mb-2">
 									<Text className="text-muted-foreground">
 										Items (
@@ -316,7 +479,7 @@ export default function Cart() {
 								</View>
 
 								<Muted className="mb-4">
-									Tax and other fees will be calculated at checkout
+									Final prices and arrangements will be negotiated with each business owner
 								</Muted>
 
 								{/* Environmental Impact */}
@@ -329,24 +492,29 @@ export default function Cart() {
 									</View>
 								</View>
 							</View>
-							{/* Checkout Button */}
+
+							{/* Action Buttons */}
 							<Button
-								onPress={() => {
-									// TODO: Implement checkout functionality
-									Alert.alert(
-										"Checkout",
-										"Checkout functionality will be implemented soon!",
-										[{ text: "OK" }],
-									);
-								}}
+								onPress={handleConfirmAndMessage}
+								disabled={confirming}
 								className="w-full mb-3"
 								variant="default"
 								size="lg"
 							>
-								<Text className="font-semibold text-base">
-									Proceed to Checkout • ${getTotalPrice().toFixed(2)}
-								</Text>
+								{confirming ? (
+									<View className="flex-row items-center">
+										<ActivityIndicator size="small" color="#ffffff" />
+										<Text className="text-primary-foreground font-semibold ml-2">
+											Starting conversations...
+										</Text>
+									</View>
+								) : (
+									<Text className="font-semibold text-base">
+										Confirm & Start Messages • ${getTotalPrice().toFixed(2)}
+									</Text>
+								)}
 							</Button>
+
 							{/* Continue Shopping Button */}
 							<Button
 								onPress={() => {

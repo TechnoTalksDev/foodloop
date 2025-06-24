@@ -384,6 +384,61 @@ export class GeminiService {
       .slice(0, maxProducts);
   }
 
+  private isTaskAppropriateForMode(content: string, currentMode: string): { appropriate: boolean; suggestedMode?: string; reason?: string } {
+    const contentLower = content.toLowerCase();
+    
+    // Define task keywords for each mode
+    const taskKeywords = {
+      smartplate: ['recipe', 'cook', 'ingredient', 'meal', 'food preparation', 'kitchen', 'dish', 'cuisine', 'cooking', 'bake', 'fry', 'grill'],
+      smartdoctor: ['plant', 'disease', 'pest', 'leaf', 'root', 'stem', 'diagnose', 'sick', 'dying', 'brown spots', 'yellow', 'wilting', 'bug', 'insect'],
+      harvesthelper: ['harvest', 'pick', 'ripe', 'storage', 'preserve', 'when to harvest', 'ready', 'mature', 'store', 'shelf life'],
+      soilsage: ['soil', 'compost', 'fertilizer', 'amendment', 'ph', 'nutrient', 'dirt', 'earth', 'organic matter', 'nitrogen', 'phosphorus'],
+      weatherwise: ['weather', 'climate', 'season', 'temperature', 'rain', 'drought', 'frost', 'winter', 'summer', 'protection'],
+      wastewarrior: ['waste', 'surplus', 'leftover', 'expired', 'spoiled', 'reduce waste', 'food waste', 'scraps', 'disposal']
+    };
+
+    // Check if the current mode has relevant keywords
+    const currentModeKeywords = taskKeywords[currentMode as keyof typeof taskKeywords] || [];
+    const hasRelevantKeywords = currentModeKeywords.some(keyword => contentLower.includes(keyword));
+
+    // If current mode is appropriate, return true
+    if (hasRelevantKeywords) {
+      return { appropriate: true };
+    }
+
+    // Check which mode would be more appropriate
+    for (const [mode, keywords] of Object.entries(taskKeywords)) {
+      if (mode !== currentMode && keywords.some(keyword => contentLower.includes(keyword))) {
+        const modeNames = {
+          smartplate: 'SmartPlate',
+          smartdoctor: 'SmartDoctor', 
+          harvesthelper: 'HarvestHelper',
+          soilsage: 'SoilSage',
+          weatherwise: 'WeatherWise',
+          wastewarrior: 'WasteWarrior'
+        };
+
+        const modeDescriptions = {
+          smartplate: 'recipe creation and cooking advice',
+          smartdoctor: 'plant health diagnosis and care',
+          harvesthelper: 'harvest timing and storage guidance',
+          soilsage: 'soil health and fertility advice',
+          weatherwise: 'weather-based farming guidance',
+          wastewarrior: 'food waste reduction strategies'
+        };
+
+        return {
+          appropriate: false,
+          suggestedMode: mode,
+          reason: `Your question is about ${modeDescriptions[mode as keyof typeof modeDescriptions]}. Please switch to ${modeNames[mode as keyof typeof modeNames]} for specialized help with this topic.`
+        };
+      }
+    }
+
+    // If no specific mode detected, allow current mode to handle it
+    return { appropriate: true };
+  }
+
   async sendMessage(messages: ChatMessage[]): Promise<{ response: string; productSuggestions: ProductSuggestion[] }> {
     try {
       // Fetch latest marketplace products
@@ -391,7 +446,25 @@ export class GeminiService {
 
       // Detect AI mode from the latest message
       const lastMessage = messages[messages.length - 1];
-      const aiMode = this.detectAIMode(lastMessage.content);
+      const requestedMode = this.detectAIMode(lastMessage.content);
+      
+      // Extract current mode from the message prefix
+      let currentMode = 'smartplate'; // default
+      const modeMatch = lastMessage.content.match(/^\[(.*?)\sMode\]/);
+      if (modeMatch) {
+        const modeName = modeMatch[1].toLowerCase().replace(/\s/g, '');
+        currentMode = modeName;
+      }
+
+      // Check if the task is appropriate for the current mode
+      const appropriateness = this.isTaskAppropriateForMode(lastMessage.content, currentMode);
+      
+      if (!appropriateness.appropriate && appropriateness.suggestedMode) {
+        return {
+          response: `I'm specialized in my specific area and can't help with that request. ${appropriateness.reason}\n\nUse the dropdown at the top of the screen to switch AI assistants and get the best help for your question! 🤖`,
+          productSuggestions: []
+        };
+      }
 
       // Convert our chat format to Gemini's expected format
       const geminiMessages = messages.map(msg => {
@@ -423,7 +496,7 @@ export class GeminiService {
         ? `\n\nCURRENT FOODLOOP MARKETPLACE: ${this.marketplaceProducts.length} available products including: ${this.marketplaceProducts.slice(0, 10).map(p => `${p.name} ($${p.price})`).join(', ')}. When relevant, suggest these marketplace items to users.`
         : '';
 
-      const systemPrompt = AI_MODE_PROMPTS[aiMode as keyof typeof AI_MODE_PROMPTS] + productContext;
+      const systemPrompt = AI_MODE_PROMPTS[currentMode as keyof typeof AI_MODE_PROMPTS] + productContext;
 
       const requestBody = {
         contents: geminiMessages,
@@ -480,7 +553,7 @@ export class GeminiService {
       
       // Find relevant products based on the conversation and AI mode
       const conversationContext = lastMessage?.content + ' ' + responseText;
-      const productSuggestions = this.findRelevantProducts(conversationContext, aiMode);
+      const productSuggestions = this.findRelevantProducts(conversationContext, currentMode);
 
       return {
         response: responseText,

@@ -1,5 +1,4 @@
 import { Redirect, Stack } from "expo-router";
-
 import { useAuth } from "@/context/supabase-provider";
 
 export const unstable_settings = {
@@ -29,6 +28,8 @@ export default function ProtectedLayout() {
 			<Stack.Screen name="create-product-modal" options={{ presentation: "modal" }} />
 			<Stack.Screen name="smartplate-ai" options={{ presentation: "card" }} />
 			<Stack.Screen name="impact-dashboard" options={{ presentation: "card" }} />
+			<Stack.Screen name="messages" options={{ presentation: "card" }} />
+			<Stack.Screen name="conversation" />
 		</Stack>
 	);
 }
