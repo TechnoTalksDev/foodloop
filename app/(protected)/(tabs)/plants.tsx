@@ -20,6 +20,7 @@ import { useAuth } from "@/context/supabase-provider";
 import { supabase } from "@/config/supabase";
 import { weatherService } from "@/lib/weather-service";
 import { format } from "date-fns";
+import { useNotifications } from "@/context/notification-provider";
 
 interface UserPlant {
 	id: string;
@@ -59,6 +60,7 @@ export default function PlantsScreen() {
 	const [currentWeather, setCurrentWeather] = useState<any>(null);
 	const [weatherLoading, setWeatherLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+    const { unreadCount } = useNotifications();
 
 	useEffect(() => {
 		fetchUserPlants();
@@ -246,33 +248,26 @@ export default function PlantsScreen() {
 
 	return (
 		<SafeAreaView className="flex-1 bg-background">
-			<ScrollView
-				className="flex-1"
-				showsVerticalScrollIndicator={false}
-				refreshControl={
-					<RefreshControl
-						refreshing={refreshing}
-						onRefresh={onRefresh}
-						colors={["#10b981"]}
-						tintColor="#10b981"
-					/>
-				}
-			>
-				{/* Header */}
+			<ScrollView>
+				{/* REPLACE the existing header with this updated version */}
 				<View className="flex-row justify-between items-center px-4 py-3 mb-4">
-					<TouchableOpacity
-						onPress={() => router.push("/(protected)/notification-modal")}
-					>
+					<TouchableOpacity onPress={() => router.push("/(protected)/notification-modal")}>
 						<View className="w-10 h-10 items-center justify-center">
 							<Text className="text-2xl">🔔</Text>
+							{/* ADD THIS notification badge */}
+							{unreadCount > 0 && (
+								<View className="absolute top-0 right-0 w-4 h-4 bg-red-500 rounded-full items-center justify-center">
+									<Text className="text-white text-xs font-bold">
+										{unreadCount > 99 ? "99+" : unreadCount}
+									</Text>
+								</View>
+							)}
 						</View>
 					</TouchableOpacity>
 
 					<H1>My Plants</H1>
 
-					<TouchableOpacity
-						onPress={() => router.push("/(protected)/(tabs)/profile")}
-					>
+					<TouchableOpacity onPress={() => router.push("/(protected)/(tabs)/profile")}>
 						<View className="w-10 h-10 items-center justify-center">
 							<Text className="text-2xl">👤</Text>
 						</View>

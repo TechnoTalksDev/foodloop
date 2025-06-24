@@ -1,3 +1,5 @@
+// app/(protected)/create-product-modal.tsx - COMPLETE WITH NOTIFICATIONS
+
 import React, { useState, useRef, useEffect } from "react";
 import {
 	View,
@@ -33,11 +35,12 @@ import { useColorScheme } from "@/lib/useColorScheme";
 import { colors } from "@/constants/colors";
 import { H1 } from "@/components/ui/typography";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
 
 import { supabase } from "@/config/supabase";
 import { useAuth } from "@/context/supabase-provider";
+import { useNotifications } from "@/context/notification-provider";
 import { decode } from "base64-arraybuffer";
 import * as FileSystem from "expo-file-system";
 import { nanoid } from "nanoid";
@@ -96,6 +99,7 @@ const tagIcons = {
 export default function CreateProduct() {
 	const router = useRouter();
 	const { colorScheme } = useColorScheme();
+	const { addNotification } = useNotifications();
 	const [selectedTags, setSelectedTags] = useState<string[]>([]);
 	const [images, setImages] = useState<string[]>([]);
 	const [isUploading, setIsUploading] = useState(false);
@@ -249,6 +253,7 @@ export default function CreateProduct() {
 					icon: tag ? tagIcons[tag.icon as keyof typeof tagIcons] : "leaf",
 				};
 			});
+
 			// Create the product in the database
 			console.log("Creating product in database...");
 			const { data: product, error } = await supabase
@@ -276,6 +281,22 @@ export default function CreateProduct() {
 
 			console.log("Product created successfully:", product);
 
+			// Send marketplace notification
+			await addNotification({
+				type: 'marketplace_update',
+				title: 'Product listed successfully! 🛒',
+				message: `Your "${data.name}" is now live on the marketplace. Buyers can discover it now!`,
+				data: { 
+					action: 'product_created', 
+					product_name: data.name, 
+					product_id: product.id 
+				},
+				urgent: false,
+				icon: '✅',
+				action_url: '/(protected)/(tabs)/marketplace',
+				expires_at: addDays(new Date(), 7).toISOString(),
+			});
+
 			// Show success message and navigate back
 			alert("Product created successfully!");
 			router.back();
@@ -286,6 +307,7 @@ export default function CreateProduct() {
 			setIsSubmitting(false);
 		}
 	};
+
 	return (
 		<SafeAreaView className="flex-1 bg-background">
 			{/* Modal Header */}

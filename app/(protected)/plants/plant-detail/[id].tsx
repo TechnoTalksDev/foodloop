@@ -21,6 +21,8 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/supabase-provider";
 import { supabase } from "@/config/supabase";
 import { format, differenceInDays } from "date-fns";
+import { useNotifications } from "@/context/notification-provider";
+import { addDays } from "date-fns";
 
 interface PlantDetail {
 	id: string;
@@ -93,6 +95,7 @@ export default function PlantDetailScreen() {
 	const [checkInHealth, setCheckInHealth] = useState("healthy");
 	const [submittingCheckIn, setSubmittingCheckIn] = useState(false);
 	const [uploadingImage, setUploadingImage] = useState(false);
+    const { addNotification } = useNotifications()
 
 	useEffect(() => {
 		if (id) {
@@ -359,6 +362,17 @@ export default function PlantDetailScreen() {
 				.update({ last_checkin: new Date().toISOString() })
 				.eq("id", id);
 
+			// ADD THIS: Send achievement notification
+			addNotification({
+				type: 'achievement',
+				title: 'Plant check-in complete! 🌱',
+				message: `Great job taking care of ${plant?.plant_name}. Your plant is thriving!`,
+				data: { plant_id: id, achievement_type: 'check_in' },
+				urgent: false,
+				icon: '🎉',
+				expires_at: addDays(new Date(), 3).toISOString(),
+			});
+
 			// Reset form
 			setCheckInImage(null);
 			setCheckInNotes("");
@@ -378,6 +392,7 @@ export default function PlantDetailScreen() {
 		}
 	};
 
+	// ADD THIS: Update plant status function to include notifications
 	const updatePlantStatus = async (newStatus: string) => {
 		if (!id) return;
 
@@ -395,7 +410,19 @@ export default function PlantDetailScreen() {
 
 			setPlant(prev => prev ? { ...prev, status: newStatus } : null);
 			
+			// ADD THIS: Send notification for harvest readiness
 			if (newStatus === 'ready_to_harvest') {
+				addNotification({
+					type: 'achievement',
+					title: 'Ready to Harvest! 🍅',
+					message: `Your ${plant?.plant_name} is ready for harvest! Consider selling on the marketplace.`,
+					data: { plant_id: id, achievement_type: 'harvest_ready' },
+					urgent: false,
+					icon: '🎉',
+					action_url: '/(protected)/create-product-modal',
+					expires_at: addDays(new Date(), 7).toISOString(),
+				});
+
 				Alert.alert(
 					"Ready to Harvest! 🎉",
 					"Your plant is ready for harvest! Consider selling your produce on the marketplace.",

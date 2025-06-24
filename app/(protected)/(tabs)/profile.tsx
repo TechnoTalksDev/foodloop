@@ -12,6 +12,7 @@ import { useAuth } from "@/context/supabase-provider";
 import { supabase } from "@/config/supabase";
 import { Image } from "@/components/image";
 import { format } from "date-fns";
+import { useNotifications } from "@/context/notification-provider";
 
 // Define a User type for TypeScript
 type User = {
@@ -57,6 +58,7 @@ export default function Profile() {
 		totalMoneySaved: 0,
 		totalCO2Saved: 0,
 	});
+	const { preferences, updatePreferences } = useNotifications();
 
 	useEffect(() => {
 		if (session?.user?.id) {
@@ -347,6 +349,80 @@ export default function Profile() {
 									))}
 								</View>
 							)}
+						</View>
+
+						<View className="bg-card p-4 rounded-lg mb-6">
+							<H2 className="mb-3">Notification Preferences</H2>
+							
+							<TouchableOpacity 
+								className="flex-row items-center justify-between py-3"
+								onPress={() => updatePreferences({ messages: !preferences.messages })}
+							>
+								<Text className="text-foreground">Message Notifications</Text>
+								<View className={`w-12 h-6 rounded-full justify-center ${
+									preferences.messages ? 'bg-primary' : 'bg-muted'
+								}`}>
+									<View className={`w-5 h-5 rounded-full bg-white ${
+										preferences.messages ? 'self-end mr-0.5' : 'self-start ml-0.5'
+									}`} />
+								</View>
+							</TouchableOpacity>
+
+							<TouchableOpacity 
+								className="flex-row items-center justify-between py-3"
+								onPress={() => updatePreferences({ plant_reminders: !preferences.plant_reminders })}
+							>
+								<Text className="text-foreground">Plant Care Reminders</Text>
+								<View className={`w-12 h-6 rounded-full justify-center ${
+									preferences.plant_reminders ? 'bg-primary' : 'bg-muted'
+								}`}>
+									<View className={`w-5 h-5 rounded-full bg-white ${
+										preferences.plant_reminders ? 'self-end mr-0.5' : 'self-start ml-0.5'
+									}`} />
+								</View>
+							</TouchableOpacity>
+
+							<TouchableOpacity 
+								className="flex-row items-center justify-between py-3"
+								onPress={() => updatePreferences({ weather_alerts: !preferences.weather_alerts })}
+							>
+								<Text className="text-foreground">Weather Alerts</Text>
+								<View className={`w-12 h-6 rounded-full justify-center ${
+									preferences.weather_alerts ? 'bg-primary' : 'bg-muted'
+								}`}>
+									<View className={`w-5 h-5 rounded-full bg-white ${
+										preferences.weather_alerts ? 'self-end mr-0.5' : 'self-start ml-0.5'
+									}`} />
+								</View>
+							</TouchableOpacity>
+
+							<TouchableOpacity 
+								className="flex-row items-center justify-between py-3"
+								onPress={() => updatePreferences({ achievements: !preferences.achievements })}
+							>
+								<Text className="text-foreground">Achievement Notifications</Text>
+								<View className={`w-12 h-6 rounded-full justify-center ${
+									preferences.achievements ? 'bg-primary' : 'bg-muted'
+								}`}>
+									<View className={`w-5 h-5 rounded-full bg-white ${
+										preferences.achievements ? 'self-end mr-0.5' : 'self-start ml-0.5'
+									}`} />
+								</View>
+							</TouchableOpacity>
+
+							<TouchableOpacity 
+								className="flex-row items-center justify-between py-3"
+								onPress={() => updatePreferences({ marketplace_updates: !preferences.marketplace_updates })}
+							>
+								<Text className="text-foreground">Marketplace Updates</Text>
+								<View className={`w-12 h-6 rounded-full justify-center ${
+									preferences.marketplace_updates ? 'bg-primary' : 'bg-muted'
+								}`}>
+									<View className={`w-5 h-5 rounded-full bg-white ${
+										preferences.marketplace_updates ? 'self-end mr-0.5' : 'self-start ml-0.5'
+									}`} />
+								</View>
+							</TouchableOpacity>
 						</View>
 
 						{/* Preferences */}

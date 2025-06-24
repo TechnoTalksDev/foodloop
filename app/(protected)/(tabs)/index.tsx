@@ -14,6 +14,7 @@ import { useAuth } from "@/context/supabase-provider";
 import { supabase } from "@/config/supabase";
 import { format, subMonths } from 'date-fns';
 import { weatherService, WeatherData } from "@/lib/weather-service";
+import { useNotifications } from "@/context/notification-provider";
 
 // Sample food categories with eco-friendly icons
 const foodCategories = [
@@ -94,6 +95,7 @@ interface WeatherDisplay {
 
 export default function Home() {
 	const { session } = useAuth();
+	const { unreadCount } = useNotifications();
 	const [username, setUsername] = useState<string | null>(null);
 	const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 	const [loadingUser, setLoadingUser] = useState(true);
@@ -279,14 +281,19 @@ export default function Home() {
 	return (
 		<SafeAreaView className="flex-1 bg-background">
 			<ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-				{/* Header with notification and cart */}
+				{/* REPLACE the existing header section with this updated version */}
 				<View className="flex-row justify-between items-center px-4 py-3 mb-4">
 					<TouchableOpacity onPress={() => router.push("/(protected)/notification-modal")}> 
 						<View className="w-10 h-10 items-center justify-center">
 							<Text className="text-2xl">🔔</Text>
-							<View className="absolute top-0 right-0 w-4 h-4 bg-red-500 rounded-full items-center justify-center">
-								<Text className="text-white text-xs font-bold">2</Text>
-							</View>
+							{/* ADD THIS notification badge */}
+							{unreadCount > 0 && (
+								<View className="absolute top-0 right-0 w-5 h-5 bg-red-500 rounded-full items-center justify-center">
+									<Text className="text-white text-xs font-bold">
+										{unreadCount > 99 ? "99+" : unreadCount}
+									</Text>
+								</View>
+							)}
 						</View>
 					</TouchableOpacity>
 
