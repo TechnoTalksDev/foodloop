@@ -14,7 +14,7 @@ import { Text } from "@/components/ui/text";
 import { H1, H3 } from "@/components/ui/typography";
 import { useAuth } from "@/context/supabase-provider";
 import { supabase } from "@/config/supabase";
-import { format, formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow } from "date-fns";
 
 interface Conversation {
 	id: string;
@@ -58,9 +58,11 @@ export default function MessagesScreen() {
 
 		try {
 			// Fetch conversations where user is either buyer or seller
-			const { data: conversationsData, error: conversationsError } = await supabase
-				.from('conversations')
-				.select(`
+			const { data: conversationsData, error: conversationsError } =
+				await supabase
+					.from("conversations")
+					.select(
+						`
 					id,
 					buyer_id,
 					seller_id,
@@ -68,12 +70,13 @@ export default function MessagesScreen() {
 					status,
 					last_message_at,
 					created_at
-				`)
-				.or(`buyer_id.eq.${session.user.id},seller_id.eq.${session.user.id}`)
-				.order('last_message_at', { ascending: false });
+				`,
+					)
+					.or(`buyer_id.eq.${session.user.id},seller_id.eq.${session.user.id}`)
+					.order("last_message_at", { ascending: false });
 
 			if (conversationsError) {
-				console.error('Error fetching conversations:', conversationsError);
+				console.error("Error fetching conversations:", conversationsError);
 				return;
 			}
 
@@ -83,84 +86,86 @@ export default function MessagesScreen() {
 			}
 
 			// Get other user IDs and product IDs
-			const otherUserIds = conversationsData.map(conv => 
-				conv.buyer_id === session.user.id ? conv.seller_id : conv.buyer_id
+			const otherUserIds = conversationsData.map((conv) =>
+				conv.buyer_id === session.user.id ? conv.seller_id : conv.buyer_id,
 			);
-			const productIds = conversationsData.map(conv => conv.product_id);
+			const productIds = conversationsData.map((conv) => conv.product_id);
 
 			// Fetch other users info
 			const { data: usersData } = await supabase
-				.from('users')
-				.select('id, name, username, avatar')
-				.in('id', otherUserIds);
+				.from("users")
+				.select("id, name, username, avatar")
+				.in("id", otherUserIds);
 
 			// Fetch products info
 			const { data: productsData } = await supabase
-				.from('product')
-				.select('id, name, price, image_url')
-				.in('id', productIds);
+				.from("product")
+				.select("id, name, price, image_url")
+				.in("id", productIds);
 
 			// Fetch last messages for each conversation
-			const conversationIds = conversationsData.map(conv => conv.id);
+			const conversationIds = conversationsData.map((conv) => conv.id);
 			const { data: lastMessages } = await supabase
-				.from('messages')
-				.select('conversation_id, content, sender_id, created_at, message_type')
-				.in('conversation_id', conversationIds)
-				.order('created_at', { ascending: false });
+				.from("messages")
+				.select("conversation_id, content, sender_id, created_at, message_type")
+				.in("conversation_id", conversationIds)
+				.order("created_at", { ascending: false });
 
 			// Fetch unread counts
 			const unreadCounts = await Promise.all(
 				conversationIds.map(async (convId) => {
 					const { count } = await supabase
-						.from('messages')
-						.select('id', { count: 'exact' })
-						.eq('conversation_id', convId)
-						.neq('sender_id', session.user.id)
-						.is('read_at', null);
+						.from("messages")
+						.select("id", { count: "exact" })
+						.eq("conversation_id", convId)
+						.neq("sender_id", session.user.id)
+						.is("read_at", null);
 					return { conversationId: convId, count: count || 0 };
-				})
+				}),
 			);
 
 			// Create lookup maps
 			const usersMap = new Map();
-			usersData?.forEach(user => usersMap.set(user.id, user));
+			usersData?.forEach((user) => usersMap.set(user.id, user));
 
 			const productsMap = new Map();
-			productsData?.forEach(product => productsMap.set(product.id, product));
+			productsData?.forEach((product) => productsMap.set(product.id, product));
 
 			const lastMessagesMap = new Map();
-			lastMessages?.forEach(msg => {
+			lastMessages?.forEach((msg) => {
 				if (!lastMessagesMap.has(msg.conversation_id)) {
 					lastMessagesMap.set(msg.conversation_id, msg);
 				}
 			});
 
 			const unreadMap = new Map();
-			unreadCounts.forEach(({ conversationId, count }) => 
-				unreadMap.set(conversationId, count)
+			unreadCounts.forEach(({ conversationId, count }) =>
+				unreadMap.set(conversationId, count),
 			);
 
 			// Combine all data
-			const enrichedConversations: Conversation[] = conversationsData.map(conv => {
-				const otherUserId = conv.buyer_id === session.user.id ? conv.seller_id : conv.buyer_id;
-				const otherUser = usersMap.get(otherUserId);
-				const product = productsMap.get(conv.product_id);
-				const lastMessage = lastMessagesMap.get(conv.id);
-				const unreadCount = unreadMap.get(conv.id);
+			const enrichedConversations: Conversation[] = conversationsData.map(
+				(conv) => {
+					const otherUserId =
+						conv.buyer_id === session.user.id ? conv.seller_id : conv.buyer_id;
+					const otherUser = usersMap.get(otherUserId);
+					const product = productsMap.get(conv.product_id);
+					const lastMessage = lastMessagesMap.get(conv.id);
+					const unreadCount = unreadMap.get(conv.id);
 
-				return {
-					...conv,
-					other_user: otherUser,
-					product: product,
-					last_message: lastMessage,
-					unread_count: unreadCount
-				};
-			});
+					return {
+						...conv,
+						other_user: otherUser,
+						product: product,
+						last_message: lastMessage,
+						unread_count: unreadCount,
+					};
+				},
+			);
 
 			setConversations(enrichedConversations);
-
 		} catch (error) {
-			console.error('Error in fetchConversations:', error);
+			console.error("Error in fetchConversations:", error);
 		} finally {
 			setLoading(false);
 		}
@@ -192,29 +197,36 @@ export default function MessagesScreen() {
 		const product = conversation.product;
 		const lastMessage = conversation.last_message;
 
-		const displayName = otherUser?.name || otherUser?.username || 'Unknown User';
-		const productImage = product?.image_url 
-			? (Array.isArray(product.image_url) ? product.image_url[0] : product.image_url)
+		const displayName =
+			otherUser?.name || otherUser?.username || "Unknown User";
+		const productImage = product?.image_url
+			? Array.isArray(product.image_url)
+				? product.image_url[0]
+				: product.image_url
 			: null;
 
-		const timeAgo = conversation.last_message_at 
-			? formatDistanceToNow(new Date(conversation.last_message_at), { addSuffix: true })
-			: formatDistanceToNow(new Date(conversation.created_at), { addSuffix: true });
+		const timeAgo = conversation.last_message_at
+			? formatDistanceToNow(new Date(conversation.last_message_at), {
+					addSuffix: true,
+				})
+			: formatDistanceToNow(new Date(conversation.created_at), {
+					addSuffix: true,
+				});
 
 		const isUnread = (conversation.unread_count || 0) > 0;
 
 		return (
 			<TouchableOpacity
 				key={conversation.id}
-				className={`p-4 border-b border-border ${isUnread ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+				className={`p-4 border-b border-border ${isUnread ? "bg-blue-50 dark:bg-blue-900/20" : ""}`}
 				onPress={() => router.push(`/conversation/${conversation.id}` as any)}
 			>
 				<View className="flex-row items-center">
 					{/* User Avatar */}
 					<View className="w-12 h-12 rounded-full bg-secondary items-center justify-center mr-3">
 						{otherUser?.avatar ? (
-							<Image 
-								source={{ uri: otherUser.avatar }} 
+							<Image
+								source={{ uri: otherUser.avatar }}
 								className="w-12 h-12 rounded-full"
 								resizeMode="cover"
 							/>
@@ -228,12 +240,12 @@ export default function MessagesScreen() {
 					{/* Conversation Details */}
 					<View className="flex-1 mr-3">
 						<View className="flex-row items-center justify-between mb-1">
-							<Text className={`font-semibold text-base ${isUnread ? 'text-blue-700 dark:text-blue-300' : ''}`}>
+							<Text
+								className={`font-semibold text-base ${isUnread ? "text-blue-700 dark:text-blue-300" : ""}`}
+							>
 								{displayName}
 							</Text>
-							<Text className="text-xs text-muted-foreground">
-								{timeAgo}
-							</Text>
+							<Text className="text-xs text-muted-foreground">{timeAgo}</Text>
 						</View>
 
 						{product && (
@@ -243,12 +255,14 @@ export default function MessagesScreen() {
 						)}
 
 						{lastMessage && (
-							<Text 
-								className={`text-sm ${isUnread ? 'font-medium' : 'text-muted-foreground'}`}
+							<Text
+								className={`text-sm ${isUnread ? "font-medium" : "text-muted-foreground"}`}
 								numberOfLines={2}
 							>
-								{lastMessage.sender_id === session?.user?.id ? 'You: ' : ''}
-								{lastMessage.message_type === 'offer' ? '💰 Sent an offer' : lastMessage.content}
+								{lastMessage.sender_id === session?.user?.id ? "You: " : ""}
+								{lastMessage.message_type === "offer"
+									? "💰 Sent an offer"
+									: lastMessage.content}
 							</Text>
 						)}
 					</View>
@@ -281,7 +295,9 @@ export default function MessagesScreen() {
 			<SafeAreaView className="flex-1 bg-background">
 				<View className="flex-1 items-center justify-center">
 					<ActivityIndicator size="large" color="#10b981" />
-					<Text className="mt-4 text-muted-foreground">Loading conversations...</Text>
+					<Text className="mt-4 text-muted-foreground">
+						Loading conversations...
+					</Text>
 				</View>
 			</SafeAreaView>
 		);
@@ -304,7 +320,8 @@ export default function MessagesScreen() {
 					<Text className="text-6xl mb-4">💬</Text>
 					<H3 className="text-center mb-2">No conversations yet</H3>
 					<Text className="text-center text-muted-foreground mb-6">
-						Start shopping and add items to your cart to begin conversations with business owners
+						Start shopping and add items to your cart to begin conversations
+						with business owners
 					</Text>
 					<TouchableOpacity
 						className="bg-primary px-6 py-3 rounded-xl"
@@ -313,7 +330,9 @@ export default function MessagesScreen() {
 							router.push("/(protected)/(tabs)/marketplace");
 						}}
 					>
-						<Text className="text-primary-foreground font-semibold">Browse Marketplace</Text>
+						<Text className="text-primary-foreground font-semibold">
+							Browse Marketplace
+						</Text>
 					</TouchableOpacity>
 				</View>
 			) : (

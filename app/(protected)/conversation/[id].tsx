@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/supabase-provider";
 import { supabase } from "@/config/supabase";
 import { format } from "date-fns";
+import { filterProfanity, containsProfanity } from "@/lib/profanity-filter";
 
 interface Message {
 	id: string;
@@ -145,7 +146,6 @@ export default function ConversationScreen() {
 			console.error("Error marking messages as read:", error);
 		}
 	};
-
 	const sendMessage = async (
 		content: string,
 		messageType: "text" | "offer" = "text",
@@ -153,12 +153,25 @@ export default function ConversationScreen() {
 	) => {
 		if (!session?.user?.id || !id || !content.trim()) return;
 
+		// Filter profanity from the message content
+		const originalContent = content.trim();
+		const filteredContent = filterProfanity(originalContent);
+
+		// Warn user if profanity was detected and filtered
+		if (containsProfanity(originalContent)) {
+			Alert.alert(
+				"Message Filtered",
+				"Your message contained inappropriate language and has been filtered to maintain a professional environment.",
+				[{ text: "OK" }],
+			);
+		}
+
 		setSending(true);
 		try {
 			const { error } = await supabase.from("messages").insert({
 				conversation_id: id,
 				sender_id: session.user.id,
-				content: content.trim(),
+				content: filteredContent,
 				message_type: messageType,
 				metadata: metadata,
 			});
@@ -254,15 +267,13 @@ export default function ConversationScreen() {
 							</Text>
 						</View>
 					)}
-
 					<Text
 						className={`text-base ${
 							isOwnMessage ? "text-primary-foreground" : "text-foreground"
 						}`}
 					>
-						{message.content}
+						{filterProfanity(message.content)}
 					</Text>
-
 					<Text
 						className={`text-xs mt-2 ${
 							isOwnMessage
