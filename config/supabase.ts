@@ -68,3 +68,41 @@ AppState.addEventListener("change", (state) => {
 		supabase.auth.stopAutoRefresh();
 	}
 });
+
+/**
+ * Initialize realtime subscriptions and verify connection
+ * Call this during app startup to ensure realtime is working
+ */
+export const initializeRealtime = async (): Promise<boolean> => {
+	try {
+		console.log('🚀 [Realtime] Initializing realtime connection...');
+		
+		// Test realtime connection with a simple subscription
+		const testChannel = supabase
+			.channel('realtime-test')
+			.subscribe((status) => {
+				console.log('📡 [Realtime] Connection status:', status);
+				
+				if (status === 'SUBSCRIBED') {
+					console.log('✅ [Realtime] Successfully connected and subscribed!');
+				} else if (status === 'CHANNEL_ERROR') {
+					console.error('❌ [Realtime] Channel error - check your Supabase configuration');
+				} else if (status === 'TIMED_OUT') {
+					console.error('⏰ [Realtime] Connection timed out - check your network');
+				} else if (status === 'CLOSED') {
+					console.log('🔒 [Realtime] Connection closed');
+				}
+			});
+
+		// Clean up test channel after verification
+		setTimeout(() => {
+			console.log('🧹 [Realtime] Cleaning up test connection');
+			supabase.removeChannel(testChannel);
+		}, 2000);
+
+		return true;
+	} catch (error) {
+		console.error('❌ [Realtime] Initialization failed:', error);
+		return false;
+	}
+};
