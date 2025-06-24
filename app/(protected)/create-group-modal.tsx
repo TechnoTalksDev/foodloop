@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { useColorScheme } from "@/lib/useColorScheme";
 import { colors } from "@/constants/colors";
@@ -192,7 +191,6 @@ export default function CreateGroupModal() {
 							className="text-foreground"
 						/>
 					</View>
-
 					{/* Description */}
 					<View className="mb-6">
 						<Label className="mb-2">Description</Label>
@@ -206,30 +204,42 @@ export default function CreateGroupModal() {
 							className="text-foreground"
 						/>
 					</View>
-
 					{/* Category */}
 					<View className="mb-6">
 						<Label className="mb-3">Category *</Label>
-						<RadioGroup
-							value={formData.category}
-							onValueChange={(value) =>
-								setFormData((prev) => ({ ...prev, category: value }))
-							}
-						>
+						<View>
 							{GROUP_CATEGORIES.map((category) => (
-								<View
+								<TouchableOpacity
 									key={category.id}
-									className="flex-row items-center space-x-2 mb-3"
+									onPress={() =>
+										setFormData((prev) => ({
+											...prev,
+											category: category.value,
+										}))
+									}
+									className="flex-row items-center py-3 px-2 mb-2 rounded-lg"
+									activeOpacity={0.7}
 								>
-									<RadioGroupItem value={category.value} />
+									<View className="mr-4">
+										<View
+											className={`w-6 h-6 rounded-full border-2 items-center justify-center ${
+												formData.category === category.value
+													? "border-primary bg-primary"
+													: "border-border bg-background"
+											}`}
+										>
+											{formData.category === category.value && (
+												<View className="w-3 h-3 rounded-full bg-white" />
+											)}
+										</View>
+									</View>
 									<Text className="text-foreground flex-1">
 										{category.label}
 									</Text>
-								</View>
+								</TouchableOpacity>
 							))}
-						</RadioGroup>
+						</View>
 					</View>
-
 					{/* Subcategory */}
 					<View className="mb-6">
 						<Label className="mb-2">Subcategory (Optional)</Label>
@@ -242,7 +252,6 @@ export default function CreateGroupModal() {
 							className="text-foreground"
 						/>
 					</View>
-
 					{/* Location */}
 					<View className="mb-6">
 						<Label className="mb-2">Location (Optional)</Label>
@@ -255,7 +264,6 @@ export default function CreateGroupModal() {
 							className="text-foreground"
 						/>
 					</View>
-
 					{/* Location Radius */}
 					{formData.location && (
 						<View className="mb-6">
@@ -271,7 +279,6 @@ export default function CreateGroupModal() {
 							/>
 						</View>
 					)}
-
 					{/* Icon Selection */}
 					<View className="mb-6">
 						<Label className="mb-3">Group Icon</Label>
@@ -291,7 +298,6 @@ export default function CreateGroupModal() {
 							))}
 						</View>
 					</View>
-
 					{/* Color Selection */}
 					<View className="mb-6">
 						<Label className="mb-3">Group Color</Label>
@@ -310,7 +316,6 @@ export default function CreateGroupModal() {
 							))}
 						</View>
 					</View>
-
 					{/* Privacy */}
 					<View className="flex-row items-center justify-between mb-6">
 						<View className="flex-1">
@@ -326,7 +331,6 @@ export default function CreateGroupModal() {
 							}
 						/>
 					</View>
-
 					{/* Rules */}
 					<View className="mb-6">
 						<Label className="mb-2">Group Rules (Optional)</Label>
@@ -340,7 +344,6 @@ export default function CreateGroupModal() {
 							className="text-foreground"
 						/>
 					</View>
-
 					{/* Tags */}
 					<View className="mb-8">
 						<Label className="mb-2">Tags (Optional)</Label>
@@ -356,7 +359,6 @@ export default function CreateGroupModal() {
 							Separate tags with commas
 						</Text>
 					</View>
-
 					{/* Submit Button */}
 					<Button
 						onPress={handleSubmit}

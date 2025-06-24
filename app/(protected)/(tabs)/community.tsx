@@ -423,7 +423,6 @@ export default function Community() {
 					</View>
 				)}
 			</View>
-
 			{/* Post Type & Tags - Horizontal ScrollView */}
 			{(item.post_type || (item.tags && item.tags.length > 0)) && (
 				<ScrollView
@@ -454,17 +453,52 @@ export default function Community() {
 					</View>
 				</ScrollView>
 			)}
-
 			{/* Post Title */}
 			<Text className="text-xl font-semibold text-foreground mb-3">
 				{item.title}
 			</Text>
-
 			{/* Post Content */}
 			<Text className="text-foreground mb-4 leading-6" numberOfLines={3}>
 				{item.content}
 			</Text>
-
+			{/* Post Images */}
+			{item.images && item.images.length > 0 && (
+				<View className="mb-4">
+					<ScrollView
+						horizontal
+						showsHorizontalScrollIndicator={false}
+						contentContainerStyle={{ paddingRight: 16 }}
+					>
+						<View className="flex-row">
+							{item.images.slice(0, 3).map((imageUrl, index) => (
+								<TouchableOpacity
+									key={index}
+									onPress={(e) => {
+										e.stopPropagation();
+										// Navigate to post detail where images can be viewed in full
+										router.push(`/(protected)/post/${item.id}` as any);
+									}}
+									className="mr-2 relative"
+								>
+									<Image
+										source={{ uri: imageUrl }}
+										className="w-20 h-20 rounded-lg"
+										resizeMode="cover"
+									/>
+									{/* Show count indicator if there are more images */}
+									{index === 2 && item.images!.length > 3 && (
+										<View className="absolute inset-0 bg-black/60 rounded-lg items-center justify-center">
+											<Text className="text-white font-semibold">
+												+{item.images!.length - 3}
+											</Text>
+										</View>
+									)}
+								</TouchableOpacity>
+							))}
+						</View>
+					</ScrollView>
+				</View>
+			)}
 			{/* Post Location */}
 			{item.location && (
 				<View className="flex-row items-center mb-4">
@@ -474,7 +508,6 @@ export default function Community() {
 					</Text>
 				</View>
 			)}
-
 			{/* Post Actions - Match post detail page exactly */}
 			<View className="flex-row items-center justify-between pt-3 border-t border-border">
 				<View className="flex-row items-center">
@@ -846,7 +879,28 @@ export default function Community() {
 				<View className="h-20" />
 			</ScrollView>
 			{/* Floating Action Buttons */}
-			<View className="absolute bottom-20 right-6">
+			<View className="absolute bottom-14 right-6">
+				{/* Secondary FAB - Group creation (above main FAB) */}
+				{activeTab !== "groups" && (
+					<TouchableOpacity
+						onPress={() => router.push("/(protected)/create-group-modal")}
+						className="w-16 h-16 rounded-full shadow-lg active:scale-95 mb-3"
+						style={{
+							backgroundColor: colorScheme === "dark" ? "#0369a1" : "#0ea5e9",
+							shadowColor: "#000",
+							shadowOffset: { width: 0, height: 4 },
+							shadowOpacity: 0.3,
+							shadowRadius: 8,
+							elevation: 8,
+						}}
+						activeOpacity={0.8}
+					>
+						<View className="flex-1 items-center justify-center">
+							<Ionicons name="people" size={28} color="#FFFFFF" />
+						</View>
+					</TouchableOpacity>
+				)}
+
 				{/* Main Create FAB */}
 				<TouchableOpacity
 					onPress={() => {
@@ -857,7 +911,7 @@ export default function Community() {
 							router.push("/(protected)/create-post-modal");
 						}
 					}}
-					className="w-16 h-16 rounded-full shadow-lg active:scale-95 mb-3"
+					className="w-16 h-16 rounded-full shadow-lg active:scale-95"
 					style={{
 						backgroundColor: colorScheme === "dark" ? "#10b981" : "#10b981",
 						shadowColor: "#000",
@@ -872,27 +926,6 @@ export default function Community() {
 						<Ionicons name="add" size={28} color="#FFFFFF" />
 					</View>
 				</TouchableOpacity>
-
-				{/* Secondary FAB - only show when not on the relevant tab */}
-				{activeTab !== "groups" && (
-					<TouchableOpacity
-						onPress={() => router.push("/(protected)/create-group-modal")}
-						className="w-12 h-12 rounded-full shadow-lg active:scale-95"
-						style={{
-							backgroundColor: colorScheme === "dark" ? "#0369a1" : "#0ea5e9",
-							shadowColor: "#000",
-							shadowOffset: { width: 0, height: 4 },
-							shadowOpacity: 0.3,
-							shadowRadius: 8,
-							elevation: 8,
-						}}
-						activeOpacity={0.8}
-					>
-						<View className="flex-1 items-center justify-center">
-							<Ionicons name="people" size={18} color="#FFFFFF" />
-						</View>
-					</TouchableOpacity>
-				)}
 			</View>
 		</SafeAreaView>
 	);

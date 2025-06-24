@@ -6,8 +6,14 @@ import {
 	TouchableOpacity,
 	Pressable,
 	FlatList,
+	Image,
+	ActivityIndicator,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system";
+import { decode } from "base64-arraybuffer";
+import { nanoid } from "nanoid";
 import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
 import { H1 } from "@/components/ui/typography";
@@ -21,6 +27,7 @@ import { colors } from "@/constants/colors";
 import { Ionicons } from "@expo/vector-icons";
 import { useCreatePost, useGroups } from "@/hooks/useCommunity";
 import { CreatePostData } from "@/types/community";
+import { supabase } from "@/config/supabase";
 
 const POST_TYPES = [
 	{
@@ -67,19 +74,24 @@ const COMMON_TAGS = [
 
 export default function CreatePostModal() {
 	const router = useRouter();
+	const { groupId } = useLocalSearchParams();
 	const { colorScheme } = useColorScheme();
 	const { createPost, loading, error } = useCreatePost();
 	const { groups } = useGroups();
-
 	// Form state
 	const [formData, setFormData] = useState({
 		title: "",
 		content: "",
-		group_id: "",
+		group_id: groupId ? String(groupId) : "",
 		post_type: "discussion",
 		tags: [] as string[],
 		location: "",
 	});
+
+	// Image state
+	const [selectedImages, setSelectedImages] = useState<string[]>([]);
+	const [uploadingImages, setUploadingImages] = useState(false);
+	const [isPickingImage, setIsPickingImage] = useState(false);
 
 	// Colors based on the theme
 	const textColor =
@@ -90,6 +102,162 @@ export default function CreatePostModal() {
 		colorScheme === "dark"
 			? colors.dark.mutedForeground
 			: colors.light.mutedForeground;
+
+	// Image upload functions
+	const pickImages = async () => {
+		if (selectedImages.length >= 5) {
+			Alert.alert("Limit Reached", "You can only add up to 5 images per post.");
+			return;
+		}
+
+		if (isPickingImage || uploadingImages) {
+			return; // Prevent multiple concurrent operations
+		}
+
+		try {
+			setIsPickingImage(true);
+
+			const { status } =
+				await ImagePicker.requestMediaLibraryPermissionsAsync();
+			if (status !== "granted") {
+				Alert.alert(
+					"Permission Denied",
+					"Sorry, we need camera roll permissions to upload images.",
+				);
+				return;
+			}
+
+			const result = await ImagePicker.launchImageLibraryAsync({
+				mediaTypes: ImagePicker.MediaTypeOptions.Images,
+				allowsEditing: true,
+				aspect: [4, 3],
+				quality: 0.8,
+			});
+
+			if (!result.canceled && result.assets?.[0]) {
+				setSelectedImages((prev) => [...prev, result.assets[0].uri]);
+			}
+		} catch (error) {
+			console.error("Error picking image:", error);
+			Alert.alert("Error", "There was an error selecting your image.");
+		} finally {
+			setIsPickingImage(false);
+		}
+	};
+
+	const takePhoto = async () => {
+		if (selectedImages.length >= 5) {
+			Alert.alert("Limit Reached", "You can only add up to 5 images per post.");
+			return;
+		}
+
+		if (isPickingImage || uploadingImages) {
+			return; // Prevent multiple concurrent operations
+		}
+
+		try {
+			setIsPickingImage(true);
+
+			const { status } = await ImagePicker.requestCameraPermissionsAsync();
+			if (status !== "granted") {
+				Alert.alert(
+					"Permission Denied",
+					"Sorry, we need camera permissions to take photos.",
+				);
+				return;
+			}
+
+			const result = await ImagePicker.launchCameraAsync({
+				mediaTypes: ImagePicker.MediaTypeOptions.Images,
+				quality: 0.8,
+				aspect: [4, 3],
+			});
+
+			if (!result.canceled && result.assets?.[0]) {
+				setSelectedImages((prev) => [...prev, result.assets[0].uri]);
+			}
+		} catch (error) {
+			console.error("Error taking photo:", error);
+			Alert.alert("Error", "There was an error taking the photo.");
+		} finally {
+			setIsPickingImage(false);
+		}
+	};
+
+	const removeImage = (index: number) => {
+		setSelectedImages((prev) => prev.filter((_, i) => i !== index));
+	};
+
+	const uploadImages = async (): Promise<string[]> => {
+		if (selectedImages.length === 0) return [];
+
+		setUploadingImages(true);
+		const uploadedUrls: string[] = [];
+
+		try {
+			for (let i = 0; i < selectedImages.length; i++) {
+				const imageUri = selectedImages[i];
+				const fileName = `${nanoid()}.jpg`;
+
+				// Read file as base64
+				const base64 = await FileSystem.readAsStringAsync(imageUri, {
+					encoding: FileSystem.EncodingType.Base64,
+				});
+
+				// Upload to Supabase Storage (directly to bucket root, no folder)
+				const { data, error } = await supabase.storage
+					.from("posts")
+					.upload(fileName, decode(base64), {
+						contentType: "image/jpeg",
+						upsert: false,
+					});
+
+				if (error) {
+					console.error("Upload error:", error);
+					throw error;
+				}
+
+				// Get public URL
+				const { data: urlData } = supabase.storage
+					.from("posts")
+					.getPublicUrl(fileName);
+
+				uploadedUrls.push(urlData.publicUrl);
+			}
+		} catch (error) {
+			console.error("Error uploading images:", error);
+			Alert.alert(
+				"Upload Error",
+				"Failed to upload some images. Please try again.",
+			);
+			throw error;
+		} finally {
+			setUploadingImages(false);
+		}
+
+		return uploadedUrls;
+	};
+
+	const showImageOptions = () => {
+		Alert.alert(
+			"Add Images",
+			"Choose how you'd like to add images to your post",
+			[
+				{
+					text: "Cancel",
+					style: "cancel",
+				},
+				{
+					text: "Take Photo",
+					onPress: takePhoto,
+				},
+				{
+					text: "Choose from Library",
+					onPress: pickImages,
+				},
+			],
+		);
+	};
 
 	const handleSubmit = async () => {
 		if (!formData.title.trim()) {
@@ -102,26 +270,58 @@ export default function CreatePostModal() {
 			return;
 		}
 
-		const postData: CreatePostData = {
-			title: formData.title.trim(),
-			content: formData.content.trim(),
-			group_id: formData.group_id ? parseInt(formData.group_id) : undefined,
-			post_type: formData.post_type,
-			tags: formData.tags.length > 0 ? formData.tags : undefined,
-			location: formData.location.trim() || undefined,
-		};
+		// Check if posting to a group and warn if user might not be a member
+		if (formData.group_id) {
+			const selectedGroup = groups.find(
+				(g) => g.id.toString() === formData.group_id,
+			);
+			if (selectedGroup && !selectedGroup.is_member) {
+				Alert.alert(
+					"Group Membership",
+					"You may need to join this group to post in it. Do you want to continue?",
+					[
+						{ text: "Cancel", style: "cancel" },
+						{ text: "Continue", onPress: () => proceedWithPost() },
+					],
+				);
+				return;
+			}
+		}
 
-		const result = await createPost(postData);
+		await proceedWithPost();
+	};
+	const proceedWithPost = async () => {
+		try {
+			// Upload images first if any
+			let imageUrls: string[] = [];
+			if (selectedImages.length > 0) {
+				imageUrls = await uploadImages();
+			}
 
-		if (result) {
-			Alert.alert("Success", "Your post has been created successfully!", [
-				{
-					text: "OK",
-					onPress: () => router.back(),
-				},
-			]);
-		} else if (error) {
-			Alert.alert("Error", error);
+			const postData: CreatePostData = {
+				title: formData.title.trim(),
+				content: formData.content.trim(),
+				group_id: formData.group_id ? parseInt(formData.group_id) : undefined,
+				post_type: formData.post_type,
+				tags: formData.tags.length > 0 ? formData.tags : undefined,
+				location: formData.location.trim() || undefined,
+				images: imageUrls.length > 0 ? imageUrls : undefined,
+			};
+
+			const result = await createPost(postData);
+
+			if (result) {
+				Alert.alert("Success", "Your post has been created successfully!", [
+					{
+						text: "OK",
+						onPress: () => router.back(),
+					},
+				]);
+			} else if (error) {
+				Alert.alert("Error", error);
+			}
+		} catch (error) {
+			Alert.alert("Error", "Failed to create post. Please try again.");
 		}
 	};
 
@@ -133,7 +333,6 @@ export default function CreatePostModal() {
 				: [...prev.tags, tag],
 		}));
 	};
-
 	const renderGroup = ({ item }: { item: any }) => (
 		<Pressable
 			onPress={() =>
@@ -152,7 +351,16 @@ export default function CreatePostModal() {
 			<View className="flex-row items-center">
 				<Text className="text-xl mr-3">{item.icon || "📁"}</Text>
 				<View className="flex-1">
-					<Text className="font-medium text-foreground">{item.name}</Text>
+					<View className="flex-row items-center">
+						<Text className="font-medium text-foreground mr-2">
+							{item.name}
+						</Text>
+						{item.is_member && (
+							<Text className="text-xs bg-green-100 text-green-600 px-2 py-1 rounded-full">
+								Member
+							</Text>
+						)}
+					</View>
 					<Text className="text-sm text-muted-foreground">
 						{item.member_count} members
 					</Text>
@@ -184,18 +392,29 @@ export default function CreatePostModal() {
 					{/* Post Type */}
 					<View className="mb-6">
 						<Label className="mb-3">Post Type</Label>
-						<RadioGroup
-							value={formData.post_type}
-							onValueChange={(value) =>
-								setFormData((prev) => ({ ...prev, post_type: value }))
-							}
-						>
+						<View>
 							{POST_TYPES.map((type) => (
-								<View
+								<TouchableOpacity
 									key={type.id}
-									className="flex-row items-center space-x-2 mb-3"
+									onPress={() =>
+										setFormData((prev) => ({ ...prev, post_type: type.id }))
+									}
+									className="flex-row items-center py-3 px-2 mb-2 rounded-lg"
+									activeOpacity={0.7}
 								>
-									<RadioGroupItem value={type.id} />
+									<View className="mr-4">
+										<View
+											className={`w-6 h-6 rounded-full border-2 items-center justify-center ${
+												formData.post_type === type.id
+													? "border-primary bg-primary"
+													: "border-border bg-background"
+											}`}
+										>
+											{formData.post_type === type.id && (
+												<View className="w-3 h-3 rounded-full bg-white" />
+											)}
+										</View>
+									</View>
 									<View className="flex-1">
 										<Text className="text-foreground font-medium">
 											{type.label}
@@ -204,11 +423,10 @@ export default function CreatePostModal() {
 											{type.description}
 										</Text>
 									</View>
-								</View>
+								</TouchableOpacity>
 							))}
-						</RadioGroup>
+						</View>
 					</View>
-
 					{/* Group Selection */}
 					<View className="mb-6">
 						<Label className="mb-3">Post to Group (Optional)</Label>
@@ -236,7 +454,6 @@ export default function CreatePostModal() {
 							className="max-h-60"
 						/>
 					</View>
-
 					{/* Title */}
 					<View className="mb-6">
 						<Label className="mb-2">Title *</Label>
@@ -249,7 +466,6 @@ export default function CreatePostModal() {
 							className="text-foreground"
 						/>
 					</View>
-
 					{/* Content */}
 					<View className="mb-6">
 						<Label className="mb-2">Content *</Label>
@@ -263,7 +479,62 @@ export default function CreatePostModal() {
 							className="text-foreground"
 						/>
 					</View>
+					{/* Images */}
+					<View className="mb-6">
+						<Label className="mb-3">Images (Optional)</Label>
+						<Text className="text-muted-foreground text-sm mb-3">
+							Add up to 5 images to your post
+						</Text>
 
+						{/* Add Image Button */}
+						{selectedImages.length < 5 && (
+							<TouchableOpacity
+								onPress={showImageOptions}
+								className="border-2 border-dashed border-border rounded-lg p-4 mb-3 items-center justify-center"
+								activeOpacity={0.7}
+							>
+								<Ionicons
+									name="camera-outline"
+									size={32}
+									color={mutedTextColor}
+								/>
+								<Text className="text-muted-foreground mt-2 text-center">
+									{selectedImages.length === 0
+										? "Add images"
+										: `Add more images (${selectedImages.length}/5)`}
+								</Text>
+							</TouchableOpacity>
+						)}
+
+						{/* Image Preview */}
+						{selectedImages.length > 0 && (
+							<View className="mb-3">
+								<FlatList
+									data={selectedImages}
+									horizontal
+									showsHorizontalScrollIndicator={false}
+									keyExtractor={(item, index) => index.toString()}
+									renderItem={({ item, index }) => (
+										<View className="mr-3 relative">
+											<Image
+												source={{ uri: item }}
+												className="w-20 h-20 rounded-lg"
+												resizeMode="cover"
+											/>
+											<TouchableOpacity
+												onPress={() => removeImage(index)}
+												className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full items-center justify-center"
+												activeOpacity={0.7}
+											>
+												<Ionicons name="close" size={16} color="white" />
+											</TouchableOpacity>
+										</View>
+									)}
+									contentContainerStyle={{ paddingRight: 16 }}
+								/>
+							</View>
+						)}
+					</View>
 					{/* Tags */}
 					<View className="mb-6">
 						<Label className="mb-3">Tags (Optional)</Label>
@@ -301,7 +572,6 @@ export default function CreatePostModal() {
 							</View>
 						)}
 					</View>
-
 					{/* Location */}
 					<View className="mb-8">
 						<Label className="mb-2">Location (Optional)</Label>
@@ -317,17 +587,23 @@ export default function CreatePostModal() {
 							Share your location if relevant to your post
 						</Text>
 					</View>
-
 					{/* Submit Button */}
 					<Button
 						onPress={handleSubmit}
 						disabled={
-							loading || !formData.title.trim() || !formData.content.trim()
+							loading ||
+							uploadingImages ||
+							!formData.title.trim() ||
+							!formData.content.trim()
 						}
 						className="w-full mb-8"
 					>
 						<Text className="text-primary-foreground font-semibold">
-							{loading ? "Creating..." : "Create Post"}
+							{uploadingImages
+								? "Uploading images..."
+								: loading
+									? "Creating..."
+									: "Create Post"}
 						</Text>
 					</Button>
 				</View>

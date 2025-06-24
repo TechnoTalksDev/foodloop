@@ -150,7 +150,11 @@ export default function GroupDetail() {
 						/>
 					</TouchableOpacity>
 					<TouchableOpacity
-						onPress={() => router.push("/(protected)/create-post-modal")}
+						onPress={() =>
+							router.push(
+								`/(protected)/create-post-modal?groupId=${groupId}` as any,
+							)
+						}
 					>
 						<Ionicons name="add" size={24} color="#10b981" />
 					</TouchableOpacity>
@@ -218,7 +222,11 @@ export default function GroupDetail() {
 							Recent Posts
 						</Text>
 						<TouchableOpacity
-							onPress={() => router.push("/(protected)/create-post-modal")}
+							onPress={() =>
+								router.push(
+									`/(protected)/create-post-modal?groupId=${groupId}` as any,
+								)
+							}
 						>
 							<Text className="text-primary font-medium">Create Post</Text>
 						</TouchableOpacity>
@@ -239,7 +247,9 @@ export default function GroupDetail() {
 						<View className="py-8 items-center">
 							<Text className="text-muted-foreground">No posts yet</Text>
 							<Text className="text-muted-foreground text-sm mt-1">
-								Be the first to create one!
+								{group.is_member
+									? "Be the first to create one!"
+									: "Join the group to see and create posts!"}
 							</Text>
 						</View>
 					) : (
