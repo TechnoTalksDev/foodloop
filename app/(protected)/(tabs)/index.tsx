@@ -15,6 +15,8 @@ import { supabase } from "@/config/supabase";
 import { format, subMonths, differenceInHours, isToday } from 'date-fns';
 import { weatherService, WeatherData } from "@/lib/weather-service";
 import { useNotifications } from "@/context/notification-provider";
+import { useAchievements } from "@/hooks/useAchievements";
+import { AchievementsModal } from "@/components/achievements-modal";
 
 // Sample food categories with eco-friendly icons
 const foodCategories = [
@@ -425,13 +427,12 @@ export default function Home() {
 	}>>([]);
 	const [loadingRecommendations, setLoadingRecommendations] = useState(true);
 	
-	// Achievements data (placeholder)
-	const [achievements, setAchievements] = useState({
-		completed: 3,
-		total: 10,
-		next: "Waste Warrior - Rescue 10 items",
-		progress: 80
-	});
+	// Achievements data - using real hook
+	const { getStats, getNextMilestone, loading: achievementsLoading } = useAchievements();
+	const [achievementsModalVisible, setAchievementsModalVisible] = useState(false);
+	
+	const achievementStats = getStats();
+	const nextMilestone = getNextMilestone();
 
 	const getPlantTypeIcon = (plantType: string) => {
 		return PLANT_TYPE_ICONS[plantType as keyof typeof PLANT_TYPE_ICONS] || '🌱';
@@ -447,6 +448,7 @@ export default function Home() {
 	};
 
 	return (
+		<>
 		<SafeAreaView className="flex-1 bg-background">
 			<ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
 				{/* Header section */}
@@ -606,29 +608,59 @@ export default function Home() {
 				</TouchableOpacity>
 
 				{/* Achievements/Milestones Widget */}
-				<View className="mx-4 mb-6 p-5 bg-secondary/30 rounded-2xl border border-border">
+				<TouchableOpacity 
+					className="mx-4 mb-6 p-5 bg-secondary/30 rounded-2xl border border-border"
+					onPress={() => setAchievementsModalVisible(true)}
+					activeOpacity={0.7}
+				>
 					<View className="flex-row justify-between items-center mb-3">
 						<View className="flex-row items-center">
 							<Text className="text-xl mr-2">🏆</Text>
 							<Text className="text-lg font-semibold">Milestones</Text>
 						</View>
-						<TouchableOpacity>
+						<TouchableOpacity onPress={() => setAchievementsModalVisible(true)}>
 							<Text className="text-primary font-medium text-sm">See All</Text>
 						</TouchableOpacity>
 					</View>
 					
-					<View className="bg-secondary/50 p-3 rounded-lg mb-2">
-						<Text className="font-medium mb-1">{achievements.next}</Text>
-						<View className="w-full h-2 bg-secondary rounded-full overflow-hidden">
-							<View className="h-2 bg-green-500 rounded-full" style={{ width: `${achievements.progress}%` }} />
+					{achievementsLoading ? (
+						<View className="bg-secondary/50 p-4 rounded-lg items-center">
+							<Text className="text-muted-foreground">Loading achievements...</Text>
 						</View>
-						<Text className="text-muted-foreground mt-1 text-right text-xs">{achievements.progress}%</Text>
-					</View>
+					) : nextMilestone ? (
+						<View className="bg-secondary/50 p-3 rounded-lg mb-2">
+							<View className="flex-row items-center mb-2">
+								<Text className="text-lg mr-2">{nextMilestone.achievement.icon}</Text>
+								<Text className="font-medium flex-1">{nextMilestone.achievement.name}</Text>
+								<Text className="text-primary text-xs font-medium">+{nextMilestone.achievement.points}</Text>
+							</View>
+							<Text className="text-sm text-muted-foreground mb-2">
+								{nextMilestone.achievement.description}
+							</Text>
+							<View className="w-full h-2 bg-secondary rounded-full overflow-hidden">
+								<View className="h-2 bg-green-500 rounded-full" style={{ width: `${nextMilestone.progressPercentage}%` }} />
+							</View>
+							<View className="flex-row justify-between mt-1">
+								<Text className="text-muted-foreground text-xs">
+									{nextMilestone.current_progress} / {nextMilestone.achievement.target_value}
+								</Text>
+								<Text className="text-muted-foreground text-xs">{Math.round(nextMilestone.progressPercentage)}%</Text>
+							</View>
+						</View>
+					) : (
+						<View className="bg-secondary/50 p-4 rounded-lg items-center">
+							<Text className="text-4xl mb-2">🎉</Text>
+							<Text className="font-medium text-center mb-1">All achievements completed!</Text>
+							<Text className="text-muted-foreground text-sm text-center">
+								You're a FoodLoop champion!
+							</Text>
+						</View>
+					)}
 					
 					<Text className="text-muted-foreground text-center mt-2">
-						{achievements.completed} of {achievements.total} achievements completed
+						{achievementStats.completedCount} of {achievementStats.totalAchievements} achievements completed
 					</Text>
-				</View>
+				</TouchableOpacity>
 
 				{/* Local Weather Widget - Using Weather Service */}
 				<View className="mx-4 mb-6 p-5 bg-secondary/30 rounded-2xl border border-border">
@@ -832,5 +864,12 @@ export default function Home() {
 
 			{/* Tab navigation is handled by the parent layout */}
 		</SafeAreaView>
+		
+		{/* Achievements Modal */}
+		<AchievementsModal 
+			visible={achievementsModalVisible}
+			onClose={() => setAchievementsModalVisible(false)}
+		/>
+		</>
 	);
 }
