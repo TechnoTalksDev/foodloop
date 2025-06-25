@@ -597,19 +597,6 @@ export default function Home() {
 		fetchRealImpactData();
 	}, [session?.user?.id]);
 
-	// Recommended items state
-	const [recommendedItems, setRecommendedItems] = useState<Array<{
-		id: number;
-		name: string;
-		business: string;
-		price: number;
-		originalPrice: number;
-		discount: string;
-		image: { uri: string } | any;
-		eco: string;
-	}>>([]);
-	const [loadingRecommendations, setLoadingRecommendations] = useState(true);
-	
 	// Achievements data - using real hook
 	const { getStats, getNextMilestone, loading: achievementsLoading } = useAchievements();
 	const [achievementsModalVisible, setAchievementsModalVisible] = useState(false);
