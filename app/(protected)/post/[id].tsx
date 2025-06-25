@@ -102,7 +102,10 @@ export default function PostDetailPage() {
 		}
 	};
 
-	const openImageModal = (index: number, imageSet: string[] = post?.images || []) => {
+	const openImageModal = (
+		index: number,
+		imageSet: string[] = post?.images || [],
+	) => {
 		setSelectedImageIndex(index);
 		setModalImageSet(imageSet);
 		setImageModalVisible(true);
@@ -127,7 +130,7 @@ export default function PostDetailPage() {
 				onRequestClose={closeImageModal}
 			>
 				{/* Backdrop - tap to close */}
-				<TouchableOpacity 
+				<TouchableOpacity
 					className="flex-1 bg-black/90 justify-center items-center"
 					activeOpacity={1}
 					onPress={closeImageModal}
@@ -149,9 +152,9 @@ export default function PostDetailPage() {
 							</Text>
 						</View>
 					)}
-					
+
 					{/* Image container - prevent tap propagation */}
-					<TouchableOpacity 
+					<TouchableOpacity
 						activeOpacity={1}
 						onPress={(e) => e.stopPropagation()}
 						style={{ width: width - 40, height: height - 200 }}
@@ -166,7 +169,7 @@ export default function PostDetailPage() {
 							resizeMode="contain"
 						/>
 					</TouchableOpacity>
-					
+
 					{/* Navigation buttons - bottom */}
 					{modalImageSet.length > 1 && (
 						<View className="absolute bottom-20 left-0 right-0">
