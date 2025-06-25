@@ -1,3 +1,5 @@
+// app/(protected)/smartplate-ai.tsx - WITH EPIC INTRO ANIMATION
+
 import React, { useRef, useEffect, useState } from 'react';
 import {
   View,
@@ -12,10 +14,23 @@ import {
   Alert,
   Modal,
   FlatList,
+  Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSequence,
+  withDelay,
+  withSpring,
+  runOnJS,
+  Easing,
+  interpolate,
+  withRepeat,
+} from 'react-native-reanimated';
 import { SafeAreaView } from '@/components/safe-area-view';
 import { Text } from '@/components/ui/text';
 import { H1 } from '@/components/ui/typography';
@@ -25,6 +40,8 @@ import { format } from 'date-fns';
 import Markdown from 'react-native-markdown-display';
 import { useChatContext } from '@/context/chat-provider';
 import { ProductSuggestion } from '@/lib/gemini';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // AI Mode definitions
 const AI_MODES = [
@@ -92,8 +109,21 @@ export default function SmartPlateAI() {
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [currentMode, setCurrentMode] = useState(AI_MODES[0]);
   const [showModeSelector, setShowModeSelector] = useState(false);
+  const [showIntro, setShowIntro] = useState(true);
   const scrollViewRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
+
+  // Animation values for the epic intro
+  const faceScale = useSharedValue(0);
+  const faceRotation = useSharedValue(-360);
+  const faceOpacity = useSharedValue(0);
+  const showWink = useSharedValue(0);
+  const textScale = useSharedValue(0);
+  const textOpacity = useSharedValue(0);
+  const textRotation = useSharedValue(180);
+  const introOpacity = useSharedValue(1);
+  const backgroundGlow = useSharedValue(0);
+  const particleOpacity = useSharedValue(0);
 
   // Colors based on theme
   const textColor = colorScheme === 'dark' ? colors.dark.foreground : colors.light.foreground;
@@ -102,19 +132,143 @@ export default function SmartPlateAI() {
   const borderColor = colorScheme === 'dark' ? colors.dark.border : colors.light.border;
   const secondaryBg = colorScheme === 'dark' ? colors.dark.secondary : colors.light.secondary;
 
+  // Epic intro animation sequence
+  useEffect(() => {
+    if (showIntro) {
+      const startAnimation = () => {
+        // Particle effects
+        particleOpacity.value = withTiming(1, { duration: 500 });
+        
+        // Background glow effect
+        backgroundGlow.value = withRepeat(
+          withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.quad) }),
+          -1,
+          true
+        );
+
+        // Face entrance - dramatic spin and scale
+        faceScale.value = withSequence(
+          withTiming(0, { duration: 0 }),
+          withDelay(300, withSpring(1.3, { 
+            damping: 8, 
+            stiffness: 100,
+            mass: 1.2 
+          })),
+          withSpring(1, { damping: 12, stiffness: 150 })
+        );
+
+        faceRotation.value = withSequence(
+          withTiming(-360, { duration: 0 }),
+          withDelay(300, withTiming(0, { 
+            duration: 800, 
+            easing: Easing.out(Easing.back(1.7)) 
+          }))
+        );
+
+        faceOpacity.value = withSequence(
+          withTiming(0, { duration: 0 }),
+          withDelay(300, withTiming(1, { duration: 600 }))
+        );
+
+        // Blink sequence - happens after face settles
+        setTimeout(() => {
+          // First blink
+          showWink.value = withSequence(
+            withTiming(1, { duration: 80 }),
+            withTiming(0, { duration: 80 }),
+            // Second blink after delay
+            withDelay(400, withTiming(1, { duration: 80 })),
+            withTiming(0, { duration: 80 }),
+            // Third blink
+            withDelay(600, withTiming(1, { duration: 80 })),
+            withTiming(0, { duration: 120 })
+          );
+        }, 1200);
+
+        // Text entrance - epic slide and rotate
+        setTimeout(() => {
+          textOpacity.value = withTiming(1, { duration: 800 });
+          textScale.value = withSequence(
+            withTiming(0, { duration: 0 }),
+            withSpring(1.2, { damping: 6, stiffness: 120 }),
+            withSpring(1, { damping: 8, stiffness: 150 })
+          );
+          textRotation.value = withTiming(0, { 
+            duration: 1000, 
+            easing: Easing.out(Easing.back(1.5)) 
+          });
+        }, 1800);
+
+        // Fade out intro and show main app
+        setTimeout(() => {
+          introOpacity.value = withTiming(0, { 
+            duration: 1000, 
+            easing: Easing.inOut(Easing.quad) 
+          }, () => {
+            runOnJS(setShowIntro)(false);
+          });
+        }, 4500);
+      };
+
+      startAnimation();
+    }
+  }, [showIntro]);
+
+  // Animated styles
+  const faceAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { scale: faceScale.value },
+        { rotate: `${faceRotation.value}deg` }
+      ],
+      opacity: faceOpacity.value,
+    };
+  });
+
+  const textAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { scale: textScale.value },
+        { rotate: `${textRotation.value}deg` }
+      ],
+      opacity: textOpacity.value,
+    };
+  });
+
+  const introAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      opacity: introOpacity.value,
+    };
+  });
+
+  const backgroundGlowStyle = useAnimatedStyle(() => {
+    const glowIntensity = interpolate(backgroundGlow.value, [0, 1], [0.3, 0.8]);
+    return {
+      opacity: glowIntensity,
+    };
+  });
+
+  const particleAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      opacity: particleOpacity.value,
+    };
+  });
+
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    if (scrollViewRef.current && messages.length > 0) {
+    if (scrollViewRef.current && messages.length > 0 && !showIntro) {
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
       }, 100);
     }
-  }, [messages]);
+  }, [messages, showIntro]);
 
   // Clear chat when mode changes
   useEffect(() => {
-    clearChat();
-  }, [currentMode.id]);
+    if (!showIntro) {
+      clearChat();
+    }
+  }, [currentMode.id, showIntro]);
 
   const handleSendMessage = async () => {
     if ((!inputText.trim() && selectedImages.length === 0) || isLoading) return;
@@ -474,6 +628,148 @@ export default function SmartPlateAI() {
     </Modal>
   );
 
+  // Render epic intro animation
+  if (showIntro) {
+    return (
+      <View style={{ flex: 1, backgroundColor: bgColor }}>
+        <Animated.View 
+          style={[
+            {
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: '#10b981',
+            },
+            backgroundGlowStyle
+          ]}
+        />
+        
+        {/* Particle effects background */}
+        <Animated.View 
+          style={[
+            {
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+            },
+            particleAnimatedStyle
+          ]}
+        >
+          {/* Animated particles */}
+          {[...Array(20)].map((_, i) => (
+            <Animated.View
+              key={i}
+              style={{
+                position: 'absolute',
+                left: Math.random() * SCREEN_WIDTH,
+                top: Math.random() * SCREEN_HEIGHT,
+                width: 4,
+                height: 4,
+                backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                borderRadius: 2,
+                transform: [
+                  { scale: Math.random() * 2 + 0.5 }
+                ]
+              }}
+            />
+          ))}
+        </Animated.View>
+
+        <Animated.View 
+          style={[
+            {
+              flex: 1,
+              justifyContent: 'center',
+              alignItems: 'center',
+              paddingHorizontal: 20,
+              paddingBottom: 120, // Add bottom padding to account for loading indicator
+            },
+            introAnimatedStyle
+          ]}
+        >
+          {/* Epic Face Animation */}
+          <Animated.View style={[faceAnimatedStyle, { marginBottom: 40 }]}>
+            <View style={{ position: 'relative' }}>
+              {/* Normal face (1.png) */}
+              <Animated.View
+                style={{
+                  opacity: showWink.value === 0 ? 1 : 0,
+                }}
+              >
+                <Image
+                  source={require('@/assets/2.png')}
+                  style={{
+                    width: 200,
+                    height: 200,
+                    resizeMode: 'contain',
+                  }}
+                />
+              </Animated.View>
+              
+              {/* Winking face (2.png) */}
+              <Animated.View
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  opacity: showWink.value,
+                }}
+              >
+                <Image
+                  source={require('@/assets/1.png')}
+                  style={{
+                    width: 200,
+                    height: 200,
+                    resizeMode: 'contain',
+                  }}
+                />
+              </Animated.View>
+            </View>
+          </Animated.View>
+
+          {/* Epic Text Animation */}
+          <Animated.View style={textAnimatedStyle}>
+            <Text 
+              style={{
+                fontSize: 36,
+                fontWeight: 'bold',
+                color: 'white',
+                textAlign: 'center',
+                textShadowColor: 'rgba(0, 0, 0, 0.5)',
+                textShadowOffset: { width: 2, height: 2 },
+                textShadowRadius: 10,
+                letterSpacing: 2,
+              }}
+            >
+              FoodLoop AI
+            </Text>
+            <Text 
+              style={{
+                fontSize: 12,
+                color: 'rgba(255, 255, 255, 0.9)',
+                textAlign: 'center',
+                marginTop: 10,
+                letterSpacing: 1,
+              }}
+            >
+              Powered by Intelligence
+            </Text>
+          </Animated.View>
+
+          {/* Loading indicator */}
+          <View style={{ marginTop: 40, position: 'absolute', bottom: 80 }}>
+            <ActivityIndicator size="large" color="white" />
+          </View>
+        </Animated.View>
+      </View>
+    );
+  }
+
+  // Regular chat interface (shown after intro)
   return (
     <SafeAreaView className="flex-1" style={{ backgroundColor: bgColor }}>
       {/* Header */}

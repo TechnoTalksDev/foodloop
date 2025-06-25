@@ -730,16 +730,20 @@ export default function Home() {
 					<View className="bg-green-900 p-5 pb-6">
 						<View className="flex-row items-center mb-3">
 							<View className="w-12 h-12 bg-green-600 rounded-full items-center justify-center mr-3">
-								<Text className="text-2xl">🧠</Text>
+								<Image 
+									source={require('../../../assets/2.png')} 
+									className="w-8 h-8"
+									resizeMode="contain"
+								/>
 							</View>
 							<View>
-								<H3 className="text-white">SmartPlate AI</H3>
-								<Text className="text-green-100 opacity-80">Reduce food waste with AI</Text>
+								<H3 className="text-white">FoodLoop AI</H3>
+								<Text className="text-green-100 opacity-80">Multiple AI Models to Use</Text>
 							</View>
 						</View>
 						
 						<Text className="text-green-50 mb-4">
-							Get personalized recipes and sustainability tips from our AI assistant
+							Use our variety of AI models to help you make the most of your food, reduce waste, and save money.
 						</Text>
 					</View>
 					
