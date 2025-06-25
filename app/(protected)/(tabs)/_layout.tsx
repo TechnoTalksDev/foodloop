@@ -3,7 +3,8 @@
 import React from "react";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { View } from "react-native";
+import { View, TouchableOpacity, StyleSheet } from "react-native";
+import { BlurView } from "expo-blur";
 
 import { Text } from "@/components/ui/text";
 import { useColorScheme } from "@/lib/useColorScheme";
@@ -12,8 +13,6 @@ import { colors } from "@/constants/colors";
 export default function TabsLayout() {
 	const { colorScheme } = useColorScheme();
 
-	const bgColor =
-		colorScheme === "dark" ? colors.dark.background : colors.light.background;
 	const borderColor =
 		colorScheme === "dark" ? colors.dark.border : colors.light.border;
 	const textColor =
@@ -25,37 +24,72 @@ export default function TabsLayout() {
 
 	const createTabBarIcon = (iconName: any, focused: boolean, color: string) => {
 		return (
-			<View className="items-center justify-center pt-0.5">
+			<View className="items-center justify-center">
 				<Ionicons
 					name={focused ? iconName : `${iconName}-outline`}
-					size={20}
+					size={24}
 					color={color}
 				/>
 			</View>
 		);
 	};
 
+	const CustomTabBar = ({ state, descriptors, navigation }: any) => {
+		return (
+			<View style={styles.tabBarContainer}>
+				<BlurView
+					intensity={80}
+					tint={colorScheme === "dark" ? "dark" : "light"}
+					style={styles.blurView}
+				>
+					<View style={[styles.tabBar, { borderTopColor: borderColor }]}>
+						{state.routes.map((route: any, index: number) => {
+							const { options } = descriptors[route.key];
+							const isFocused = state.index === index;
+
+							const onPress = () => {
+								const event = navigation.emit({
+									type: "tabPress",
+									target: route.key,
+									canPreventDefault: true,
+								});
+
+								if (!isFocused && !event.defaultPrevented) {
+									navigation.navigate(route.name);
+								}
+							};
+
+							return (
+								<TouchableOpacity
+									key={route.key}
+									accessibilityRole="button"
+									accessibilityState={isFocused ? { selected: true } : {}}
+									accessibilityLabel={options.tabBarAccessibilityLabel}
+									testID={options.tabBarTestID}
+									onPress={onPress}
+									style={styles.tabButton}
+								>
+									{options.tabBarIcon({
+										focused: isFocused,
+										color: isFocused ? textColor : mutedTextColor,
+									})}
+								</TouchableOpacity>
+							);
+						})}
+					</View>
+				</BlurView>
+			</View>
+		);
+	};
+
 	return (
 		<Tabs
+			tabBar={(props) => <CustomTabBar {...props} />}
 			screenOptions={{
 				headerShown: false,
-				tabBarStyle: {
-					backgroundColor: bgColor,
-					borderTopColor: borderColor,
-					borderTopWidth: 0.5,
-					height: 85,
-					paddingBottom: 20,
-					paddingTop: 6,
-					marginTop: -34,
-				},
 				tabBarActiveTintColor: textColor,
 				tabBarInactiveTintColor: mutedTextColor,
-				tabBarShowLabel: true,
-				tabBarLabelStyle: {
-					fontSize: 12,
-					fontWeight: "500",
-					marginTop: 0,
-				},
+				tabBarShowLabel: false,
 			}}
 		>
 			<Tabs.Screen
@@ -109,3 +143,30 @@ export default function TabsLayout() {
 		</Tabs>
 	);
 }
+
+const styles = StyleSheet.create({
+	tabBarContainer: {
+		position: "absolute",
+		bottom: 0,
+		left: 0,
+		right: 0,
+	},
+	blurView: {
+		overflow: "hidden",
+	},
+	tabBar: {
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "space-around",
+		height: 84,
+		paddingBottom: 24,
+		paddingTop: 8,
+		borderTopWidth: 0.5,
+	},
+	tabButton: {
+		flex: 1,
+		alignItems: "center",
+		justifyContent: "center",
+		paddingVertical: 8,
+	},
+});
