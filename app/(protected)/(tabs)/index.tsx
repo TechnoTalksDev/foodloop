@@ -25,49 +25,21 @@ const foodCategories = [
 	{ id: 5, name: "Meals", icon: "🍲" },
 ];
 
-// Sample recommended items with discount percentages
-const recommendedItems = [
-	{
-		id: 1,
-		name: "Organic Apples",
-		business: "Local Farm",
-		price: 2.99,
-		originalPrice: 4.99,
-		discount: "40% off",
-		image: require("@/assets/foodloop.png"),
-		eco: "Saves 2kg CO₂",
-	},
-	{
-		id: 2,
-		name: "Fresh Bread",
-		business: "Campus Bakery",
-		price: 1.99,
-		originalPrice: 3.5,
-		discount: "43% off",
-		image: require("@/assets/foodloop.png"),
-		eco: "Saves 1kg CO₂",
-	},
-	{
-		id: 3,
-		name: "Veggie Bowl",
-		business: "Green Café",
-		price: 4.99,
-		originalPrice: 7.99,
-		discount: "38% off",
-		image: require("@/assets/foodloop.png"),
-		eco: "Saves 3kg CO₂",
-	},
-	{
-		id: 4,
-		name: "Greek Yogurt",
-		business: "Student Store",
-		price: 0.99,
-		originalPrice: 2.49,
-		discount: "60% off",
-		image: require("@/assets/foodloop.png"),
-		eco: "Saves 1kg CO₂",
-	},
-];
+// Interface for marketplace products
+interface MarketplaceProduct {
+	id: number;
+	name: string;
+	price: number;
+	original_price?: string;
+	description?: string;
+	image_url?: string[];
+	created_at: string;
+	expiry?: string;
+	trash?: number;
+	user_id: string;
+	location: string;
+	amount: number;
+}
 
 interface RealImpactData {
 	totalCO2Saved: number;
@@ -282,9 +254,82 @@ export default function Home() {
 		}
 	};
 
-	// Fetch weather on component mount
+	// Fetch recommended marketplace items
+	const fetchRecommendedItems = async () => {
+		try {
+			setLoadingRecommendations(true);
+
+			// Get recent products with good discounts and eco-friendly options
+			const { data: products, error } = await supabase
+				.from("product")
+				.select("*")
+				.gt("amount", 0)
+				.not("original_price", "is", null)
+				.order("created_at", { ascending: false })
+				.limit(6);
+
+			if (error) {
+				console.error("Error fetching recommended items:", error);
+				return;
+			}
+
+			if (products && products.length > 0) {
+				// Get user info for business names
+				const userIds = [...new Set(products.map(p => p.user_id).filter(Boolean))];
+				const { data: users } = await supabase
+					.from("users")
+					.select("id, username, name")
+					.in("id", userIds);
+
+				const userMap = new Map();
+				if (users) {
+					users.forEach(user => {
+						userMap.set(user.id, user);
+					});
+				}
+
+				// Transform products to match UI expectations
+				const formattedRecommendations = products.slice(0, 4).map((product: MarketplaceProduct) => {
+					const originalPrice = product.original_price ? parseFloat(product.original_price) : product.price;
+					const savings = originalPrice - product.price;
+					const discountPercentage = originalPrice > product.price 
+						? Math.round((savings / originalPrice) * 100)
+						: 0;
+
+					const user = userMap.get(product.user_id);
+					const businessName = user?.name || user?.username || "Local Business";
+
+					const ecoImpact = product.trash 
+						? `Saves ${product.trash}kg CO₂` 
+						: "Eco-friendly";
+
+					return {
+						id: product.id,
+						name: product.name,
+						business: businessName,
+						price: product.price,
+						originalPrice: originalPrice,
+						discount: discountPercentage > 0 ? `${discountPercentage}% off` : "",
+						image: product.image_url && product.image_url.length > 0 
+							? { uri: product.image_url[0] }
+							: require("@/assets/foodloop.png"),
+						eco: ecoImpact,
+					};
+				});
+
+				setRecommendedItems(formattedRecommendations);
+			}
+		} catch (error) {
+			console.error("Error in fetchRecommendedItems:", error);
+		} finally {
+			setLoadingRecommendations(false);
+		}
+	};
+
+	// Fetch weather and recommendations on component mount
 	useEffect(() => {
 		fetchWeather();
+		fetchRecommendedItems();
 	}, []);
 
 	// Fetch plant data on component mount
@@ -367,8 +412,18 @@ export default function Home() {
 		fetchRealImpactData();
 	}, [session?.user?.id]);
 
-	// Daily check-in state (placeholder logic)
-	const [checkedIn, setCheckedIn] = useState(false);
+	// Recommended items state
+	const [recommendedItems, setRecommendedItems] = useState<Array<{
+		id: number;
+		name: string;
+		business: string;
+		price: number;
+		originalPrice: number;
+		discount: string;
+		image: { uri: string } | any;
+		eco: string;
+	}>>([]);
+	const [loadingRecommendations, setLoadingRecommendations] = useState(true);
 	
 	// Achievements data (placeholder)
 	const [achievements, setAchievements] = useState({
@@ -630,7 +685,7 @@ export default function Home() {
 					)}
 				</View>
 
-				{/* Recommendations Widget with ProductCard component */}
+				{/* Recommendations Widget with real marketplace data */}
 				<View className="mx-4 mb-6">
 					<View className="flex-row justify-between items-center mb-4">
 						<Text className="text-lg font-semibold">Recommended For You</Text>
@@ -639,21 +694,35 @@ export default function Home() {
 						</TouchableOpacity>
 					</View>
 					
-					<View className="flex-row flex-wrap justify-between">
-						{recommendedItems.slice(0, 2).map((item) => (
-							<ProductCard
-								key={item.id}
-								name={item.name}
-								business={item.business}
-								price={item.price}
-								originalPrice={item.originalPrice}
-								discount={item.discount}
-								image={item.image}
-								eco={item.eco}
-								onPress={() => router.push(`/(protected)/product/${item.id}`)}
-							/>
-						))}
-					</View>
+					{loadingRecommendations ? (
+						<View className="items-center py-8">
+							<Text className="text-muted-foreground">Loading recommendations...</Text>
+						</View>
+					) : recommendedItems.length === 0 ? (
+						<View className="items-center py-8 bg-secondary/30 rounded-xl">
+							<Text className="text-4xl mb-2">🛒</Text>
+							<Text className="font-semibold mb-1">No items available</Text>
+							<Text className="text-center text-muted-foreground">
+								Check back later for new products from local businesses
+							</Text>
+						</View>
+					) : (
+						<View className="flex-row flex-wrap justify-between">
+							{recommendedItems.slice(0, 2).map((item) => (
+								<ProductCard
+									key={item.id}
+									name={item.name}
+									business={item.business}
+									price={item.price}
+									originalPrice={item.originalPrice}
+									discount={item.discount}
+									image={item.image}
+									eco={item.eco}
+									onPress={() => router.push(`/(protected)/product/${item.id}`)}
+								/>
+							))}
+						</View>
+					)}
 				</View>
 				
 				{/* SmartPlate AI section - Updated with navigation */}
