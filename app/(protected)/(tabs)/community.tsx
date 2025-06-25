@@ -36,8 +36,6 @@ const communityTabs = [
 	{ id: "popular", name: "Popular" },
 	{ id: "groups", name: "Groups" },
 	{ id: "posts", name: "Posts" },
-	{ id: "growing", name: "Growing Tips" },
-	{ id: "challenges", name: "Challenges" },
 ];
 
 // Original recommended posts data
@@ -793,51 +791,6 @@ export default function Community() {
 					</View>
 				);
 
-			case "growing":
-				return (
-					<View className="px-4">
-						<Text className="text-xl font-semibold mb-4 text-foreground">
-							Growing Tips & Guides
-						</Text>
-						<Text className="text-muted-foreground text-sm mb-4">
-							Coming soon! Plant care guides and growing tips will be available
-							here.
-						</Text>
-
-						{/* Placeholder content */}
-						<View className="bg-card p-6 rounded-xl border border-border items-center">
-							<Text className="text-6xl mb-4">🌱</Text>
-							<Text className="font-semibold text-lg mb-2">Growing Tips</Text>
-							<Text className="text-muted-foreground text-center text-sm">
-								This section will contain helpful guides and tips for growing
-								your plants successfully.
-							</Text>
-						</View>
-					</View>
-				);
-
-			case "challenges":
-				return (
-					<View className="px-4">
-						<Text className="text-xl font-semibold mb-4 text-foreground">
-							Community Challenges
-						</Text>
-						<Text className="text-muted-foreground text-sm mb-4">
-							Coming soon! Join community challenges to make a bigger impact.
-						</Text>
-
-						{/* Placeholder content */}
-						<View className="bg-card p-6 rounded-xl border border-border items-center">
-							<Text className="text-6xl mb-4">�</Text>
-							<Text className="font-semibold text-lg mb-2">Challenges</Text>
-							<Text className="text-muted-foreground text-center text-sm">
-								This section will contain community challenges to help reduce
-								waste and support sustainability.
-							</Text>
-						</View>
-					</View>
-				);
-
 			default:
 				return null;
 		}
@@ -893,25 +846,25 @@ export default function Community() {
 					</TouchableOpacity>
 				</View>
 				{/* Subtitle */}
-				<View className="px-4 pb-2">
+				{/* <View className="px-4 pb-2">
 					<Text className="text-muted-foreground text-base">
 						Connect, share, and learn with the FoodLoop community
 					</Text>
-				</View>
+				</View> */}
 				{/* Tab Navigation */}
 				<View className="px-4 mb-6">
-					<ScrollView
-						horizontal
-						showsHorizontalScrollIndicator={false}
-						className="flex-row"
-						contentContainerStyle={{ paddingRight: 16 }}
-					>
-						{communityTabs.map((tab) => (
+					<View className="flex-row">
+						{communityTabs.map((tab, index) => (
 							<Pressable
 								key={tab.id}
 								onPress={() => setActiveTab(tab.id)}
 								className={cn(
-									"mr-3 px-4 py-2 rounded-full border",
+									"flex-1 px-4 py-3 rounded-full border items-center justify-center",
+									index === 0
+										? "mr-2"
+										: index === communityTabs.length - 1
+											? "ml-2"
+											: "mx-1",
 									activeTab === tab.id
 										? "bg-green-600 border-green-600"
 										: "bg-secondary border-border",
@@ -919,7 +872,7 @@ export default function Community() {
 							>
 								<Text
 									className={cn(
-										"font-medium",
+										"font-medium text-center",
 										activeTab === tab.id ? "text-white" : "text-foreground",
 									)}
 								>
@@ -927,7 +880,7 @@ export default function Community() {
 								</Text>
 							</Pressable>
 						))}
-					</ScrollView>
+					</View>
 				</View>
 				{/* Tab Content */}
 				{renderTabContent()} {/* Bottom spacing */}

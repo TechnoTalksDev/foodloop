@@ -8,6 +8,7 @@ import {
 	FlatList,
 	Image,
 	ActivityIndicator,
+	Keyboard,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -25,6 +26,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useColorScheme } from "@/lib/useColorScheme";
 import { colors } from "@/constants/colors";
 import { Ionicons } from "@expo/vector-icons";
+import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
 import { useCreatePost, useGroups } from "@/hooks/useCommunity";
 import { CreatePostData } from "@/types/community";
 import { supabase } from "@/config/supabase";
@@ -378,7 +380,11 @@ export default function CreatePostModal() {
 
 	return (
 		<SafeAreaView className="flex-1 bg-background">
-			<ScrollView showsVerticalScrollIndicator={false}>
+			<ScrollView
+				showsVerticalScrollIndicator={false}
+				keyboardShouldPersistTaps="handled"
+				keyboardDismissMode="on-drag"
+			>
 				{/* Header */}
 				<View className="flex-row items-center justify-between px-4 py-3 mb-4">
 					<TouchableOpacity onPress={() => router.back()}>
@@ -479,6 +485,129 @@ export default function CreatePostModal() {
 							className="text-foreground"
 						/>
 					</View>
+					{/* Location */}
+					<View className="mb-6">
+						<Label className="mb-2">Location (Optional)</Label>
+						<View
+							className="mb-1"
+							style={{
+								zIndex: 1,
+								height: 48,
+							}}
+						>
+							<GooglePlacesAutocomplete
+								placeholder="e.g., San Francisco, CA"
+								predefinedPlaces={[]}
+								onPress={(data, details = null) => {
+									setFormData((prev) => ({
+										...prev,
+										location: data.description,
+									}));
+									Keyboard.dismiss();
+								}}
+								renderLeftButton={() => (
+									<View className="justify-center items-center pl-3">
+										<Ionicons
+											name="location-outline"
+											size={20}
+											color={mutedTextColor}
+										/>
+									</View>
+								)}
+								fetchDetails={false}
+								keyboardShouldPersistTaps="handled"
+								listViewDisplayed="auto"
+								enablePoweredByContainer={false}
+								minLength={2}
+								query={{
+									key: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+									language: "en",
+								}}
+								textInputProps={{
+									autoCapitalize: "none",
+									autoCorrect: false,
+									clearButtonMode: "while-editing",
+								}}
+								styles={{
+									container: {
+										flex: 0,
+									},
+									textInputContainer: {
+										flexDirection: "row",
+										borderWidth: 1,
+										borderColor:
+											colorScheme === "dark"
+												? colors.dark.input
+												: colors.light.input,
+										borderRadius: 8,
+										backgroundColor:
+											colorScheme === "dark"
+												? colors.dark.background
+												: colors.light.background,
+										height: 48,
+									},
+									textInput: {
+										height: 46,
+										color:
+											colorScheme === "dark"
+												? colors.dark.foreground
+												: colors.light.foreground,
+										fontSize: 16,
+										backgroundColor: "transparent",
+										flex: 1,
+									},
+									listView: {
+										borderWidth: 1,
+										borderColor:
+											colorScheme === "dark"
+												? colors.dark.border
+												: colors.light.border,
+										backgroundColor:
+											colorScheme === "dark"
+												? colors.dark.background
+												: colors.light.background,
+										borderRadius: 8,
+										marginTop: 5,
+										position: "absolute",
+										top: 50,
+										left: 0,
+										right: 0,
+										zIndex: 9999,
+										elevation: 5,
+										maxHeight: 200,
+										overflow: "visible",
+									},
+									row: {
+										backgroundColor:
+											colorScheme === "dark"
+												? colors.dark.background
+												: colors.light.background,
+										padding: 13,
+									},
+									separator: {
+										backgroundColor:
+											colorScheme === "dark"
+												? colors.dark.border
+												: colors.light.border,
+										height: 1,
+									},
+									description: {
+										color:
+											colorScheme === "dark"
+												? colors.dark.foreground
+												: colors.light.foreground,
+									},
+									poweredContainer: {
+										display: "none",
+									},
+								}}
+								debounce={300}
+							/>
+						</View>
+						<Text className="text-muted-foreground text-xs mt-1">
+							Share your location if relevant to your post
+						</Text>
+					</View>
 					{/* Images */}
 					<View className="mb-6">
 						<Label className="mb-3">Images (Optional)</Label>
@@ -571,21 +700,6 @@ export default function CreatePostModal() {
 								</Text>
 							</View>
 						)}
-					</View>
-					{/* Location */}
-					<View className="mb-8">
-						<Label className="mb-2">Location (Optional)</Label>
-						<Input
-							placeholder="e.g., San Francisco, CA"
-							value={formData.location}
-							onChangeText={(text) =>
-								setFormData((prev) => ({ ...prev, location: text }))
-							}
-							className="text-foreground"
-						/>
-						<Text className="text-muted-foreground text-xs mt-1">
-							Share your location if relevant to your post
-						</Text>
 					</View>
 					{/* Submit Button */}
 					<Button

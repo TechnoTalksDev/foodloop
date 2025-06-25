@@ -5,6 +5,7 @@ import {
 	Alert,
 	TouchableOpacity,
 	Pressable,
+	Keyboard,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "@/components/safe-area-view";
@@ -18,6 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { useColorScheme } from "@/lib/useColorScheme";
 import { colors } from "@/constants/colors";
 import { Ionicons } from "@expo/vector-icons";
+import { GooglePlacesAutocomplete } from "react-native-google-places-autocomplete";
 import { useCreateGroup } from "@/hooks/useCommunity";
 import { CreateGroupData } from "@/types/community";
 
@@ -168,7 +170,11 @@ export default function CreateGroupModal() {
 
 	return (
 		<SafeAreaView className="flex-1 bg-background">
-			<ScrollView showsVerticalScrollIndicator={false}>
+			<ScrollView
+				showsVerticalScrollIndicator={false}
+				keyboardShouldPersistTaps="handled"
+				keyboardDismissMode="on-drag"
+			>
 				{/* Header */}
 				<View className="flex-row items-center justify-between px-4 py-3 mb-4">
 					<TouchableOpacity onPress={() => router.back()}>
@@ -255,14 +261,122 @@ export default function CreateGroupModal() {
 					{/* Location */}
 					<View className="mb-6">
 						<Label className="mb-2">Location (Optional)</Label>
-						<Input
-							placeholder="e.g., San Francisco, CA"
-							value={formData.location}
-							onChangeText={(text) =>
-								setFormData((prev) => ({ ...prev, location: text }))
-							}
-							className="text-foreground"
-						/>
+						<View
+							className="mb-1"
+							style={{
+								zIndex: 1,
+								height: 48,
+							}}
+						>
+							<GooglePlacesAutocomplete
+								placeholder="e.g., San Francisco, CA"
+								predefinedPlaces={[]}
+								onPress={(data, details = null) => {
+									setFormData((prev) => ({
+										...prev,
+										location: data.description,
+									}));
+									Keyboard.dismiss();
+								}}
+								renderLeftButton={() => (
+									<View className="justify-center items-center pl-3">
+										<Ionicons
+											name="location-outline"
+											size={20}
+											color={mutedTextColor}
+										/>
+									</View>
+								)}
+								fetchDetails={false}
+								keyboardShouldPersistTaps="handled"
+								listViewDisplayed="auto"
+								enablePoweredByContainer={false}
+								minLength={2}
+								query={{
+									key: process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+									language: "en",
+								}}
+								textInputProps={{
+									autoCapitalize: "none",
+									autoCorrect: false,
+									clearButtonMode: "while-editing",
+								}}
+								styles={{
+									container: {
+										flex: 0,
+									},
+									textInputContainer: {
+										flexDirection: "row",
+										borderWidth: 1,
+										borderColor:
+											colorScheme === "dark"
+												? colors.dark.input
+												: colors.light.input,
+										borderRadius: 8,
+										backgroundColor:
+											colorScheme === "dark"
+												? colors.dark.background
+												: colors.light.background,
+										height: 48,
+									},
+									textInput: {
+										height: 46,
+										color:
+											colorScheme === "dark"
+												? colors.dark.foreground
+												: colors.light.foreground,
+										fontSize: 16,
+										backgroundColor: "transparent",
+										flex: 1,
+									},
+									listView: {
+										borderWidth: 1,
+										borderColor:
+											colorScheme === "dark"
+												? colors.dark.border
+												: colors.light.border,
+										backgroundColor:
+											colorScheme === "dark"
+												? colors.dark.background
+												: colors.light.background,
+										borderRadius: 8,
+										marginTop: 5,
+										position: "absolute",
+										top: 50,
+										left: 0,
+										right: 0,
+										zIndex: 9999,
+										elevation: 5,
+										maxHeight: 200,
+										overflow: "visible",
+									},
+									row: {
+										backgroundColor:
+											colorScheme === "dark"
+												? colors.dark.background
+												: colors.light.background,
+										padding: 13,
+									},
+									separator: {
+										backgroundColor:
+											colorScheme === "dark"
+												? colors.dark.border
+												: colors.light.border,
+										height: 1,
+									},
+									description: {
+										color:
+											colorScheme === "dark"
+												? colors.dark.foreground
+												: colors.light.foreground,
+									},
+									poweredContainer: {
+										display: "none",
+									},
+								}}
+								debounce={300}
+							/>
+						</View>
 					</View>
 					{/* Location Radius */}
 					{formData.location && (
