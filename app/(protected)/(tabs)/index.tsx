@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { ProductCard } from "@/components/ui/product-card";
 import { useAuth } from "@/context/supabase-provider";
 import { supabase } from "@/config/supabase";
-import { format, subMonths } from 'date-fns';
+import { format, subMonths, differenceInHours, isToday } from 'date-fns';
 import { weatherService, WeatherData } from "@/lib/weather-service";
 import { useNotifications } from "@/context/notification-provider";
 
@@ -93,6 +93,34 @@ interface WeatherDisplay {
 	advice: string;
 }
 
+// Plant check-in interface
+interface PlantCheckInData {
+	plantsNeedingCheckIn: Array<{
+		id: string;
+		plant_name: string;
+		plant_type: string;
+		last_checkin: string | null;
+		hoursSinceLastCheckIn: number;
+		image_url: string | null;
+	}>;
+	totalPlants: number;
+	plantsCheckedInToday: number;
+	loading: boolean;
+}
+
+const PLANT_TYPE_ICONS = {
+	tomatoes: '🍅',
+	lettuce: '🥬',
+	carrots: '🥕',
+	peppers: '🌶️',
+	herbs: '🌿',
+	strawberries: '🍓',
+	spinach: '🥬',
+	radishes: '🔴',
+	beans: '🫘',
+	cucumbers: '🥒',
+};
+
 export default function Home() {
 	const { session } = useAuth();
 	const { unreadCount } = useNotifications();
@@ -117,6 +145,14 @@ export default function Home() {
 		error: null,
 		location: "Getting location...",
 		advice: ""
+	});
+
+	// Plant check-in state
+	const [plantCheckIn, setPlantCheckIn] = useState<PlantCheckInData>({
+		plantsNeedingCheckIn: [],
+		totalPlants: 0,
+		plantsCheckedInToday: 0,
+		loading: true
 	});
 	
 	useEffect(() => {
@@ -187,10 +223,74 @@ export default function Home() {
 		}
 	};
 
+	// Fetch plant check-in data
+	const fetchPlantCheckInData = async () => {
+		if (!session?.user?.id) {
+			setPlantCheckIn(prev => ({ ...prev, loading: false }));
+			return;
+		}
+
+		try {
+			setPlantCheckIn(prev => ({ ...prev, loading: true }));
+
+			// Fetch all user plants
+			const { data: plantsData, error: plantsError } = await supabase
+				.from('user_plants')
+				.select('id, plant_name, plant_type, last_checkin, image_url, status')
+				.eq('user_id', session.user.id)
+				.neq('status', 'harvested'); // Don't include harvested plants
+
+			if (plantsError) {
+				console.error('Error fetching plants:', plantsError);
+				setPlantCheckIn(prev => ({ ...prev, loading: false }));
+				return;
+			}
+
+			const plants = plantsData || [];
+
+			// Calculate which plants need check-in
+			const now = new Date();
+			const plantsNeedingCheckIn = plants.filter(plant => {
+				if (!plant.last_checkin) return true; // Never checked in
+				
+				const lastCheckin = new Date(plant.last_checkin);
+				const hoursSince = differenceInHours(now, lastCheckin);
+				return hoursSince >= 20; // Need check-in after 20 hours
+			}).map(plant => ({
+				...plant,
+				hoursSinceLastCheckIn: plant.last_checkin 
+					? differenceInHours(now, new Date(plant.last_checkin))
+					: 999
+			}));
+
+			// Count plants checked in today
+			const plantsCheckedInToday = plants.filter(plant => {
+				if (!plant.last_checkin) return false;
+				return isToday(new Date(plant.last_checkin));
+			}).length;
+
+			setPlantCheckIn({
+				plantsNeedingCheckIn: plantsNeedingCheckIn.slice(0, 3), // Show max 3
+				totalPlants: plants.length,
+				plantsCheckedInToday,
+				loading: false
+			});
+
+		} catch (error) {
+			console.error('Error fetching plant check-in data:', error);
+			setPlantCheckIn(prev => ({ ...prev, loading: false }));
+		}
+	};
+
 	// Fetch weather on component mount
 	useEffect(() => {
 		fetchWeather();
 	}, []);
+
+	// Fetch plant data on component mount
+	useEffect(() => {
+		fetchPlantCheckInData();
+	}, [session?.user?.id]);
 
 	// Fetch real impact data
 	useEffect(() => {
@@ -278,15 +378,27 @@ export default function Home() {
 		progress: 80
 	});
 
+	const getPlantTypeIcon = (plantType: string) => {
+		return PLANT_TYPE_ICONS[plantType as keyof typeof PLANT_TYPE_ICONS] || '🌱';
+	};
+
+	const handlePlantCheckIn = (plantId: string) => {
+		// Navigate directly to the plant detail page for check-in
+		router.push(`/(protected)/plants/plant-detail/${plantId}`);
+	};
+
+	const navigateToPlants = () => {
+		router.push("/(protected)/(tabs)/plants");
+	};
+
 	return (
 		<SafeAreaView className="flex-1 bg-background">
 			<ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-				{/* REPLACE the existing header section with this updated version */}
+				{/* Header section */}
 				<View className="flex-row justify-between items-center px-4 py-3 mb-4">
 					<TouchableOpacity onPress={() => router.push("/(protected)/notification-modal")}> 
 						<View className="w-10 h-10 items-center justify-center">
 							<Text className="text-2xl">🔔</Text>
-							{/* ADD THIS notification badge */}
 							{unreadCount > 0 && (
 								<View className="absolute top-0 right-0 w-5 h-5 bg-red-500 rounded-full items-center justify-center">
 									<Text className="text-white text-xs font-bold">
@@ -318,33 +430,123 @@ export default function Home() {
 					</TouchableOpacity>
 				</View>
 
-				{/* Daily Check-In Widget - Redesigned */}
+				{/* Plant Check-In Widget - Updated with real data */}
 				<TouchableOpacity 
 					className="mx-4 mb-6 p-5 bg-secondary/30 rounded-2xl shadow border border-border"
-					onPress={() => router.push("/(protected)/modal")}
+					onPress={navigateToPlants}
 					activeOpacity={0.7}
 				>
 					<View className="flex-row items-center mb-3">
 						<View className="rounded-full items-center justify-center mr-3">
-							<Text className="text-lg">📝</Text>
+							<Text className="text-lg">🌱</Text>
 						</View>
-						<View>
-							<Text className="text-lg font-semibold text-green-500">Daily Check-In</Text>
-							<Text className="text-muted-foreground text-sm">Keep track of your sustainability journey</Text>
+						<View className="flex-1">
+							<Text className="text-lg font-semibold text-green-500">Plant Check-In</Text>
+							<Text className="text-muted-foreground text-sm">
+								{plantCheckIn.loading 
+									? "Loading your plants..." 
+									: `${plantCheckIn.totalPlants} plants in your garden`
+								}
+							</Text>
 						</View>
 					</View>
 					
 					<View className="bg-secondary/50 rounded-xl p-4 mt-2">
-						<Text className="text-xl font-medium text-center mb-2">What did you do today?</Text>
-						<Text className="text-muted-foreground text-center mb-3">Share your environmental actions</Text>
-						
-						<Button
-							variant="default"
-							className="w-full"
-							onPress={() => router.push("/(protected)/modal")}
-						>
-							<Text className="text-primary-foreground font-medium">Add Check-In</Text>
-						</Button>
+						{plantCheckIn.loading ? (
+							<View className="items-center py-4">
+								<Text className="text-muted-foreground">Loading plant data...</Text>
+							</View>
+						) : plantCheckIn.totalPlants === 0 ? (
+							<View className="items-center">
+								<Text className="text-4xl mb-2">🌱</Text>
+								<Text className="text-xl font-medium text-center mb-2">Start Your Garden</Text>
+								<Text className="text-muted-foreground text-center mb-3">
+									Add your first plant to begin daily check-ins
+								</Text>
+								<Button
+									variant="default"
+									className="w-full"
+									onPress={() => router.push("/(protected)/plants/add-plant")}
+								>
+									<Text className="text-primary-foreground font-medium">Add Your First Plant</Text>
+								</Button>
+							</View>
+						) : plantCheckIn.plantsNeedingCheckIn.length === 0 ? (
+							<View className="items-center">
+								<Text className="text-4xl mb-2">✅</Text>
+								<Text className="text-xl font-medium text-center mb-2">All Caught Up!</Text>
+								<Text className="text-muted-foreground text-center mb-3">
+									{plantCheckIn.plantsCheckedInToday > 0 
+										? `${plantCheckIn.plantsCheckedInToday} plants checked in today`
+										: "All your plants are up to date"
+									}
+								</Text>
+								<Button
+									variant="default"
+									className="w-full"
+									onPress={navigateToPlants}
+								>
+									<Text className="text-primary-foreground font-medium">View All Plants</Text>
+								</Button>
+							</View>
+						) : (
+							<View>
+								<Text className="text-xl font-medium text-center mb-2">
+									{plantCheckIn.plantsNeedingCheckIn.length} plant{plantCheckIn.plantsNeedingCheckIn.length > 1 ? 's' : ''} need{plantCheckIn.plantsNeedingCheckIn.length === 1 ? 's' : ''} check-in
+								</Text>
+								<Text className="text-muted-foreground text-center mb-3">
+									Track your plants' growth progress
+								</Text>
+								
+								{/* Show plants needing check-in */}
+								<View className="space-y-2 mb-4">
+									{plantCheckIn.plantsNeedingCheckIn.map((plant) => (
+										<TouchableOpacity
+											key={plant.id}
+											className="flex-row items-center p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
+											onPress={() => handlePlantCheckIn(plant.id)}
+											activeOpacity={0.7}
+										>
+											<View className="w-10 h-10 rounded-lg bg-muted items-center justify-center mr-3">
+												{plant.image_url ? (
+													<Image
+														source={{ uri: plant.image_url }}
+														className="w-10 h-10 rounded-lg"
+														resizeMode="cover"
+													/>
+												) : (
+													<Text className="text-lg">
+														{getPlantTypeIcon(plant.plant_type)}
+													</Text>
+												)}
+											</View>
+											<View className="flex-1">
+												<Text className="font-medium text-sm">{plant.plant_name}</Text>
+												<Text className="text-xs text-muted-foreground">
+													{plant.hoursSinceLastCheckIn >= 999 
+														? "Never checked in" 
+														: `${Math.floor(plant.hoursSinceLastCheckIn)}h ago`
+													}
+												</Text>
+											</View>
+											<View className="bg-yellow-200 dark:bg-yellow-800 px-2 py-1 rounded">
+												<Text className="text-yellow-800 dark:text-yellow-200 text-xs font-medium">
+													📸 Check-in
+												</Text>
+											</View>
+										</TouchableOpacity>
+									))}
+								</View>
+
+								<Button
+									variant="default"
+									className="w-full"
+									onPress={navigateToPlants}
+								>
+									<Text className="text-primary-foreground font-medium">View All Plants</Text>
+								</Button>
+							</View>
+						)}
 					</View>
 				</TouchableOpacity>
 
