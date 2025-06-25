@@ -7,6 +7,7 @@ import {
 	FlatList,
 	TouchableOpacity,
 	Image,
+	ActivityIndicator,
 } from "react-native";
 import { router } from "expo-router";
 import { SafeAreaView } from "@/components/safe-area-view";
@@ -16,15 +17,25 @@ import { useAuth } from "@/context/supabase-provider";
 import { supabase } from "@/config/supabase";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { Ionicons } from "@expo/vector-icons";
+import { colors } from "@/constants/colors";
+import { useColorScheme } from "@/lib/useColorScheme";
+
+// Import community hooks and types
+import {
+	useGroups,
+	usePosts,
+	usePostVoting,
+	usePopularPosts,
+	usePopularGroups,
+} from "@/hooks/useCommunity";
+import { Group, Post } from "@/types/community";
 
 // Tab categories for the community
 const communityTabs = [
 	{ id: "popular", name: "Popular" },
-	{ id: "recommend", name: "Recommend" },
-	{ id: "plants", name: "Plants" },
-	{ id: "growing", name: "Growing Tips" },
-	{ id: "plugin", name: "Groups" },
-	{ id: "issue", name: "Challenges" },
+	{ id: "groups", name: "Groups" },
+	{ id: "posts", name: "Posts" },
 ];
 
 // Original recommended posts data
@@ -289,15 +300,44 @@ const activeChallenges = [
 ];
 
 export default function Community() {
-	const [activeTab, setActiveTab] = useState("recommend");
+	const [activeTab, setActiveTab] = useState("popular");
 	const [refreshing, setRefreshing] = useState(false);
 
 	// User authentication state
 	const { session } = useAuth();
+	const { colorScheme } = useColorScheme();
 	const [username, setUsername] = useState<string | null>(null);
 	const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 	const [loadingUser, setLoadingUser] = useState(true);
-	
+	// Community data hooks
+	const {
+		groups,
+		loading: groupsLoading,
+		error: groupsError,
+		refetch: refetchGroups,
+	} = useGroups();
+	const {
+		posts,
+		loading: postsLoading,
+		error: postsError,
+		refetch: refetchPosts,
+	} = usePosts();
+	const { votePost, loading: voteLoading } = usePostVoting();
+
+	// Popular content hooks
+	const {
+		posts: popularPosts,
+		loading: popularPostsLoading,
+		error: popularPostsError,
+		refetch: refetchPopularPosts,
+	} = usePopularPosts();
+	const {
+		groups: popularGroups,
+		loading: popularGroupsLoading,
+		error: popularGroupsError,
+		refetch: refetchPopularGroups,
+	} = usePopularGroups();
+
 	useEffect(() => {
 		const fetchUser = async () => {
 			if (session?.user?.id) {
@@ -323,15 +363,28 @@ export default function Community() {
 	// Handler for pull-to-refresh
 	const onRefresh = async () => {
 		setRefreshing(true);
-		// Simulate API call
-		setTimeout(() => {
-			setRefreshing(false);
-		}, 1000);
+		await Promise.all([
+			refetchGroups(),
+			refetchPosts(),
+			refetchPopularPosts(),
+			refetchPopularGroups(),
+		]);
+		setRefreshing(false);
+	};
+
+	const handleVote = async (postId: number, voteType: "up" | "down") => {
+		const success = await votePost(postId, voteType);
+		if (success) {
+			refetchPosts(); // Refresh posts to show updated vote counts
+			refetchPopularPosts(); // Also refresh popular posts
+		}
 	};
 
 	const renderRecommendedPost = ({ item }: { item: any }) => (
 		<View className="mr-4">
-			<Pressable className={cn("w-32 h-32 rounded-2xl p-4 justify-between", item.color)}>
+			<Pressable
+				className={cn("w-32 h-32 rounded-2xl p-4 justify-between", item.color)}
+			>
 				<Text className="text-4xl">{item.icon}</Text>
 				<View>
 					<Text className="text-white font-semibold text-lg mb-1">
@@ -342,265 +395,369 @@ export default function Community() {
 			</Pressable>
 		</View>
 	);
-
-	const renderForumPost = ({ item }: { item: any }) => (
-		<Pressable className="bg-card rounded-xl p-4 mb-4 border border-border">
-			<View className="flex-row items-start justify-between mb-2">
-				<Text className="flex-1 font-semibold text-foreground text-base leading-6 mr-2">
-					{item.title}
-				</Text>
-				<Text className="text-muted-foreground text-2xl">{item.arrow}</Text>
+	const renderPost = ({ item }: { item: Post }) => (
+		<Pressable
+			className="bg-card rounded-xl p-4 mb-4 border border-border"
+			onPress={() => router.push(`/(protected)/post/${item.id}` as any)}
+		>
+			{/* Post Header - Match post detail page exactly */}
+			<View className="flex-row items-start justify-between mb-3">
+				<View className="flex-row items-center flex-1">
+					<View className="w-10 h-10 rounded-full overflow-hidden mr-3">
+						{item.author?.avatar ? (
+							<Image
+								source={{ uri: item.author.avatar }}
+								className="w-10 h-10"
+								resizeMode="cover"
+							/>
+						) : (
+							<View className="w-10 h-10 bg-primary/80 rounded-full items-center justify-center">
+								<Text className="text-white text-sm font-bold">
+									{item.author?.name
+										? item.author.name.charAt(0).toUpperCase()
+										: "U"}
+								</Text>
+							</View>
+						)}
+					</View>
+					<View className="flex-1">
+						<Text className="font-medium text-foreground">
+							{item.author?.name || item.author?.username || "Anonymous"}
+						</Text>
+						<View className="flex-row items-center">
+							<Text className="text-xs text-muted-foreground">
+								{format(new Date(item.created_at), "MMM d, yyyy 'at' h:mm a")}
+							</Text>
+							{item.group && (
+								<>
+									<Text className="text-xs text-muted-foreground mx-1">•</Text>
+									<Text className="text-xs text-primary font-medium">
+										{item.group.name}
+									</Text>
+								</>
+							)}
+						</View>
+					</View>
+				</View>
+				{item.is_pinned && (
+					<View className="bg-yellow-100 dark:bg-yellow-900/30 px-2 py-1 rounded-full">
+						<Text className="text-yellow-600 dark:text-yellow-400 text-xs font-medium">
+							📌 Pinned
+						</Text>
+					</View>
+				)}
 			</View>
-			
-			<Text className="text-muted-foreground text-sm mb-3 leading-5">
-				{item.description}
+			{/* Post Type & Tags - Horizontal ScrollView */}
+			{(item.post_type || (item.tags && item.tags.length > 0)) && (
+				<ScrollView
+					horizontal
+					showsHorizontalScrollIndicator={false}
+					className="mb-3"
+					contentContainerStyle={{ paddingRight: 16 }}
+				>
+					<View className="flex-row items-center">
+						{item.post_type && (
+							<View className="bg-secondary/50 px-2 py-1 rounded-full mr-2">
+								<Text className="text-xs text-secondary-foreground font-medium">
+									{item.post_type}
+								</Text>
+							</View>
+						)}
+						{item.tags &&
+							item.tags.map((tag, index) => (
+								<View
+									key={index}
+									className="bg-primary/10 px-2 py-1 rounded-full mr-2"
+								>
+									<Text className="text-xs text-primary font-medium">
+										#{tag}
+									</Text>
+								</View>
+							))}
+					</View>
+				</ScrollView>
+			)}
+			{/* Post Title */}
+			<Text className="text-xl font-semibold text-foreground mb-3">
+				{item.title}
 			</Text>
-			
-			<View className="flex-row items-center justify-between">
-				<View className="flex-row items-center">
-					<Text className="text-2xl mr-2">{item.author.avatar}</Text>
-					<Text className="text-muted-foreground text-sm">
-						{item.answers} answers, {item.date}
+			{/* Post Content */}
+			<Text className="text-foreground mb-4 leading-6" numberOfLines={3}>
+				{item.content}
+			</Text>
+			{/* Post Images */}
+			{item.images && item.images.length > 0 && (
+				<View className="mb-4">
+					<ScrollView
+						horizontal
+						showsHorizontalScrollIndicator={false}
+						contentContainerStyle={{ paddingRight: 16 }}
+					>
+						<View className="flex-row">
+							{item.images.slice(0, 3).map((imageUrl, index) => (
+								<TouchableOpacity
+									key={index}
+									onPress={(e) => {
+										e.stopPropagation();
+										// Navigate to post detail where images can be viewed in full
+										router.push(`/(protected)/post/${item.id}` as any);
+									}}
+									className="mr-2 relative"
+								>
+									<Image
+										source={{ uri: imageUrl }}
+										className="w-20 h-20 rounded-lg"
+										resizeMode="cover"
+									/>
+									{/* Show count indicator if there are more images */}
+									{index === 2 && item.images!.length > 3 && (
+										<View className="absolute inset-0 bg-black/60 rounded-lg items-center justify-center">
+											<Text className="text-white font-semibold">
+												+{item.images!.length - 3}
+											</Text>
+										</View>
+									)}
+								</TouchableOpacity>
+							))}
+						</View>
+					</ScrollView>
+				</View>
+			)}
+			{/* Post Location */}
+			{item.location && (
+				<View className="flex-row items-center mb-4">
+					<Ionicons name="location-outline" size={16} color="#6b7280" />
+					<Text className="text-muted-foreground text-sm ml-1">
+						{item.location}
 					</Text>
 				</View>
-				<Text className="text-green-500 text-sm font-medium">{item.tag}</Text>
+			)}
+			{/* Post Actions - Match post detail page exactly */}
+			<View className="flex-row items-center justify-between pt-3 border-t border-border">
+				<View className="flex-row items-center">
+					<TouchableOpacity
+						onPress={(e) => {
+							e.stopPropagation();
+							handleVote(item.id, "up");
+						}}
+						disabled={voteLoading}
+						className="flex-row items-center mr-6"
+					>
+						<Ionicons
+							name={item.user_vote === "up" ? "arrow-up" : "arrow-up-outline"}
+							size={20}
+							color={item.user_vote === "up" ? colors.light.primary : "#6b7280"}
+						/>
+						<Text className="text-foreground ml-1 font-medium">
+							{item.upvotes}
+						</Text>
+					</TouchableOpacity>
+					<TouchableOpacity
+						onPress={(e) => {
+							e.stopPropagation();
+							handleVote(item.id, "down");
+						}}
+						disabled={voteLoading}
+						className="flex-row items-center mr-6"
+					>
+						<Ionicons
+							name={
+								item.user_vote === "down" ? "arrow-down" : "arrow-down-outline"
+							}
+							size={20}
+							color={item.user_vote === "down" ? "#ef4444" : "#6b7280"}
+						/>
+						<Text className="text-foreground ml-1 font-medium">
+							{item.downvotes}
+						</Text>
+					</TouchableOpacity>
+					<View className="flex-row items-center mr-6">
+						<Ionicons name="chatbubble-outline" size={18} color="#6b7280" />
+						<Text className="text-muted-foreground text-sm ml-1">
+							{item.reply_count} replies
+						</Text>
+					</View>
+					<View className="flex-row items-center">
+						<Ionicons name="eye-outline" size={18} color="#6b7280" />
+						<Text className="text-muted-foreground text-sm ml-1">
+							{item.view_count} views
+						</Text>
+					</View>
+				</View>
 			</View>
 		</Pressable>
 	);
 
-	const renderGroup = ({ item }: { item: any }) => (
-		<Pressable className="bg-card rounded-xl p-4 mb-4 border border-border">
+	const renderGroup = ({ item }: { item: Group }) => (
+		<Pressable
+			className="bg-card rounded-xl p-4 mb-4 border border-border"
+			onPress={() => {
+				// Navigate to group detail or posts filtered by group
+				router.push(`/(protected)/groups/${item.id}` as any);
+			}}
+		>
 			<View className="flex-row items-start justify-between mb-2">
-				<Text className="font-semibold text-foreground text-lg">{item.name}</Text>
-				<Text className="text-muted-foreground text-sm">{item.members} members</Text>
+				<View className="flex-row items-center flex-1">
+					{item.icon && <Text className="text-2xl mr-3">{item.icon}</Text>}
+					<View className="flex-1">
+						<Text className="font-semibold text-foreground text-lg">
+							{item.name}
+						</Text>
+						{item.location && (
+							<Text className="text-muted-foreground text-xs">
+								📍 {item.location}
+							</Text>
+						)}
+					</View>
+				</View>
+				<Text className="text-muted-foreground text-sm">
+					{item.member_count} members
+				</Text>
 			</View>
-			<Text className="text-muted-foreground text-sm mb-2">{item.description}</Text>
-			<View className="bg-secondary/50 self-start px-3 py-1 rounded-full">
-				<Text className="text-secondary-foreground text-xs font-medium">{item.category}</Text>
-			</View>
-		</Pressable>
-	);
 
-	const renderChallenge = ({ item }: { item: any }) => (
-		<Pressable className="bg-card rounded-xl p-4 mb-4 border border-border">
-			<View className="flex-row items-start justify-between mb-2">
-				<Text className="flex-1 font-semibold text-foreground text-lg mr-2">
-					{item.title}
+			{item.description && (
+				<Text className="text-muted-foreground text-sm mb-2" numberOfLines={2}>
+					{item.description}
 				</Text>
-				<Text className="text-green-500 text-sm font-medium">
-					{item.daysLeft} days left
+			)}
+			<View className="flex-row items-center justify-between">
+				<View className="bg-secondary/50 self-start px-3 py-1 rounded-full">
+					<Text className="text-secondary-foreground text-xs font-medium">
+						{item.category}
+					</Text>
+				</View>
+				<Text className="text-muted-foreground text-xs">
+					{item.post_count} posts
 				</Text>
 			</View>
-			
-			<Text className="text-muted-foreground text-sm mb-3">{item.description}</Text>
-			
-			<View className="mb-3">
-				<View className="flex-row items-center justify-between mb-1">
-					<Text className="text-muted-foreground text-xs">Progress</Text>
-					<Text className="text-foreground text-xs font-medium">{item.progress}%</Text>
-				</View>
-				<View className="bg-secondary rounded-full h-2">
-					<View 
-						className="bg-green-500 rounded-full h-2" 
-						style={{ width: `${item.progress}%` }}
-					/>
-				</View>
-			</View>
-			
-			<Text className="text-muted-foreground text-sm">
-				{item.participants} participants
-			</Text>
 		</Pressable>
 	);
 
 	const renderTabContent = () => {
 		switch (activeTab) {
 			case "popular":
+				if (popularPostsLoading || popularGroupsLoading) {
+					return (
+						<View className="px-4 py-8 items-center">
+							<ActivityIndicator size="large" color="#10b981" />
+							<Text className="text-muted-foreground mt-2">
+								Loading popular content...
+							</Text>
+						</View>
+					);
+				}
+
 				return (
 					<View className="px-4">
+						{/* Popular Posts Section */}
 						<Text className="text-xl font-semibold mb-4 text-foreground">
-							Popular in Community
+							🔥 Most Viewed Posts
 						</Text>
-						<FlatList
-							data={forumPosts.slice(0, 2)}
-							renderItem={renderForumPost}
-							keyExtractor={(item) => item.id.toString()}
-							scrollEnabled={false}
-						/>
-					</View>
-				);
+						{popularPostsError ? (
+							<View className="py-4 items-center mb-6">
+								<Text className="text-muted-foreground">
+									Error loading popular posts
+								</Text>
+							</View>
+						) : popularPosts.length === 0 ? (
+							<View className="py-4 items-center mb-6">
+								<Text className="text-muted-foreground">No posts yet</Text>
+								<Text className="text-muted-foreground text-sm mt-1">
+									Be the first to create one!
+								</Text>
+							</View>
+						) : (
+							<View className="mb-8">
+								<FlatList
+									data={popularPosts}
+									renderItem={renderPost}
+									keyExtractor={(item) => item.id.toString()}
+									scrollEnabled={false}
+								/>
+							</View>
+						)}
 
-			case "recommend":
-				return (
-					<View>
-						{/* Recommended Posts Section */}
-						<View className="px-4 mb-6">
-							<Text className="text-xl font-semibold mb-4 text-foreground">
-								Recommended posts
-							</Text>
+						{/* Popular Groups Section */}
+						<Text className="text-xl font-semibold mb-4 text-foreground">
+							👥 Top Communities
+						</Text>
+						{popularGroupsError ? (
+							<View className="py-4 items-center">
+								<Text className="text-muted-foreground">
+									Error loading popular groups
+								</Text>
+							</View>
+						) : popularGroups.length === 0 ? (
+							<View className="py-4 items-center">
+								<Text className="text-muted-foreground">No groups yet</Text>
+								<Text className="text-muted-foreground text-sm mt-1">
+									Be the first to create one!
+								</Text>
+							</View>
+						) : (
 							<FlatList
-								data={recommendedPosts}
-								renderItem={renderRecommendedPost}
-								keyExtractor={(item) => item.id.toString()}
-								horizontal
-								showsHorizontalScrollIndicator={false}
-								contentContainerStyle={{ paddingRight: 16 }}
-							/>
-						</View>
-
-						{/* Forum Posts */}
-						<View className="px-4">
-							<FlatList
-								data={forumPosts}
-								renderItem={renderForumPost}
+								data={popularGroups}
+								renderItem={renderGroup}
 								keyExtractor={(item) => item.id.toString()}
 								scrollEnabled={false}
 							/>
-						</View>
+						)}
 					</View>
 				);
 
-			case "plants":
-				return (
-					<View>
-						{/* Plant Recommended Posts Section */}
-						<View className="px-4 mb-6">
-							<Text className="text-xl font-semibold mb-4 text-foreground">
-								Popular Plant Topics
+			case "posts":
+				if (postsLoading) {
+					return (
+						<View className="px-4 py-8 items-center">
+							<ActivityIndicator size="large" color="#10b981" />
+							<Text className="text-muted-foreground mt-2">
+								Loading posts...
 							</Text>
-							<FlatList
-								data={plantRecommendedPosts}
-								renderItem={renderRecommendedPost}
-								keyExtractor={(item) => item.id.toString()}
-								horizontal
-								showsHorizontalScrollIndicator={false}
-								contentContainerStyle={{ paddingRight: 16 }}
-							/>
 						</View>
+					);
+				}
 
-						{/* Plant Forum Posts */}
-						<View className="px-4">
-							<View className="flex-row items-center justify-between mb-4">
-								<Text className="text-lg font-semibold text-foreground">
-									Recent Plant Discussions
-								</Text>
-								<TouchableOpacity onPress={() => router.push("/(protected)/plants/add-plant" as any)}>
-									<Text className="text-primary font-medium text-sm">Add Your Plant</Text>
-								</TouchableOpacity>
-							</View>
-							<FlatList
-								data={plantForumPosts}
-								renderItem={renderForumPost}
-								keyExtractor={(item) => item.id.toString()}
-								scrollEnabled={false}
-							/>
-						</View>
-					</View>
-				);
-
-			case "growing":
 				return (
 					<View className="px-4">
 						<Text className="text-xl font-semibold mb-4 text-foreground">
-							Growing Tips & Guides
+							Recent Posts
 						</Text>
-						
-						{/* Quick Tips Section */}
-						<View className="mb-6">
-							<Text className="text-lg font-medium mb-3 text-foreground">Quick Tips</Text>
-							<View className="space-y-3">
-								<View className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg border border-green-200 dark:border-green-800">
-									<View className="flex-row items-center mb-2">
-										<Text className="text-2xl mr-3">💧</Text>
-										<Text className="font-semibold text-green-700 dark:text-green-300">
-											Watering Wisdom
-										</Text>
-									</View>
-									<Text className="text-green-600 dark:text-green-400 text-sm">
-										Water deeply but less frequently to encourage strong root growth. 
-										Check soil moisture 2 inches down before watering.
-									</Text>
-								</View>
-								
-								<View className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
-									<View className="flex-row items-center mb-2">
-										<Text className="text-2xl mr-3">☀️</Text>
-										<Text className="font-semibold text-yellow-700 dark:text-yellow-300">
-											Sunlight Secrets
-										</Text>
-									</View>
-									<Text className="text-yellow-600 dark:text-yellow-400 text-sm">
-										Most vegetables need 6-8 hours of direct sunlight. 
-										Rotate plants weekly for even growth.
-									</Text>
-								</View>
-								
-								<View className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
-									<View className="flex-row items-center mb-2">
-										<Text className="text-2xl mr-3">🌱</Text>
-										<Text className="font-semibold text-blue-700 dark:text-blue-300">
-											Fertilizer Facts
-										</Text>
-									</View>
-									<Text className="text-blue-600 dark:text-blue-400 text-sm">
-										Feed plants every 2-3 weeks during growing season. 
-										Use half-strength fertilizer to avoid burning roots.
-									</Text>
-								</View>
-							</View>
-						</View>
-
-						{/* Seasonal Guide */}
-						<View className="mb-6">
-							<Text className="text-lg font-medium mb-3 text-foreground">This Month's Focus</Text>
-							<View className="bg-card p-4 rounded-xl border border-border">
-								<Text className="font-semibold text-base mb-2">
-									{format(new Date(), 'MMMM')} Garden Tasks
+						{postsError ? (
+							<View className="py-8 items-center">
+								<Text className="text-muted-foreground">
+									Error loading posts
 								</Text>
-								<View className="space-y-2">
-									<View className="flex-row items-center">
-										<Text className="mr-2">🌱</Text>
-										<Text className="text-sm text-muted-foreground">
-											Start seeds indoors for warm-season crops
-										</Text>
-									</View>
-									<View className="flex-row items-center">
-										<Text className="mr-2">✂️</Text>
-										<Text className="text-sm text-muted-foreground">
-											Prune dead branches and shape plants
-										</Text>
-									</View>
-									<View className="flex-row items-center">
-										<Text className="mr-2">🐛</Text>
-										<Text className="text-sm text-muted-foreground">
-											Check for early pest activity
-										</Text>
-									</View>
-								</View>
 							</View>
-						</View>
-
-						{/* Link to AI Calendar */}
-						<View className="bg-gradient-to-r from-purple-50 to-green-50 dark:from-purple-900/20 dark:to-green-900/20 p-4 rounded-xl border border-border">
-							<View className="flex-row items-center justify-between">
-								<View className="flex-1">
-									<Text className="font-semibold text-lg">AI Garden Calendar</Text>
-									<Text className="text-sm text-muted-foreground">
-										Get personalized care reminders for your plants
-									</Text>
-								</View>
-								<TouchableOpacity
-									className="bg-primary px-4 py-2 rounded-lg"
-									onPress={() => router.push("/(protected)/plants/ai-calendar" as any)}
-								>
-									<Text className="text-primary-foreground font-medium">View Calendar</Text>
-								</TouchableOpacity>
+						) : posts.length === 0 ? (
+							<View className="py-8 items-center">
+								<Text className="text-muted-foreground">No posts yet</Text>
+								<Text className="text-muted-foreground text-sm mt-1">
+									Be the first to create one!
+								</Text>
 							</View>
-						</View>
+						) : (
+							<FlatList
+								data={posts}
+								renderItem={renderPost}
+								keyExtractor={(item) => item.id.toString()}
+								scrollEnabled={false}
+							/>
+						)}
 					</View>
 				);
 
-			case "plugin":
+			case "groups":
+				if (groupsLoading) {
+					return (
+						<View className="px-4 py-8 items-center">
+							<ActivityIndicator size="large" color="#10b981" />
+							<Text className="text-muted-foreground mt-2">
+								Loading groups...
+							</Text>
+						</View>
+					);
+				}
+
 				return (
 					<View className="px-4">
 						<Text className="text-xl font-semibold mb-4 text-foreground">
@@ -609,43 +766,28 @@ export default function Community() {
 						<Text className="text-muted-foreground text-sm mb-4">
 							Join groups based on your interests and location
 						</Text>
-						
-						{/* Plant-specific groups */}
-						<Text className="text-lg font-medium mb-3 text-foreground">🌱 Plant & Garden Groups</Text>
-						<FlatList
-							data={plantCommunityGroups}
-							renderItem={renderGroup}
-							keyExtractor={(item) => item.id.toString()}
-							scrollEnabled={false}
-							className="mb-6"
-						/>
-						
-						{/* Original community groups */}
-						<Text className="text-lg font-medium mb-3 text-foreground">🏘️ Local Community</Text>
-						<FlatList
-							data={communityGroups}
-							renderItem={renderGroup}
-							keyExtractor={(item) => item.id.toString()}
-							scrollEnabled={false}
-						/>
-					</View>
-				);
 
-			case "issue":
-				return (
-					<View className="px-4">
-						<Text className="text-xl font-semibold mb-4 text-foreground">
-							Active Challenges
-						</Text>
-						<Text className="text-muted-foreground text-sm mb-4">
-							Participate in community challenges to make a bigger impact
-						</Text>
-						<FlatList
-							data={activeChallenges}
-							renderItem={renderChallenge}
-							keyExtractor={(item) => item.id.toString()}
-							scrollEnabled={false}
-						/>
+						{groupsError ? (
+							<View className="py-8 items-center">
+								<Text className="text-muted-foreground">
+									Error loading groups
+								</Text>
+							</View>
+						) : groups.length === 0 ? (
+							<View className="py-8 items-center">
+								<Text className="text-muted-foreground">No groups yet</Text>
+								<Text className="text-muted-foreground text-sm mt-1">
+									Be the first to create one!
+								</Text>
+							</View>
+						) : (
+							<FlatList
+								data={groups}
+								renderItem={renderGroup}
+								keyExtractor={(item) => item.id.toString()}
+								scrollEnabled={false}
+							/>
+						)}
 					</View>
 				);
 
@@ -670,7 +812,9 @@ export default function Community() {
 			>
 				{/* Header with notification and profile */}
 				<View className="flex-row justify-between items-center px-4 py-3 mb-4">
-					<TouchableOpacity onPress={() => router.push("/(protected)/notification-modal")}> 
+					<TouchableOpacity
+						onPress={() => router.push("/(protected)/notification-modal")}
+					>
 						<View className="w-10 h-10 items-center justify-center">
 							<Text className="text-2xl">🔔</Text>
 							<View className="absolute top-0 right-0 w-4 h-4 bg-red-500 rounded-full items-center justify-center">
@@ -681,12 +825,14 @@ export default function Community() {
 
 					<H1>Community</H1>
 
-					<TouchableOpacity onPress={() => router.push("/(protected)/(tabs)/profile")}> 
+					<TouchableOpacity
+						onPress={() => router.push("/(protected)/(tabs)/profile")}
+					>
 						<View className="w-10 h-10 items-center justify-center overflow-hidden rounded-full">
 							{avatarUrl ? (
-								<Image 
-									source={{ uri: avatarUrl }} 
-									className="w-10 h-10" 
+								<Image
+									source={{ uri: avatarUrl }}
+									className="w-10 h-10"
 									resizeMode="cover"
 								/>
 							) : (
@@ -699,54 +845,96 @@ export default function Community() {
 						</View>
 					</TouchableOpacity>
 				</View>
-
 				{/* Subtitle */}
-				<View className="px-4 pb-2">
+				{/* <View className="px-4 pb-2">
 					<Text className="text-muted-foreground text-base">
 						Connect, share, and learn with the FoodLoop community
 					</Text>
-				</View>
-
+				</View> */}
 				{/* Tab Navigation */}
 				<View className="px-4 mb-6">
-					<ScrollView
-						horizontal
-						showsHorizontalScrollIndicator={false}
-						className="flex-row"
-						contentContainerStyle={{ paddingRight: 16 }}
-					>
-						{communityTabs.map((tab) => (
+					<View className="flex-row">
+						{communityTabs.map((tab, index) => (
 							<Pressable
 								key={tab.id}
 								onPress={() => setActiveTab(tab.id)}
 								className={cn(
-									"mr-3 px-4 py-2 rounded-full border",
+									"flex-1 px-4 py-3 rounded-full border items-center justify-center",
+									index === 0
+										? "mr-2"
+										: index === communityTabs.length - 1
+											? "ml-2"
+											: "mx-1",
 									activeTab === tab.id
 										? "bg-green-600 border-green-600"
-										: "bg-secondary border-border"
+										: "bg-secondary border-border",
 								)}
 							>
 								<Text
 									className={cn(
-										"font-medium",
-										activeTab === tab.id
-											? "text-white"
-											: "text-foreground"
+										"font-medium text-center",
+										activeTab === tab.id ? "text-white" : "text-foreground",
 									)}
 								>
 									{tab.name}
 								</Text>
 							</Pressable>
 						))}
-					</ScrollView>
+					</View>
 				</View>
-
 				{/* Tab Content */}
-				{renderTabContent()}
-
-				{/* Bottom spacing */}
+				{renderTabContent()} {/* Bottom spacing */}
 				<View className="h-20" />
 			</ScrollView>
+			{/* Floating Action Buttons */}
+			<View className="absolute bottom-14 right-6">
+				{/* Secondary FAB - Group creation (above main FAB) */}
+				{activeTab !== "groups" && (
+					<TouchableOpacity
+						onPress={() => router.push("/(protected)/create-group-modal")}
+						className="w-16 h-16 rounded-full shadow-lg active:scale-95 mb-3"
+						style={{
+							backgroundColor: colorScheme === "dark" ? "#0369a1" : "#0ea5e9",
+							shadowColor: "#000",
+							shadowOffset: { width: 0, height: 4 },
+							shadowOpacity: 0.3,
+							shadowRadius: 8,
+							elevation: 8,
+						}}
+						activeOpacity={0.8}
+					>
+						<View className="flex-1 items-center justify-center">
+							<Ionicons name="people" size={28} color="#FFFFFF" />
+						</View>
+					</TouchableOpacity>
+				)}
+
+				{/* Main Create FAB */}
+				<TouchableOpacity
+					onPress={() => {
+						// Navigate based on active tab
+						if (activeTab === "groups") {
+							router.push("/(protected)/create-group-modal");
+						} else {
+							router.push("/(protected)/create-post-modal");
+						}
+					}}
+					className="w-16 h-16 rounded-full shadow-lg active:scale-95"
+					style={{
+						backgroundColor: colorScheme === "dark" ? "#10b981" : "#10b981",
+						shadowColor: "#000",
+						shadowOffset: { width: 0, height: 4 },
+						shadowOpacity: 0.7,
+						shadowRadius: 8,
+						elevation: 8,
+					}}
+					activeOpacity={0.8}
+				>
+					<View className="flex-1 items-center justify-center">
+						<Ionicons name="add" size={28} color="#FFFFFF" />
+					</View>
+				</TouchableOpacity>
+			</View>
 		</SafeAreaView>
 	);
 }

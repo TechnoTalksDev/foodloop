@@ -25,3 +25,5 @@ expo-env.d.ts
 # @end expo-cli
 
 .github/instructions
+
+.vscode/mcp.json
