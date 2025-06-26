@@ -1,10 +1,10 @@
-// app/(protected)/(tabs)/index.tsx - EPIC 3D FLOATING CARDS HOME SCREEN
+// app/(protected)/(tabs)/index.tsx - EPIC 3D FLOATING CARDS HOME SCREEN WITH AGENCY MODE
 
 import { router } from "expo-router";
 import { Image, ScrollView, TouchableOpacity, View, Dimensions } from "react-native";
 import { useSharedValue, useAnimatedStyle, withTiming, withSpring, withSequence, withDelay, withRepeat, interpolate, Extrapolation } from "react-native-reanimated";
 import { LinearGradient } from 'expo-linear-gradient';
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Animated from 'react-native-reanimated';
 
 import { SafeAreaView } from "@/components/safe-area-view";
@@ -20,6 +20,7 @@ import { weatherService, WeatherData } from "@/lib/weather-service";
 import { useNotifications } from "@/context/notification-provider";
 import { useAchievements } from "@/hooks/useAchievements";
 import { AchievementsModal } from "@/components/achievements-modal";
+import { useAgencyMode } from "@/context/agency-mode-provider";
 
 // Sample food categories with eco-friendly icons
 const foodCategories = [
@@ -103,6 +104,7 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 export default function Home() {
 	const { session } = useAuth();
 	const { unreadCount } = useNotifications();
+	const { isAgencyMode, activateAgencyMode, deactivateAgencyMode } = useAgencyMode();
 	const [username, setUsername] = useState<string | null>(null);
 	const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 	const [loadingUser, setLoadingUser] = useState(true);
@@ -113,6 +115,16 @@ export default function Home() {
 		hasData: false,
 		loading: true
 	});
+
+	// Easter egg tap counter and timer
+	const tapCount = useRef(0);
+	const tapTimer = useRef<number | null>(null);
+	const [showAgencyActivation, setShowAgencyActivation] = useState(false);
+
+	// Agency Mode activation animation
+	const agencyActivationScale = useSharedValue(0);
+	const agencyActivationOpacity = useSharedValue(0);
+	const agencyLogoRotation = useSharedValue(0);
 
 	// Epic 3D Animation Values
 	const card1Float = useSharedValue(0);
@@ -151,6 +163,83 @@ export default function Home() {
 		plantsCheckedInToday: 0,
 		loading: true
 	});
+
+	// Agency Mode activation handler
+	const handleAIWidgetTap = () => {
+		tapCount.current += 1;
+
+		// Clear existing timer
+		if (tapTimer.current) {
+			clearTimeout(tapTimer.current);
+		}
+
+		// If 3 taps within 2 seconds
+		if (tapCount.current === 3) {
+			if (isAgencyMode) {
+				// If already in agency mode, deactivate it
+				deactivateAgencyMode();
+				tapCount.current = 0; // Reset
+				// Just navigate normally after deactivation
+				setTimeout(() => {
+					router.push("/(protected)/smartplate-ai");
+				}, 100);
+			} else {
+				// If not in agency mode, activate it
+				activateAgencyMode();
+				showAgencyModeActivation();
+				tapCount.current = 0; // Reset
+			}
+		} else {
+			// Set timer to reset tap count after 2 seconds
+			tapTimer.current = setTimeout(() => {
+				if (tapCount.current < 3) {
+					// If less than 3 taps, navigate normally
+					if (tapCount.current === 1 || tapCount.current === 2) {
+						router.push("/(protected)/smartplate-ai");
+					}
+				}
+				tapCount.current = 0;
+			}, 2000);
+		}
+	};
+
+	// Show agency mode activation animation
+	const showAgencyModeActivation = () => {
+		setShowAgencyActivation(true);
+		
+		// Animated sequence for agency mode activation
+		agencyActivationScale.value = withSequence(
+			withTiming(0, { duration: 0 }),
+			withSpring(1.2, { damping: 8, stiffness: 100 }),
+			withSpring(1, { damping: 12, stiffness: 150 })
+		);
+
+		agencyActivationOpacity.value = withSequence(
+			withTiming(1, { duration: 300 }),
+			withDelay(2000, withTiming(0, { duration: 500 }))
+		);
+
+		agencyLogoRotation.value = withSequence(
+			withTiming(0, { duration: 0 }),
+			withTiming(360, { duration: 1000 }),
+			withTiming(720, { duration: 1000 })
+		);
+
+		// Hide the activation overlay after animation
+		setTimeout(() => {
+			setShowAgencyActivation(false);
+		}, 3000);
+	};
+
+	// Agency activation animated styles
+	const agencyActivationStyle = useAnimatedStyle(() => ({
+		opacity: agencyActivationOpacity.value,
+		transform: [{ scale: agencyActivationScale.value }],
+	}));
+
+	const agencyLogoStyle = useAnimatedStyle(() => ({
+		transform: [{ rotate: `${agencyLogoRotation.value}deg` }],
+	}));
 
 	// Epic 3D floating animations
 	useEffect(() => {
@@ -617,6 +706,15 @@ export default function Home() {
 		router.push("/(protected)/(tabs)/plants");
 	};
 
+	// Clean up timer on unmount
+	useEffect(() => {
+		return () => {
+			if (tapTimer.current) {
+				clearTimeout(tapTimer.current);
+			}
+		};
+	}, []);
+
 	return (
 		<>
 		<SafeAreaView className="flex-1 bg-background">
@@ -943,7 +1041,7 @@ export default function Home() {
 					)}
 				</Animated.View>
 				
-				{/* SmartPlate AI section - 3D Floating Card */}
+				{/* SmartPlate AI section - 3D Floating Card with Easter Egg */}
 				<Animated.View 
 					className="mx-4 mb-6"
 					style={card5AnimatedStyle}
@@ -953,19 +1051,26 @@ export default function Home() {
 							<View className="flex-row items-center mb-3">
 								<View className="w-12 h-12 bg-green-600 rounded-full items-center justify-center mr-3">
 									<Image 
-										source={require('../../../assets/2.png')} 
+										source={isAgencyMode ? require('../../../assets/foodloop-male.png') : require('../../../assets/2.png')} 
 										className="w-8 h-8"
 										resizeMode="contain"
 									/>
 								</View>
 								<View>
-									<H3 className="text-white">FoodLoop AI</H3>
-									<Text className="text-green-100 opacity-80">Multiple AI Models to Use</Text>
+									<H3 className="text-white">
+										{isAgencyMode ? "FoodLoop AI • Agency Mode" : "FoodLoop AI"}
+									</H3>
+									<Text className="text-green-100 opacity-80">
+										{isAgencyMode ? "Advanced AI Agent Activated" : "Multiple AI Models to Use"}
+									</Text>
 								</View>
 							</View>
 							
 							<Text className="text-green-50 mb-4">
-								Use our variety of AI models to help you make the most of your food, reduce waste, and save money.
+								{isAgencyMode 
+									? "Enhanced AI capabilities unlocked. Your personal food intelligence agent is ready to assist."
+									: "Use our variety of AI models to help you make the most of your food, reduce waste, and save money."
+								}
 							</Text>
 						</View>
 						
@@ -974,16 +1079,23 @@ export default function Home() {
 								className="w-full"
 								variant="default"
 								size="default"
-								onPress={() => router.push("/(protected)/smartplate-ai")}
+								onPress={handleAIWidgetTap}
 							>
 								<View className="flex-row items-center">
-									<Text className="text-xl mr-2">🧠</Text>
-									<Text className="text-primary-foreground font-medium">Chat with AI</Text>
+									<Text className="text-xl mr-2">
+										{isAgencyMode ? "🤖" : "🧠"}
+									</Text>
+									<Text className="text-primary-foreground font-medium">
+										{isAgencyMode ? "Chat with Agent" : "Chat with AI"}
+									</Text>
 								</View>
 							</Button>
 							
 							<Text className="text-center mt-2 text-xs text-muted-foreground">
-								Powered by AI · Saved 245kg food waste this month
+								{isAgencyMode 
+									? "Agency Mode Active · Enhanced Intelligence"
+									: "Powered by AI · Saved 245kg food waste this month"
+								}
 							</Text>
 						</View>
 					</View>
@@ -1060,6 +1172,32 @@ export default function Home() {
 
 			{/* Tab navigation is handled by the parent layout */}
 		</SafeAreaView>
+		
+		{/* Agency Mode Activation Overlay */}
+		{showAgencyActivation && (
+			<View 
+				className="absolute inset-0 bg-black/70 items-center justify-center z-50"
+				style={{ backgroundColor: 'rgba(0, 0, 0, 0.8)' }}
+			>
+				<Animated.View 
+					className="items-center"
+					style={agencyActivationStyle}
+				>
+					<Animated.View style={agencyLogoStyle}>
+						<Image
+							source={require('@/assets/foodloop-male.png')}
+							className="w-32 h-32 mb-4"
+							resizeMode="contain"
+						/>
+					</Animated.View>
+					<Text className="text-white text-2xl font-bold mb-2">Agency Mode Activated</Text>
+					<Text className="text-green-400 text-lg font-medium mb-1">🤖 Enhanced AI Unlocked</Text>
+					<Text className="text-white/80 text-center text-sm px-8">
+						Your personal food intelligence agent is now ready to assist with advanced capabilities
+					</Text>
+				</Animated.View>
+			</View>
+		)}
 		
 		{/* Achievements Modal */}
 		<AchievementsModal 

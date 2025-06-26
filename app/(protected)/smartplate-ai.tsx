@@ -1,4 +1,4 @@
-// app/(protected)/smartplate-ai.tsx - WITH EPIC INTRO ANIMATION
+// app/(protected)/smartplate-ai.tsx - WITH EPIC INTRO ANIMATION AND AGENCY MODE
 
 import React, { useRef, useEffect, useState } from 'react';
 import {
@@ -40,6 +40,7 @@ import { format } from 'date-fns';
 import Markdown from 'react-native-markdown-display';
 import { useChatContext } from '@/context/chat-provider';
 import { ProductSuggestion } from '@/lib/gemini';
+import { useAgencyMode } from '@/context/agency-mode-provider';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -105,11 +106,13 @@ export default function SmartPlateAI() {
   const router = useRouter();
   const { colorScheme } = useColorScheme();
   const { messages, isLoading, sendMessage, clearChat } = useChatContext();
+  const { isAgencyMode, getAgencyLogo } = useAgencyMode();
   const [inputText, setInputText] = useState('');
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [currentMode, setCurrentMode] = useState(AI_MODES[0]);
   const [showModeSelector, setShowModeSelector] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
+  const [introLogo, setIntroLogo] = useState(require('@/assets/2.png'));
   const scrollViewRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
 
@@ -131,6 +134,15 @@ export default function SmartPlateAI() {
   const mutedTextColor = colorScheme === 'dark' ? colors.dark.mutedForeground : colors.light.mutedForeground;
   const borderColor = colorScheme === 'dark' ? colors.dark.border : colors.light.border;
   const secondaryBg = colorScheme === 'dark' ? colors.dark.secondary : colors.light.secondary;
+
+  // Set intro logo based on agency mode
+  useEffect(() => {
+    if (isAgencyMode) {
+      setIntroLogo(getAgencyLogo());
+    } else {
+      setIntroLogo(require('@/assets/2.png'));
+    }
+  }, [isAgencyMode]);
 
   // Epic intro animation sequence
   useEffect(() => {
@@ -170,20 +182,22 @@ export default function SmartPlateAI() {
           withDelay(300, withTiming(1, { duration: 600 }))
         );
 
-        // Blink sequence - happens after face settles
-        setTimeout(() => {
-          // First blink
-          showWink.value = withSequence(
-            withTiming(1, { duration: 80 }),
-            withTiming(0, { duration: 80 }),
-            // Second blink after delay
-            withDelay(400, withTiming(1, { duration: 80 })),
-            withTiming(0, { duration: 80 }),
-            // Third blink
-            withDelay(600, withTiming(1, { duration: 80 })),
-            withTiming(0, { duration: 120 })
-          );
-        }, 1200);
+        // Blink sequence - happens after face settles (only for non-agency mode)
+        if (!isAgencyMode) {
+          setTimeout(() => {
+            // First blink
+            showWink.value = withSequence(
+              withTiming(1, { duration: 80 }),
+              withTiming(0, { duration: 80 }),
+              // Second blink after delay
+              withDelay(400, withTiming(1, { duration: 80 })),
+              withTiming(0, { duration: 80 }),
+              // Third blink
+              withDelay(600, withTiming(1, { duration: 80 })),
+              withTiming(0, { duration: 120 })
+            );
+          }, 1200);
+        }
 
         // Text entrance - epic slide and rotate
         setTimeout(() => {
@@ -212,7 +226,7 @@ export default function SmartPlateAI() {
 
       startAnimation();
     }
-  }, [showIntro]);
+  }, [showIntro, isAgencyMode]);
 
   // Animated styles
   const faceAnimatedStyle = useAnimatedStyle(() => {
@@ -493,6 +507,7 @@ export default function SmartPlateAI() {
                 <View className="mb-2">
                   <Text className="font-semibold text-lg" style={{ color: currentMode.color }}>
                     {currentMode.name}
+                    {isAgencyMode && <Text className="text-xs text-orange-500"> • Agency Mode</Text>}
                   </Text>
                 </View>
                 
@@ -576,6 +591,7 @@ export default function SmartPlateAI() {
           <View className="flex-row items-center justify-between mb-6">
             <Text className="text-xl font-bold" style={{ color: textColor }}>
               Choose AI Assistant
+              {isAgencyMode && <Text className="text-sm text-orange-500"> • Agency Mode</Text>}
             </Text>
             <TouchableOpacity onPress={() => setShowModeSelector(false)}>
               <Ionicons name="close" size={24} color={textColor} />
@@ -640,7 +656,7 @@ export default function SmartPlateAI() {
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: '#10b981',
+              backgroundColor: isAgencyMode ? '#1f2937' : '#10b981',
             },
             backgroundGlowStyle
           ]}
@@ -669,7 +685,7 @@ export default function SmartPlateAI() {
                 top: Math.random() * SCREEN_HEIGHT,
                 width: 4,
                 height: 4,
-                backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                backgroundColor: isAgencyMode ? 'rgba(249, 115, 22, 0.7)' : 'rgba(255, 255, 255, 0.7)',
                 borderRadius: 2,
                 transform: [
                   { scale: Math.random() * 2 + 0.5 }
@@ -694,40 +710,53 @@ export default function SmartPlateAI() {
           {/* Epic Face Animation */}
           <Animated.View style={[faceAnimatedStyle, { marginBottom: 40 }]}>
             <View style={{ position: 'relative' }}>
-              {/* Normal face (1.png) */}
-              <Animated.View
-                style={{
-                  opacity: showWink.value === 0 ? 1 : 0,
-                }}
-              >
+              {!isAgencyMode ? (
+                <>
+                  {/* Normal face (2.png) */}
+                  <Animated.View
+                    style={{
+                      opacity: showWink.value === 0 ? 1 : 0,
+                    }}
+                  >
+                    <Image
+                      source={require('@/assets/2.png')}
+                      style={{
+                        width: 200,
+                        height: 200,
+                        resizeMode: 'contain',
+                      }}
+                    />
+                  </Animated.View>
+                  
+                  {/* Winking face (1.png) */}
+                  <Animated.View
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      opacity: showWink.value,
+                    }}
+                  >
+                    <Image
+                      source={require('@/assets/1.png')}
+                      style={{
+                        width: 200,
+                        height: 200,
+                        resizeMode: 'contain',
+                      }}
+                    />
+                  </Animated.View>
+                </>
+              ) : (
                 <Image
-                  source={require('@/assets/2.png')}
+                  source={introLogo}
                   style={{
                     width: 200,
                     height: 200,
                     resizeMode: 'contain',
                   }}
                 />
-              </Animated.View>
-              
-              {/* Winking face (2.png) */}
-              <Animated.View
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  opacity: showWink.value,
-                }}
-              >
-                <Image
-                  source={require('@/assets/1.png')}
-                  style={{
-                    width: 200,
-                    height: 200,
-                    resizeMode: 'contain',
-                  }}
-                />
-              </Animated.View>
+              )}
             </View>
           </Animated.View>
 
@@ -745,7 +774,7 @@ export default function SmartPlateAI() {
                 letterSpacing: 2,
               }}
             >
-              FoodLoop AI
+              {isAgencyMode ? "Agency Mode" : "FoodLoop AI"}
             </Text>
             <Text 
               style={{
@@ -756,7 +785,7 @@ export default function SmartPlateAI() {
                 letterSpacing: 1,
               }}
             >
-              Powered by Intelligence
+              {isAgencyMode ? "Enhanced Intelligence Activated" : "Powered by Intelligence"}
             </Text>
           </Animated.View>
 
@@ -789,9 +818,12 @@ export default function SmartPlateAI() {
             <Text className="text-white text-sm">{currentMode.icon}</Text>
           </View>
           <View className="flex-1">
-            <H1 className="text-lg">{currentMode.name}</H1>
+            <H1 className="text-lg">
+              {currentMode.name}
+              {isAgencyMode && <Text className="text-xs text-orange-500"> • Agency</Text>}
+            </H1>
             <Text className="text-xs" style={{ color: mutedTextColor }}>
-              {currentMode.description}
+              {isAgencyMode ? "Enhanced AI capabilities active" : currentMode.description}
             </Text>
           </View>
           <Ionicons name="chevron-down" size={20} color={textColor} />
@@ -830,6 +862,7 @@ export default function SmartPlateAI() {
                     <View className="mb-2">
                       <Text className="font-semibold text-lg" style={{ color: currentMode.color }}>
                         {currentMode.name}
+                        {isAgencyMode && <Text className="text-xs text-orange-500"> • Agency Mode</Text>}
                       </Text>
                     </View>
                     
@@ -838,7 +871,10 @@ export default function SmartPlateAI() {
                       style={{ backgroundColor: secondaryBg + '40' }}
                     >
                       <Text style={{ color: textColor }} className="text-base leading-6">
-                        Hello! I'm your {currentMode.name} assistant. {currentMode.description}. How can I help you today?
+                        {isAgencyMode 
+                          ? `Hello! I'm your enhanced ${currentMode.name} agent with advanced capabilities. ${currentMode.description}. My enhanced intelligence is ready to assist you. How can I help you today?`
+                          : `Hello! I'm your ${currentMode.name} assistant. ${currentMode.description}. How can I help you today?`
+                        }
                       </Text>
                       <Text className="text-xs mt-3" style={{ color: mutedTextColor }}>
                         {format(new Date(), 'h:mm a')}
@@ -867,6 +903,7 @@ export default function SmartPlateAI() {
                     <View className="mb-2">
                       <Text className="font-semibold text-lg" style={{ color: currentMode.color }}>
                         {currentMode.name}
+                        {isAgencyMode && <Text className="text-xs text-orange-500"> • Agency Mode</Text>}
                       </Text>
                     </View>
                     
@@ -876,7 +913,9 @@ export default function SmartPlateAI() {
                     >
                       <View className="flex-row items-center">
                         <ActivityIndicator size="small" color={textColor} />
-                        <Text className="ml-2" style={{ color: textColor }}>Analyzing...</Text>
+                        <Text className="ml-2" style={{ color: textColor }}>
+                          {isAgencyMode ? "Processing with enhanced AI..." : "Analyzing..."}
+                        </Text>
                       </View>
                       <Text className="text-xs mt-3" style={{ color: mutedTextColor }}>
                         {format(new Date(), 'h:mm a')}
@@ -928,7 +967,10 @@ export default function SmartPlateAI() {
                 ref={inputRef}
                 value={inputText}
                 onChangeText={setInputText}
-                placeholder={currentMode.placeholder}
+                placeholder={isAgencyMode 
+                  ? `Enhanced ${currentMode.name} ready for complex queries...`
+                  : currentMode.placeholder
+                }
                 placeholderTextColor={mutedTextColor}
                 className="border rounded-2xl px-4 py-3 text-base min-h-[48px] max-h-32"
                 style={{ 
@@ -948,7 +990,7 @@ export default function SmartPlateAI() {
               disabled={(!inputText.trim() && selectedImages.length === 0) || isLoading}
               className="w-12 h-12 rounded-full items-center justify-center"
               style={{ 
-                backgroundColor: currentMode.color,
+                backgroundColor: isAgencyMode ? '#f97316' : currentMode.color,
                 opacity: ((!inputText.trim() && selectedImages.length === 0) || isLoading) ? 0.5 : 1 
               }}
             >
