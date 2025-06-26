@@ -1051,7 +1051,13 @@ export default function Home() {
 							<View className="flex-row items-center mb-3">
 								<View className="w-12 h-12 bg-green-600 rounded-full items-center justify-center mr-3">
 									<Image 
-										source={isAgencyMode ? require('../../../assets/foodloop-male.png') : require('../../../assets/2.png')} 
+										source={
+										isAgencyMode 
+											? (Math.random() < 0.1 
+												? require('../../../assets/foodloop-female.png') 
+												: require('../../../assets/foodloop-male.png'))
+											: require('../../../assets/2.png')
+										} 
 										className="w-8 h-8"
 										resizeMode="contain"
 									/>
@@ -1185,7 +1191,11 @@ export default function Home() {
 				>
 					<Animated.View style={agencyLogoStyle}>
 						<Image
-							source={require('@/assets/foodloop-male.png')}
+							source={
+							Math.random() < 0.1 
+								? require('@/assets/foodloop-female.png') 
+								: require('@/assets/foodloop-male.png')
+							}
 							className="w-32 h-32 mb-4"
 							resizeMode="contain"
 						/>
