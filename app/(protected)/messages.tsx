@@ -1,3 +1,4 @@
+// app/(protected)/messages.tsx
 import React, { useState, useEffect } from "react";
 import {
 	View,
@@ -176,9 +177,12 @@ export default function MessagesScreen() {
 		await fetchConversations();
 		setRefreshing(false);
 	};
+	
 	useEffect(() => {
 		fetchConversations();
-	}, [session?.user?.id]);	// Set up realtime subscriptions for conversations and messages
+	}, [session?.user?.id]);	
+	
+	// Set up realtime subscriptions for conversations and messages
 	useEffect(() => {
 		if (!session?.user?.id || loading) return;
 
@@ -290,48 +294,64 @@ export default function MessagesScreen() {
 		return (
 			<TouchableOpacity
 				key={conversation.id}
-				className={`p-4 border-b border-border ${isUnread ? "bg-blue-50 dark:bg-blue-900/20" : ""}`}
+				className="mx-4 mb-3 p-4 bg-card rounded-2xl border border-border/50 shadow-sm active:scale-[0.98] transition-all"
 				onPress={() => router.push(`/conversation/${conversation.id}` as any)}
 			>
 				<View className="flex-row items-center">
-					{/* User Avatar */}
-					<View className="w-12 h-12 rounded-full bg-secondary items-center justify-center mr-3">
-						{otherUser?.avatar ? (
-							<Image
-								source={{ uri: otherUser.avatar }}
-								className="w-12 h-12 rounded-full"
-								resizeMode="cover"
-							/>
-						) : (
-							<Text className="text-lg font-bold">
-								{displayName.charAt(0).toUpperCase()}
-							</Text>
-						)}
+					{/* User Avatar with online indicator */}
+					<View className="relative mr-4">
+						<View className="w-14 h-14 rounded-full bg-muted items-center justify-center border-2 border-background shadow-sm">
+							{otherUser?.avatar ? (
+								<Image
+									source={{ uri: otherUser.avatar }}
+									className="w-12 h-12 rounded-full"
+									resizeMode="cover"
+								/>
+							) : (
+								<Text className="text-lg font-bold text-muted-foreground">
+									{displayName.charAt(0).toUpperCase()}
+								</Text>
+							)}
+						</View>
+						{/* Online indicator */}
+						<View className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-background" />
 					</View>
 
 					{/* Conversation Details */}
 					<View className="flex-1 mr-3">
-						<View className="flex-row items-center justify-between mb-1">
-							<Text
-								className={`font-semibold text-base ${isUnread ? "text-blue-700 dark:text-blue-300" : ""}`}
-							>
+						<View className="flex-row items-center justify-between mb-2">
+							<Text className={`font-semibold text-lg ${isUnread ? "text-foreground" : "text-foreground/90"}`}>
 								{displayName}
 							</Text>
-							<Text className="text-xs text-muted-foreground">{timeAgo}</Text>
+							<Text className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
+								{timeAgo}
+							</Text>
 						</View>
 
 						{product && (
-							<Text className="text-sm text-muted-foreground mb-1">
-								{product.name} • ${product.price.toFixed(2)}
-							</Text>
+							<View className="flex-row items-center mb-2">
+								<View className="w-2 h-2 bg-primary rounded-full mr-2" />
+								<Text className="text-sm text-muted-foreground font-medium">
+									{product.name}
+								</Text>
+								<Text className="text-sm font-bold text-primary ml-auto">
+									${product.price.toFixed(2)}
+								</Text>
+							</View>
 						)}
 
 						{lastMessage && (
 							<Text
-								className={`text-sm ${isUnread ? "font-medium" : "text-muted-foreground"}`}
+								className={`text-sm leading-5 ${
+									isUnread 
+										? "text-foreground font-medium" 
+										: "text-muted-foreground"
+								}`}
 								numberOfLines={2}
 							>
-								{lastMessage.sender_id === session?.user?.id ? "You: " : ""}
+								{lastMessage.sender_id === session?.user?.id ? (
+									<Text className="text-primary font-medium">You: </Text>
+								) : null}
 								{lastMessage.message_type === "offer"
 									? "💰 Sent an offer"
 									: lastMessage.content}
@@ -339,23 +359,33 @@ export default function MessagesScreen() {
 						)}
 					</View>
 
-					{/* Product Image & Indicators */}
-					<View className="items-center">
+					{/* Product Image & Status Indicators */}
+					<View className="items-center space-y-2">
 						{productImage && (
-							<Image
-								source={{ uri: productImage }}
-								className="w-10 h-10 rounded-lg mb-1"
-								resizeMode="cover"
-							/>
-						)}
-						{isUnread && (
-							<View className="bg-blue-500 rounded-full w-5 h-5 items-center justify-center">
-								<Text className="text-white text-xs font-bold">
-									{conversation.unread_count}
-								</Text>
+							<View className="w-12 h-12 rounded-xl overflow-hidden border border-border/50 shadow-sm">
+								<Image
+									source={{ uri: productImage }}
+									className="w-full h-full"
+									resizeMode="cover"
+								/>
 							</View>
 						)}
-						<Ionicons name="chevron-forward" size={16} color="#666" />
+						
+						<View className="flex-row items-center space-x-1">
+							{isUnread && (
+								<View className="bg-primary rounded-full min-w-[20px] h-5 items-center justify-center px-1.5">
+									<Text className="text-primary-foreground text-xs font-bold">
+										{conversation.unread_count}
+									</Text>
+								</View>
+							)}
+							<Ionicons 
+								name="chevron-forward" 
+								size={14} 
+								color="#a1a1aa" 
+								className="opacity-60" 
+							/>
+						</View>
 					</View>
 				</View>
 			</TouchableOpacity>
@@ -366,10 +396,12 @@ export default function MessagesScreen() {
 		return (
 			<SafeAreaView className="flex-1 bg-background">
 				<View className="flex-1 items-center justify-center">
-					<ActivityIndicator size="large" color="#10b981" />
-					<Text className="mt-4 text-muted-foreground">
-						Loading conversations...
-					</Text>
+					<View className="bg-card rounded-2xl p-8 shadow-lg border border-border/50">
+						<ActivityIndicator size="large" color="#10b981" />
+						<Text className="mt-4 text-muted-foreground font-medium">
+							Loading conversations...
+						</Text>
+					</View>
 				</View>
 			</SafeAreaView>
 		);
@@ -377,50 +409,77 @@ export default function MessagesScreen() {
 
 	return (
 		<SafeAreaView className="flex-1 bg-background">
-			{/* Header */}
-			<View className="flex-row items-center justify-between px-4 py-3 border-b border-border">
-				<TouchableOpacity onPress={() => router.back()}>
-					<Ionicons name="chevron-back" size={24} color="#666" />
-				</TouchableOpacity>
-				<H1 className="flex-1 text-center">Messages</H1>
-				<View className="w-6" />
+			{/* Premium Header */}
+			<View className="px-4 py-6 bg-card border-b border-border/50">
+				<View className="flex-row items-center justify-between">
+					<TouchableOpacity 
+						onPress={() => router.back()}
+						className="w-10 h-10 rounded-xl bg-muted items-center justify-center active:scale-95 transition-all"
+					>
+						<Ionicons name="chevron-back" size={20} color="#6b7280" />
+					</TouchableOpacity>
+					
+					<View className="flex-1 items-center">
+						<H1 className="text-2xl font-bold text-foreground">Messages</H1>
+						<Text className="text-sm text-muted-foreground font-medium">
+							{conversations.length} {conversations.length === 1 ? 'conversation' : 'conversations'}
+						</Text>
+					</View>
+					
+					<TouchableOpacity 
+						onPress={onRefresh}
+						className="w-10 h-10 rounded-xl bg-muted items-center justify-center active:scale-95 transition-all"
+					>
+						<Ionicons name="refresh" size={18} color="#6b7280" />
+					</TouchableOpacity>
+				</View>
 			</View>
 
 			{conversations.length === 0 ? (
-				// Empty state
-				<View className="flex-1 items-center justify-center p-6">
-					<Text className="text-6xl mb-4">💬</Text>
-					<H3 className="text-center mb-2">No conversations yet</H3>
-					<Text className="text-center text-muted-foreground mb-6">
-						Start shopping and add items to your cart to begin conversations
-						with business owners
-					</Text>
-					<TouchableOpacity
-						className="bg-primary px-6 py-3 rounded-xl"
-						onPress={() => {
-							router.back();
-							router.push("/(protected)/(tabs)/marketplace");
-						}}
-					>
-						<Text className="text-primary-foreground font-semibold">
-							Browse Marketplace
+				// Premium Empty State
+				<View className="flex-1 items-center justify-center p-8">
+					<View className="bg-card rounded-3xl p-8 shadow-lg border border-border/50 max-w-sm w-full">
+						<View className="w-20 h-20 rounded-full bg-muted items-center justify-center mx-auto mb-6">
+							<Ionicons name="chatbubbles-outline" size={32} color="#6b7280" />
+						</View>
+						
+						<H3 className="text-center mb-3 text-xl font-bold">No conversations yet</H3>
+						<Text className="text-center text-muted-foreground mb-8 leading-6">
+							Connect with sellers and buyers to start meaningful conversations about products you're interested in.
 						</Text>
-					</TouchableOpacity>
+						
+						<TouchableOpacity
+							className="bg-primary py-4 px-6 rounded-xl shadow-sm active:scale-95 transition-all"
+							onPress={() => {
+								router.back();
+								router.push("/(protected)/(tabs)/marketplace");
+							}}
+						>
+							<Text className="text-primary-foreground font-semibold text-center text-base">
+								Explore Marketplace
+							</Text>
+						</TouchableOpacity>
+					</View>
 				</View>
 			) : (
-				// Conversations list
+				// Premium Conversations List
 				<ScrollView
-					className="flex-1"
+					className="flex-1 pt-4"
+					showsVerticalScrollIndicator={false}
 					refreshControl={
 						<RefreshControl
 							refreshing={refreshing}
 							onRefresh={onRefresh}
 							colors={["#10b981"]}
 							tintColor="#10b981"
+							progressBackgroundColor="#ffffff"
 						/>
 					}
 				>
 					{conversations.map(renderConversationItem)}
+					
+					{/* Bottom padding for last item */}
+					<View className="h-6" />
 				</ScrollView>
 			)}
 		</SafeAreaView>
