@@ -14,6 +14,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system";
 import { decode } from "base64-arraybuffer";
 import { nanoid } from "nanoid";
+import { format } from "date-fns";
 import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
 import { H1 } from "@/components/ui/typography";
@@ -27,9 +28,9 @@ import {
 	usePostReplies,
 	useCreateReply,
 	usePostVoting,
+	useReplyVoting,
 } from "@/hooks/useCommunity";
 import { PostReply } from "@/types/community";
-import { format } from "date-fns";
 import { supabase } from "@/config/supabase";
 
 export default function PostDetailPage() {
@@ -46,6 +47,7 @@ export default function PostDetailPage() {
 	} = usePostReplies(postId);
 	const { createReply, loading: replyLoading } = useCreateReply();
 	const { votePost, loading: voteLoading } = usePostVoting();
+	const { voteReply, loading: replyVoteLoading } = useReplyVoting();
 	const [replyContent, setReplyContent] = useState("");
 	const [replyingTo, setReplyingTo] = useState<number | null>(null);
 	const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(
@@ -99,6 +101,13 @@ export default function PostDetailPage() {
 		const success = await votePost(postId, voteType);
 		if (success) {
 			refetchPost();
+		}
+	};
+
+	const handleReplyVote = async (replyId: number, voteType: "up" | "down") => {
+		const success = await voteReply(replyId, voteType);
+		if (success) {
+			refetchReplies();
 		}
 	};
 
@@ -331,175 +340,137 @@ export default function PostDetailPage() {
 
 	const showReplyImageOptions = () => {
 		Alert.alert(
-			"Add Images",
-			"Choose how you'd like to add images to your reply",
+			"Add Image",
+			"Choose how you'd like to add an image",
 			[
-				{
-					text: "Cancel",
-					style: "cancel",
-				},
-				{
-					text: "Take Photo",
-					onPress: takeReplyPhoto,
-				},
-				{
-					text: "Choose from Library",
-					onPress: pickReplyImages,
-				},
-			],
+				{ text: "Camera", onPress: takeReplyPhoto },
+				{ text: "Photo Library", onPress: pickReplyImages },
+				{ text: "Cancel", style: "cancel" },
+			]
 		);
 	};
 
 	const renderReply = ({ item }: { item: PostReply }) => (
-		<View className="bg-card rounded-xl p-4 mb-3 border border-border">
-			{/* Reply Header */}
-			<View className="flex-row items-center justify-between mb-3">
-				<View className="flex-row items-center">
-					<View className="w-8 h-8 rounded-full overflow-hidden mr-2">
-						{item.author?.avatar ? (
-							<Image
-								source={{ uri: item.author.avatar }}
-								className="w-8 h-8"
-								resizeMode="cover"
-							/>
-						) : (
-							<View className="w-8 h-8 bg-primary/80 rounded-full items-center justify-center">
-								<Text className="text-white text-xs font-bold">
-									{item.author?.name
-										? item.author.name.charAt(0).toUpperCase()
-										: "U"}
-								</Text>
-							</View>
-						)}
-					</View>
-					<View>
-						<Text className="font-medium text-foreground">
-							{item.author?.name || item.author?.username || "Anonymous"}
-						</Text>
-						<Text className="text-xs text-muted-foreground">
-							{format(new Date(item.created_at), "MMM d, yyyy 'at' h:mm a")}
-						</Text>
-					</View>
-				</View>
-				{item.is_accepted && (
-					<View className="bg-green-100 dark:bg-green-900/30 px-2 py-1 rounded-full">
-						<Text className="text-green-600 dark:text-green-400 text-xs font-medium">
-							✓ Accepted
-						</Text>
-					</View>
-				)}
-			</View>
-			{/* Reply Content */}
-			<Text className="text-foreground mb-3 leading-5">{item.content}</Text>
-			{/* Reply Images */}
-			{item.images && item.images.length > 0 && (
-				<View className="mb-3">
-					<ScrollView
-						horizontal
-						showsHorizontalScrollIndicator={false}
-						contentContainerStyle={{ paddingRight: 16 }}
-					>
-						<View className="flex-row">
-							{item.images.map((imageUrl, index) => (
-								<TouchableOpacity
-									key={index}
-									onPress={() => openImageModal(index, item.images || [])}
-									className="mr-2"
-								>
-									<Image
-										source={{ uri: imageUrl }}
-										className="w-16 h-16 rounded-lg"
-										resizeMode="cover"
-									/>
-								</TouchableOpacity>
-							))}
+		<View className="border-l-2 border-border/50 ml-4 pl-4 mb-4">
+			<View className="flex-row items-start">
+				{/* Author Avatar */}
+				<View className="mr-3">
+					{item.author?.avatar ? (
+						<Image
+							source={{ uri: item.author.avatar }}
+							className="w-8 h-8 rounded-full"
+							resizeMode="cover"
+						/>
+					) : (
+						<View className="w-8 h-8 bg-primary/80 rounded-full items-center justify-center">
+							<Text className="text-white text-xs font-bold">
+								{item.author?.name
+									? item.author.name.charAt(0).toUpperCase()
+									: "U"}
+							</Text>
 						</View>
-					</ScrollView>
-				</View>
-			)}
-			{/* Reply Actions */}
-			<View className="flex-row items-center justify-between">
-				<View className="flex-row items-center">
-					<TouchableOpacity
-						onPress={() => {
-							/* TODO: Implement reply voting */
-						}}
-						className="flex-row items-center mr-4"
-					>
-						<Ionicons
-							name="arrow-up-outline"
-							size={16}
-							color={mutedTextColor}
-						/>
-						<Text className="text-muted-foreground text-sm ml-1">
-							{item.upvotes}
-						</Text>
-					</TouchableOpacity>
-					<TouchableOpacity
-						onPress={() => {
-							/* TODO: Implement reply voting */
-						}}
-						className="flex-row items-center mr-4"
-					>
-						<Ionicons
-							name="arrow-down-outline"
-							size={16}
-							color={mutedTextColor}
-						/>
-						<Text className="text-muted-foreground text-sm ml-1">
-							{item.downvotes}
-						</Text>
-					</TouchableOpacity>
+					)}
 				</View>
 
-				<TouchableOpacity
-					onPress={() => setReplyingTo(item.id)}
-					className="flex-row items-center"
-				>
-					<Ionicons
-						name="chatbubble-outline"
-						size={16}
-						color={mutedTextColor}
-					/>
-					<Text className="text-muted-foreground text-sm ml-1">Reply</Text>
-				</TouchableOpacity>
-			</View>
-			{/* Reply to this reply */}
-			{replyingTo === item.id && (
-				<View className="mt-4 pt-4 border-t border-border">
-					<Text className="text-muted-foreground text-sm mb-2">
-						Replying to {item.author?.name || "this comment"}
+				<View className="flex-1">
+					{/* Author Info */}
+					<View className="flex-row items-center mb-1">
+						<Text className="font-medium text-foreground text-sm">
+							{item.author?.name || item.author?.username || "Anonymous"}
+						</Text>
+						<Text className="text-xs text-muted-foreground ml-2">
+							{format(new Date(item.created_at), "MMM d, h:mm a")}
+						</Text>
+					</View>
+
+					{/* Reply Content */}
+					<Text className="text-foreground mb-3 leading-relaxed">
+						{item.content}
 					</Text>
-					<Textarea
-						placeholder="Write your reply..."
-						value={replyContent}
-						onChangeText={setReplyContent}
-						numberOfLines={3}
-						className="text-foreground mb-3"
-					/>
-					<View className="flex-row space-x-2">
-						<Button
-							onPress={handleReply}
-							disabled={replyLoading || !replyContent.trim()}
-							className="flex-1"
+
+					{/* Reply Images */}
+					{item.images && item.images.length > 0 && (
+						<ScrollView
+							horizontal
+							showsHorizontalScrollIndicator={false}
+							className="mb-3"
+							contentContainerStyle={{ paddingRight: 16 }}
 						>
-							<Text className="text-primary-foreground">
-								{replyLoading ? "Posting..." : "Post Reply"}
+							<View className="flex-row">
+								{item.images.map((imageUrl, index) => (
+									<TouchableOpacity
+										key={index}
+										onPress={() => openImageModal(index, item.images!)}
+										className="mr-2"
+										activeOpacity={0.8}
+									>
+										<Image
+											source={{ uri: imageUrl }}
+											className="w-20 h-20 rounded-lg"
+											resizeMode="cover"
+										/>
+									</TouchableOpacity>
+								))}
+							</View>
+						</ScrollView>
+					)}
+
+					{/* Vote Buttons */}
+					<View className="flex-row items-center">
+						<TouchableOpacity
+							onPress={() => handleReplyVote(item.id, "up")}
+							className={`flex-row items-center mr-4 px-2 py-1 rounded-full ${
+								item.user_vote === "up" 
+									? "bg-green-100 dark:bg-green-900/30" 
+									: "bg-secondary/50"
+							}`}
+							activeOpacity={0.7}
+							disabled={replyVoteLoading}
+						>
+							<Ionicons
+								name="arrow-up"
+								size={16}
+								color={item.user_vote === "up" ? "#16a34a" : mutedTextColor}
+							/>
+							<Text
+								className={`ml-1 text-sm ${
+									item.user_vote === "up" 
+										? "text-green-600 dark:text-green-400 font-semibold" 
+										: "text-muted-foreground"
+								}`}
+							>
+								{item.upvotes}
 							</Text>
-						</Button>
-						<Button
-							onPress={() => {
-								setReplyingTo(null);
-								setReplyContent("");
-							}}
-							variant="outline"
-							className="flex-1"
+						</TouchableOpacity>
+
+						<TouchableOpacity
+							onPress={() => handleReplyVote(item.id, "down")}
+							className={`flex-row items-center px-2 py-1 rounded-full ${
+								item.user_vote === "down" 
+									? "bg-red-100 dark:bg-red-900/30" 
+									: "bg-secondary/50"
+							}`}
+							activeOpacity={0.7}
+							disabled={replyVoteLoading}
 						>
-							<Text className="text-foreground">Cancel</Text>
-						</Button>
+							<Ionicons
+								name="arrow-down"
+								size={16}
+								color={item.user_vote === "down" ? "#dc2626" : mutedTextColor}
+							/>
+							<Text
+								className={`ml-1 text-sm ${
+									item.user_vote === "down" 
+										? "text-red-600 dark:text-red-400 font-semibold" 
+										: "text-muted-foreground"
+								}`}
+							>
+								{item.downvotes}
+							</Text>
+						</TouchableOpacity>
 					</View>
 				</View>
-			)}
+			</View>
 		</View>
 	);
 

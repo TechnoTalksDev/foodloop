@@ -54,6 +54,10 @@ export const useGroup = (groupId: number) => {
   const fetchGroup = async () => {
     try {
       setLoading(true);
+      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const { data, error } = await supabase
         .from('groups')
         .select(`
@@ -64,7 +68,22 @@ export const useGroup = (groupId: number) => {
         .single();
 
       if (error) throw error;
-      setGroup(data);
+      
+      // Check if current user is a member
+      let is_member = false;
+      if (user) {
+        const { data: memberData } = await supabase
+          .from('group_members')
+          .select('id')
+          .eq('group_id', groupId)
+          .eq('user_id', user.id)
+          .eq('is_active', true)
+          .single();
+          
+        is_member = !!memberData;
+      }
+      
+      setGroup({ ...data, is_member });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error fetching group');
     } finally {
@@ -137,6 +156,10 @@ export const usePosts = (filters?: { groupId?: number; postType?: string }) => {
   const fetchPosts = async () => {
     try {
       setLoading(true);
+      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
       let query = supabase
         .from('posts')
         .select(`
@@ -157,7 +180,27 @@ export const usePosts = (filters?: { groupId?: number; postType?: string }) => {
       const { data, error } = await query;
 
       if (error) throw error;
-      setPosts(data || []);
+      
+      // Get user votes for all posts if user is authenticated
+      let postsWithVotes = data || [];
+      if (user && data) {
+        const postIds = data.map(p => p.id);
+        const { data: votes } = await supabase
+          .from('post_votes')
+          .select('post_id, vote_type')
+          .eq('user_id', user.id)
+          .in('post_id', postIds);
+          
+        postsWithVotes = data.map(post => {
+          const userVote = votes?.find(v => v.post_id === post.id);
+          return {
+            ...post,
+            user_vote: userVote?.vote_type || null
+          };
+        });
+      }
+      
+      setPosts(postsWithVotes);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error fetching posts');
     } finally {
@@ -181,6 +224,10 @@ export const usePopularPosts = () => {
   const fetchPopularPosts = async () => {
     try {
       setLoading(true);
+      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const { data, error } = await supabase
         .from('posts')
         .select(`
@@ -192,7 +239,27 @@ export const usePopularPosts = () => {
         .limit(3);
 
       if (error) throw error;
-      setPosts(data || []);
+      
+      // Get user votes for all posts if user is authenticated
+      let postsWithVotes = data || [];
+      if (user && data) {
+        const postIds = data.map(p => p.id);
+        const { data: votes } = await supabase
+          .from('post_votes')
+          .select('post_id, vote_type')
+          .eq('user_id', user.id)
+          .in('post_id', postIds);
+          
+        postsWithVotes = data.map(post => {
+          const userVote = votes?.find(v => v.post_id === post.id);
+          return {
+            ...post,
+            user_vote: userVote?.vote_type || null
+          };
+        });
+      }
+      
+      setPosts(postsWithVotes);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error fetching popular posts');
     } finally {
@@ -250,6 +317,10 @@ export const usePost = (postId: number) => {
   const fetchPost = async () => {
     try {
       setLoading(true);
+      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const { data, error } = await supabase
         .from('posts')
         .select(`
@@ -261,7 +332,21 @@ export const usePost = (postId: number) => {
         .single();
 
       if (error) throw error;
-      setPost(data);
+      
+      // Check if current user has voted on this post
+      let user_vote = null;
+      if (user) {
+        const { data: voteData } = await supabase
+          .from('post_votes')
+          .select('vote_type')
+          .eq('post_id', postId)
+          .eq('user_id', user.id)
+          .single();
+          
+        user_vote = voteData?.vote_type || null;
+      }
+      
+      setPost({ ...data, user_vote });
 
       // Increment view count
       await supabase
@@ -372,19 +457,8 @@ export const usePostVoting = () => {
           });
       }
 
-      // Update post vote counts
-      const { data: votes } = await supabase
-        .from('post_votes')
-        .select('vote_type')
-        .eq('post_id', postId);
-
-      const upvotes = votes?.filter(v => v.vote_type === 'up').length || 0;
-      const downvotes = votes?.filter(v => v.vote_type === 'down').length || 0;
-
-      await supabase
-        .from('posts')
-        .update({ upvotes, downvotes })
-        .eq('id', postId);
+      // Fallback: manually sync vote counts if trigger doesn't work
+      await supabase.rpc('sync_post_vote_counts', { post_id_param: postId });
 
       return true;
     } catch (err) {
@@ -398,6 +472,64 @@ export const usePostVoting = () => {
   return { votePost, loading };
 };
 
+// Reply voting
+export const useReplyVoting = () => {
+  const [loading, setLoading] = useState(false);
+
+  const voteReply = async (replyId: number, voteType: 'up' | 'down'): Promise<boolean> => {
+    try {
+      setLoading(true);
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) return false;
+
+      // Check if user already voted
+      const { data: existingVote } = await supabase
+        .from('post_votes')
+        .select('*')
+        .eq('user_id', user.user.id)
+        .eq('reply_id', replyId)
+        .single();
+
+      if (existingVote) {
+        if (existingVote.vote_type === voteType) {
+          // Remove vote if same vote type
+          await supabase
+            .from('post_votes')
+            .delete()
+            .eq('id', existingVote.id);
+        } else {
+          // Update vote type
+          await supabase
+            .from('post_votes')
+            .update({ vote_type: voteType })
+            .eq('id', existingVote.id);
+        }
+      } else {
+        // Create new vote
+        await supabase
+          .from('post_votes')
+          .insert({
+            user_id: user.user.id,
+            reply_id: replyId,
+            vote_type: voteType,
+          });
+      }
+
+      // Fallback: manually sync vote counts if trigger doesn't work
+      await supabase.rpc('sync_reply_vote_counts');
+
+      return true;
+    } catch (err) {
+      console.error('Error voting on reply:', err);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { voteReply, loading };
+};
+
 // Post replies
 export const usePostReplies = (postId: number) => {
   const [replies, setReplies] = useState<PostReply[]>([]);
@@ -407,6 +539,10 @@ export const usePostReplies = (postId: number) => {
   const fetchReplies = async () => {
     try {
       setLoading(true);
+      
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const { data, error } = await supabase
         .from('post_replies')
         .select(`
@@ -418,7 +554,27 @@ export const usePostReplies = (postId: number) => {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setReplies(data || []);
+      
+      // Get user votes for all replies if user is authenticated
+      let repliesWithVotes = data || [];
+      if (user && data) {
+        const replyIds = data.map(r => r.id);
+        const { data: votes } = await supabase
+          .from('post_votes')
+          .select('reply_id, vote_type')
+          .eq('user_id', user.id)
+          .in('reply_id', replyIds);
+          
+        repliesWithVotes = data.map(reply => {
+          const userVote = votes?.find(v => v.reply_id === reply.id);
+          return {
+            ...reply,
+            user_vote: userVote?.vote_type || null
+          };
+        });
+      }
+      
+      setReplies(repliesWithVotes);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error fetching replies');
     } finally {
@@ -493,9 +649,7 @@ export const useJoinGroup = () => {
 
       if (error) throw error;
 
-      // Update group member count
-      await supabase.rpc('increment_group_member_count', { group_id: groupId });
-
+      // Member count is automatically updated by the database trigger
       return true;
     } catch (err) {
       console.error('Error joining group:', err);
@@ -519,9 +673,7 @@ export const useJoinGroup = () => {
 
       if (error) throw error;
 
-      // Update group member count
-      await supabase.rpc('decrement_group_member_count', { group_id: groupId });
-
+      // Member count is automatically updated by the database trigger
       return true;
     } catch (err) {
       console.error('Error leaving group:', err);
