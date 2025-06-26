@@ -425,7 +425,10 @@ export default function Marketplace() {
 
 	return (
 		<SafeAreaView className="flex-1 bg-background">
-			<ScrollView>
+			<ScrollView
+				contentContainerStyle={{ paddingBottom: 50 }}
+				showsVerticalScrollIndicator={false}
+			>
 				{/* REPLACE the existing header with this updated version */}
 				<View className="flex-row justify-between items-center px-4 py-3">
 					<TouchableOpacity onPress={() => router.push("/(protected)/notification-modal")}>
