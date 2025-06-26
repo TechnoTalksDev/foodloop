@@ -706,14 +706,16 @@ export default function Marketplace() {
 			{/* Floating Action Button */}
 			<TouchableOpacity
 				onPress={() => router.push("/(protected)/create-product-modal")}
-				className="absolute bottom-14 right-6 w-16 h-16 rounded-full shadow-lg active:scale-95"
+				className="absolute right-6 w-16 h-16 rounded-full shadow-lg active:scale-95"
 				style={{
+					bottom: 100, // Position above the tab bar (84px height + 16px margin)
 					backgroundColor: colorScheme === "dark" ? "#10b981" : "#10b981",
 					shadowColor: "#000",
 					shadowOffset: { width: 0, height: 4 },
 					shadowOpacity: 0.7,
 					shadowRadius: 8,
 					elevation: 8,
+					zIndex: 1000, // Ensure it stays above other elements
 				}}
 				activeOpacity={0.8}
 			>
