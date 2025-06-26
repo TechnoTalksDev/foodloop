@@ -14,6 +14,7 @@ import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
 import { H1 } from "@/components/ui/typography";
 import { useAuth } from "@/context/supabase-provider";
+import { useNotifications } from "@/context/notification-provider";
 import { supabase } from "@/config/supabase";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -38,267 +39,6 @@ const communityTabs = [
 	{ id: "posts", name: "Posts" },
 ];
 
-// Original recommended posts data
-const recommendedPosts = [
-	{
-		id: 1,
-		title: "Greens",
-		count: "25 posts",
-		color: "bg-green-600",
-		icon: "🍃",
-	},
-	{
-		id: 2,
-		title: "Tutorials",
-		count: "34 posts",
-		color: "bg-green-700",
-		icon: "📚",
-	},
-	{
-		id: 3,
-		title: "Q&A",
-		count: "164 posts",
-		color: "bg-green-800",
-		icon: "❓",
-	},
-];
-
-// Plant recommended posts
-const plantRecommendedPosts = [
-	{
-		id: 1,
-		title: "Tomato Care",
-		count: "89 posts",
-		color: "bg-red-600",
-		icon: "🍅",
-	},
-	{
-		id: 2,
-		title: "Herb Garden",
-		count: "156 posts",
-		color: "bg-green-600",
-		icon: "🌿",
-	},
-	{
-		id: 3,
-		title: "Pest Control",
-		count: "234 posts",
-		color: "bg-yellow-600",
-		icon: "🐛",
-	},
-];
-
-// Original forum posts
-const forumPosts = [
-	{
-		id: 1,
-		title: "Exported artboards are not overwriting existing exports",
-		description:
-			"If you have exported artboards (say PNG), make changes, and then export again a dialog prompts you to overwrite...",
-		author: {
-			name: "Jane Doe",
-			avatar: "👤",
-		},
-		answers: 15,
-		date: "March 23",
-		tag: "#artboard",
-		arrow: "→",
-	},
-	{
-		id: 2,
-		title: "Exporting to Zeplin",
-		description:
-			"What's the right way to export a designed card to Zeplin without detaching it from a shared library?",
-		author: {
-			name: "John Smith",
-			avatar: "👤",
-		},
-		answers: 5,
-		date: "March 14",
-		tag: "#zeplin",
-		arrow: "→",
-	},
-	{
-		id: 3,
-		title: "How to reduce food waste in restaurants?",
-		description:
-			"Looking for practical tips and strategies that work for small to medium sized restaurants...",
-		author: {
-			name: "Chef Maria",
-			avatar: "👨‍🍳",
-		},
-		answers: 23,
-		date: "March 20",
-		tag: "#sustainability",
-		arrow: "→",
-	},
-	{
-		id: 4,
-		title: "Best practices for food donation programs",
-		description:
-			"Starting a food donation program at our local store. What are the legal requirements and best practices?",
-		author: {
-			name: "Store Manager",
-			avatar: "🏪",
-		},
-		answers: 12,
-		date: "March 18",
-		tag: "#donation",
-		arrow: "→",
-	},
-];
-
-// Plant forum posts
-const plantForumPosts = [
-	{
-		id: 1,
-		title: "My tomatoes are getting yellow leaves - what should I do?",
-		description:
-			"I planted cherry tomatoes 6 weeks ago and they were doing great, but now the bottom leaves are turning yellow...",
-		author: {
-			name: "GardenNewbie",
-			avatar: "🌱",
-		},
-		answers: 12,
-		date: "2 hours ago",
-		tag: "#tomatoes",
-		arrow: "→",
-	},
-	{
-		id: 2,
-		title: "Best companion plants for peppers?",
-		description:
-			"Starting my pepper garden next month and want to know what grows well alongside them for natural pest control...",
-		author: {
-			name: "SpicyGrower",
-			avatar: "🌶️",
-		},
-		answers: 8,
-		date: "5 hours ago",
-		tag: "#peppers",
-		arrow: "→",
-	},
-	{
-		id: 3,
-		title: "Successful indoor herb garden setup - photos included!",
-		description:
-			"After 3 months of trial and error, finally got my indoor herbs thriving. Here's my setup and lessons learned...",
-		author: {
-			name: "HerbMaster",
-			avatar: "🌿",
-		},
-		answers: 25,
-		date: "1 day ago",
-		tag: "#herbs",
-		arrow: "→",
-	},
-	{
-		id: 4,
-		title: "When to harvest lettuce for best flavor?",
-		description:
-			"My buttercrunch lettuce is looking good but I'm not sure when to harvest. Should I wait longer or pick now?",
-		author: {
-			name: "LeafyLover",
-			avatar: "🥬",
-		},
-		answers: 7,
-		date: "1 day ago",
-		tag: "#lettuce",
-		arrow: "→",
-	},
-	{
-		id: 5,
-		title: "DIY organic fertilizer that actually works!",
-		description:
-			"Made this simple fertilizer from kitchen scraps and my plants have never looked better. Recipe and results inside...",
-		author: {
-			name: "OrganicGuru",
-			avatar: "♻️",
-		},
-		answers: 34,
-		date: "2 days ago",
-		tag: "#organic",
-		arrow: "→",
-	},
-];
-
-// Original groups data
-const communityGroups = [
-	{
-		id: 1,
-		name: "Local Food Rescue",
-		members: 245,
-		description: "Connecting businesses with surplus food to local charities",
-		category: "Neighborhood",
-	},
-	{
-		id: 2,
-		name: "Zero Waste Living",
-		members: 1203,
-		description: "Tips and tricks for reducing household food waste",
-		category: "Lifestyle",
-	},
-	{
-		id: 3,
-		name: "Student Store Partners",
-		members: 89,
-		description: "University partnerships for campus food waste reduction",
-		category: "Education",
-	},
-];
-
-// Plant community groups
-const plantCommunityGroups = [
-	{
-		id: 1,
-		name: "Beginner Gardeners",
-		members: 1247,
-		description: "Safe space for new gardeners to ask questions and share wins",
-		category: "Learning",
-	},
-	{
-		id: 2,
-		name: "Urban Container Gardens",
-		members: 892,
-		description: "Growing in small spaces - balconies, patios, and indoors",
-		category: "Space-Saving",
-	},
-	{
-		id: 3,
-		name: "Organic Pest Control",
-		members: 634,
-		description: "Natural solutions for keeping pests away from your plants",
-		category: "Organic",
-	},
-	{
-		id: 4,
-		name: "Seed Swappers",
-		members: 445,
-		description: "Trade seeds and cuttings with other local gardeners",
-		category: "Trading",
-	},
-];
-
-// Challenges data (original)
-const activeChallenges = [
-	{
-		id: 1,
-		title: "30-Day Food Waste Challenge",
-		description: "Track and reduce your food waste for 30 days",
-		participants: 156,
-		progress: 75,
-		daysLeft: 12,
-	},
-	{
-		id: 2,
-		title: "Local Business Hero",
-		description: "Purchase from 5 different local businesses",
-		participants: 89,
-		progress: 40,
-		daysLeft: 20,
-	},
-];
-
 export default function Community() {
 	const [activeTab, setActiveTab] = useState("popular");
 	const [refreshing, setRefreshing] = useState(false);
@@ -306,9 +46,11 @@ export default function Community() {
 	// User authentication state
 	const { session } = useAuth();
 	const { colorScheme } = useColorScheme();
+	const { unreadCount, notifications } = useNotifications();
 	const [username, setUsername] = useState<string | null>(null);
 	const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 	const [loadingUser, setLoadingUser] = useState(true);
+
 	// Community data hooks
 	const {
 		groups,
@@ -337,6 +79,19 @@ export default function Community() {
 		error: popularGroupsError,
 		refetch: refetchPopularGroups,
 	} = usePopularGroups();
+
+	// Calculate community-specific notification counts
+	const communityNotificationCount = notifications.filter(n => 
+		['community_post', 'community_reply', 'community_vote', 'group_join', 'group_update'].includes(n.type) && !n.read
+	).length;
+
+	const newPostsCount = notifications.filter(n => 
+		n.type === 'community_post' && !n.read
+	).length;
+
+	const newGroupUpdatesCount = notifications.filter(n => 
+		['group_join', 'group_update'].includes(n.type) && !n.read
+	).length;
 
 	useEffect(() => {
 		const fetchUser = async () => {
@@ -380,21 +135,6 @@ export default function Community() {
 		}
 	};
 
-	const renderRecommendedPost = ({ item }: { item: any }) => (
-		<View className="mr-4">
-			<Pressable
-				className={cn("w-32 h-32 rounded-2xl p-4 justify-between", item.color)}
-			>
-				<Text className="text-4xl">{item.icon}</Text>
-				<View>
-					<Text className="text-white font-semibold text-lg mb-1">
-						{item.title}
-					</Text>
-					<Text className="text-white/80 text-sm">{item.count}</Text>
-				</View>
-			</Pressable>
-		</View>
-	);
 	const renderPost = ({ item }: { item: Post }) => (
 		<Pressable
 			className="bg-card rounded-xl p-4 mb-4 border border-border"
@@ -447,6 +187,7 @@ export default function Community() {
 					</View>
 				)}
 			</View>
+
 			{/* Post Type & Tags - Horizontal ScrollView */}
 			{(item.post_type || (item.tags && item.tags.length > 0)) && (
 				<ScrollView
@@ -477,14 +218,17 @@ export default function Community() {
 					</View>
 				</ScrollView>
 			)}
+
 			{/* Post Title */}
 			<Text className="text-xl font-semibold text-foreground mb-3">
 				{item.title}
 			</Text>
+
 			{/* Post Content */}
 			<Text className="text-foreground mb-4 leading-6" numberOfLines={3}>
 				{item.content}
 			</Text>
+
 			{/* Post Images */}
 			{item.images && item.images.length > 0 && (
 				<View className="mb-4">
@@ -499,7 +243,6 @@ export default function Community() {
 									key={index}
 									onPress={(e) => {
 										e.stopPropagation();
-										// Navigate to post detail where images can be viewed in full
 										router.push(`/(protected)/post/${item.id}` as any);
 									}}
 									className="mr-2 relative"
@@ -509,7 +252,6 @@ export default function Community() {
 										className="w-20 h-20 rounded-lg"
 										resizeMode="cover"
 									/>
-									{/* Show count indicator if there are more images */}
 									{index === 2 && item.images!.length > 3 && (
 										<View className="absolute inset-0 bg-black/60 rounded-lg items-center justify-center">
 											<Text className="text-white font-semibold">
@@ -523,6 +265,7 @@ export default function Community() {
 					</ScrollView>
 				</View>
 			)}
+
 			{/* Post Location */}
 			{item.location && (
 				<View className="flex-row items-center mb-4">
@@ -532,6 +275,7 @@ export default function Community() {
 					</Text>
 				</View>
 			)}
+
 			{/* Post Actions - Match post detail page exactly */}
 			<View className="flex-row items-center justify-between pt-3 border-t border-border">
 				<View className="flex-row items-center">
@@ -592,7 +336,6 @@ export default function Community() {
 		<Pressable
 			className="bg-card rounded-xl p-4 mb-4 border border-border"
 			onPress={() => {
-				// Navigate to group detail or posts filtered by group
 				router.push(`/(protected)/groups/${item.id}` as any);
 			}}
 		>
@@ -650,9 +393,18 @@ export default function Community() {
 				return (
 					<View className="px-4">
 						{/* Popular Posts Section */}
-						<Text className="text-xl font-semibold mb-4 text-foreground">
-							🔥 Most Viewed Posts
-						</Text>
+						<View className="flex-row items-center justify-between mb-4">
+							<Text className="text-xl font-semibold text-foreground">
+								🔥 Most Viewed Posts
+							</Text>
+							{newPostsCount > 0 && (
+								<View className="bg-red-500 px-2 py-1 rounded-full">
+									<Text className="text-white text-xs font-bold">
+										{newPostsCount} new
+									</Text>
+								</View>
+							)}
+						</View>
 						{popularPostsError ? (
 							<View className="py-4 items-center mb-6">
 								<Text className="text-muted-foreground">
@@ -678,9 +430,18 @@ export default function Community() {
 						)}
 
 						{/* Popular Groups Section */}
-						<Text className="text-xl font-semibold mb-4 text-foreground">
-							👥 Top Communities
-						</Text>
+						<View className="flex-row items-center justify-between mb-4">
+							<Text className="text-xl font-semibold text-foreground">
+								👥 Top Communities
+							</Text>
+							{newGroupUpdatesCount > 0 && (
+								<View className="bg-blue-500 px-2 py-1 rounded-full">
+									<Text className="text-white text-xs font-bold">
+										{newGroupUpdatesCount} updates
+									</Text>
+								</View>
+							)}
+						</View>
 						{popularGroupsError ? (
 							<View className="py-4 items-center">
 								<Text className="text-muted-foreground">
@@ -719,9 +480,18 @@ export default function Community() {
 
 				return (
 					<View className="px-4">
-						<Text className="text-xl font-semibold mb-4 text-foreground">
-							Recent Posts
-						</Text>
+						<View className="flex-row items-center justify-between mb-4">
+							<Text className="text-xl font-semibold text-foreground">
+								Recent Posts
+							</Text>
+							{newPostsCount > 0 && (
+								<View className="bg-green-500 px-2 py-1 rounded-full">
+									<Text className="text-white text-xs font-bold">
+										{newPostsCount} new
+									</Text>
+								</View>
+							)}
+						</View>
 						{postsError ? (
 							<View className="py-8 items-center">
 								<Text className="text-muted-foreground">
@@ -760,9 +530,18 @@ export default function Community() {
 
 				return (
 					<View className="px-4">
-						<Text className="text-xl font-semibold mb-4 text-foreground">
-							Community Groups
-						</Text>
+						<View className="flex-row items-center justify-between mb-4">
+							<Text className="text-xl font-semibold text-foreground">
+								Community Groups
+							</Text>
+							{newGroupUpdatesCount > 0 && (
+								<View className="bg-purple-500 px-2 py-1 rounded-full">
+									<Text className="text-white text-xs font-bold">
+										{newGroupUpdatesCount} updates
+									</Text>
+								</View>
+							)}
+						</View>
 						<Text className="text-muted-foreground text-sm mb-4">
 							Join groups based on your interests and location
 						</Text>
@@ -817,9 +596,17 @@ export default function Community() {
 					>
 						<View className="w-10 h-10 items-center justify-center">
 							<Text className="text-2xl">🔔</Text>
-							<View className="absolute top-0 right-0 w-4 h-4 bg-red-500 rounded-full items-center justify-center">
-								<Text className="text-white text-xs font-bold">2</Text>
-							</View>
+							{unreadCount > 0 && (
+								<View className="absolute top-0 right-0 w-5 h-5 bg-red-500 rounded-full items-center justify-center">
+									<Text className="text-white text-xs font-bold">
+										{unreadCount > 99 ? '99+' : unreadCount}
+									</Text>
+								</View>
+							)}
+							{/* Community-specific notification indicator */}
+							{communityNotificationCount > 0 && (
+								<View className="absolute bottom-0 left-0 w-3 h-3 bg-green-500 rounded-full border border-background" />
+							)}
 						</View>
 					</TouchableOpacity>
 
@@ -845,12 +632,36 @@ export default function Community() {
 						</View>
 					</TouchableOpacity>
 				</View>
-				{/* Subtitle */}
-				{/* <View className="px-4 pb-2">
-					<Text className="text-muted-foreground text-base">
-						Connect, share, and learn with the FoodLoop community
-					</Text>
-				</View> */}
+
+				{/* Community notification summary */}
+				{communityNotificationCount > 0 && (
+					<TouchableOpacity
+						onPress={() => router.push("/(protected)/notification-modal")}
+						className="mx-4 mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl"
+						activeOpacity={0.7}
+					>
+						<View className="flex-row items-center">
+							<View className="w-8 h-8 bg-green-500 rounded-full items-center justify-center mr-3">
+								<Text className="text-white text-sm font-bold">
+									{communityNotificationCount}
+								</Text>
+							</View>
+							<View className="flex-1">
+								<Text className="font-semibold text-green-700 dark:text-green-300">
+									Community Updates
+								</Text>
+								<Text className="text-sm text-green-600 dark:text-green-400">
+									{communityNotificationCount === 1 
+										? "You have 1 new community notification"
+										: `You have ${communityNotificationCount} new community notifications`
+									}
+								</Text>
+							</View>
+							<Ionicons name="chevron-forward" size={20} color="#059669" />
+						</View>
+					</TouchableOpacity>
+				)}
+
 				{/* Tab Navigation */}
 				<View className="px-4 mb-6">
 					<View className="flex-row">
@@ -859,7 +670,7 @@ export default function Community() {
 								key={tab.id}
 								onPress={() => setActiveTab(tab.id)}
 								className={cn(
-									"flex-1 px-4 py-3 rounded-full border items-center justify-center",
+									"flex-1 px-4 py-3 rounded-full border items-center justify-center relative",
 									index === 0
 										? "mr-2"
 										: index === communityTabs.length - 1
@@ -878,14 +689,36 @@ export default function Community() {
 								>
 									{tab.name}
 								</Text>
+								{/* Tab-specific notification indicators */}
+								{tab.id === "popular" && (newPostsCount > 0 || newGroupUpdatesCount > 0) && (
+									<View className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full" />
+								)}
+								{tab.id === "posts" && newPostsCount > 0 && (
+									<View className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full items-center justify-center">
+										<Text className="text-white text-xs font-bold">
+											{newPostsCount > 9 ? '9+' : newPostsCount}
+										</Text>
+									</View>
+								)}
+								{tab.id === "groups" && newGroupUpdatesCount > 0 && (
+									<View className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 rounded-full items-center justify-center">
+										<Text className="text-white text-xs font-bold">
+											{newGroupUpdatesCount > 9 ? '9+' : newGroupUpdatesCount}
+										</Text>
+									</View>
+								)}
 							</Pressable>
 						))}
 					</View>
 				</View>
+
 				{/* Tab Content */}
-				{renderTabContent()} {/* Bottom spacing */}
+				{renderTabContent()}
+
+				{/* Bottom spacing */}
 				<View className="h-20" />
 			</ScrollView>
+
 			{/* Floating Action Buttons */}
 			<View className="absolute bottom-14 right-6">
 				{/* Secondary FAB - Group creation (above main FAB) */}
