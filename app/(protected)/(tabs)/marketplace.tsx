@@ -8,7 +8,6 @@ import {
 	TextInput,
 	ActivityIndicator,
 	RefreshControl,
-	Modal,
 	Alert,
 } from "react-native";
 import Animated, {
@@ -95,7 +94,7 @@ const commonTags = [
 ];
 
 export default function Marketplace() {
-	const { focusSearch, timestamp } = useLocalSearchParams();
+	const { focusSearch, timestamp, appliedFilters } = useLocalSearchParams();
 	const searchInputRef = useRef<React.ElementRef<typeof TextInput>>(null);
 	const { colorScheme } = useColorScheme();
 	const { unreadCount } = useNotifications();
@@ -105,7 +104,6 @@ export default function Marketplace() {
 	const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [refreshing, setRefreshing] = useState(false);
-	const [showFilters, setShowFilters] = useState(false);
 
 	// Filter state
 	const [filters, setFilters] = useState<FilterOptions>({
@@ -378,6 +376,18 @@ export default function Marketplace() {
 		}
 	};
 
+	// Apply filters when they come back from the filter modal
+	useEffect(() => {
+		if (appliedFilters) {
+			try {
+				const newFilters = JSON.parse(appliedFilters as string);
+				setFilters(newFilters);
+			} catch (error) {
+				console.error("Error parsing applied filters:", error);
+			}
+		}
+	}, [appliedFilters]);
+
 	// Apply filters whenever filter state changes
 	useEffect(() => {
 		applyFilters();
@@ -412,117 +422,6 @@ export default function Marketplace() {
 			}, 50);
 		}
 	}, [focusSearch, timestamp]);
-
-	const renderFilterModal = () => (
-		<Modal
-			visible={showFilters}
-			animationType="slide"
-			presentationStyle="pageSheet"
-		>
-			<SafeAreaView className="flex-1 bg-background">
-				<View className="flex-row items-center justify-between p-4 border-b border-border">
-					<TouchableOpacity onPress={() => setShowFilters(false)}>
-						<Text className="text-primary text-lg">Cancel</Text>
-					</TouchableOpacity>
-					<Text className="text-lg font-semibold">Filters</Text>
-					<TouchableOpacity onPress={clearFilters}>
-						<Text className="text-red-500 text-lg">Clear</Text>
-					</TouchableOpacity>
-				</View>
-
-				<ScrollView className="flex-1 p-4">
-					{/* Sort Options */}
-					<View className="mb-6">
-						<Text className="text-lg font-semibold mb-3">Sort By</Text>
-						{sortOptions.map((option) => (
-							<TouchableOpacity
-								key={option.id}
-								onPress={() =>
-									setFilters((prev) => ({ ...prev, sortBy: option.id as any }))
-								}
-								className={`flex-row items-center p-3 rounded-lg mb-2 ${
-									filters.sortBy === option.id
-										? "bg-primary/10 border border-primary"
-										: "bg-secondary"
-								}`}
-							>
-								<Ionicons name={option.icon as any} size={20} color="#666" />
-								<Text className="ml-3 flex-1">{option.label}</Text>
-								{filters.sortBy === option.id && (
-									<Ionicons name="checkmark" size={20} color="#10b981" />
-								)}
-							</TouchableOpacity>
-						))}
-					</View>
-
-					{/* Price Range */}
-					<View className="mb-6">
-						<Text className="text-lg font-semibold mb-3">Price Range</Text>
-						<View className="flex-row items-center justify-between">
-							<Text>${filters.priceRange[0]}</Text>
-							<Text>to</Text>
-							<Text>${filters.priceRange[1]}</Text>
-						</View>
-						{/* Price range slider would be implemented here */}
-					</View>
-
-					{/* Tags Filter */}
-					<View className="mb-6">
-						<Text className="text-lg font-semibold mb-3">Tags</Text>
-						<View className="flex-row flex-wrap">
-							{commonTags.map((tag) => (
-								<TouchableOpacity
-									key={tag}
-									onPress={() => {
-										setFilters((prev) => ({
-											...prev,
-											tags: prev.tags.includes(tag)
-												? prev.tags.filter((t) => t !== tag)
-												: [...prev.tags, tag],
-										}));
-									}}
-									className={`mr-2 mb-2 px-3 py-2 rounded-full border ${
-										filters.tags.includes(tag)
-											? "bg-primary border-primary"
-											: "bg-secondary border-border"
-									}`}
-								>
-									<Text
-										className={`text-sm ${
-											filters.tags.includes(tag)
-												? "text-white"
-												: "text-foreground"
-										}`}
-									>
-										{tag}
-									</Text>
-								</TouchableOpacity>
-							))}
-						</View>
-					</View>
-
-					{/* Location Filter */}
-					<View className="mb-6">
-						<Text className="text-lg font-semibold mb-3">Location</Text>
-						<TextInput
-							value={filters.location}
-							onChangeText={(text) =>
-								setFilters((prev) => ({ ...prev, location: text }))
-							}
-							placeholder="Enter location or zip code"
-							className="border border-border rounded-lg p-3 text-base"
-						/>
-					</View>
-				</ScrollView>
-
-				<View className="p-4 border-t border-border">
-					<Button onPress={() => setShowFilters(false)} className="w-full">
-						<Text>Show {filteredProducts.length} Results</Text>
-					</Button>
-				</View>
-			</SafeAreaView>
-		</Modal>
-	);
 
 	return (
 		<SafeAreaView className="flex-1 bg-background">
@@ -572,7 +471,10 @@ export default function Marketplace() {
 								placeholderTextColor="#A0A0A0"
 							/>
 							<TouchableOpacity
-								onPress={() => setShowFilters(true)}
+								onPress={() => router.push({
+									pathname: "/(protected)/filter-modal",
+									params: { filters: JSON.stringify(filters) }
+								})}
 								className="ml-2 p-1"
 							>
 								<View className="flex-row items-center">
@@ -656,7 +558,10 @@ export default function Marketplace() {
 						{filteredProducts.length === 1 ? "result" : "results"} found
 					</Text>
 					<TouchableOpacity
-						onPress={() => setShowFilters(true)}
+						onPress={() => router.push({
+							pathname: "/(protected)/filter-modal",
+							params: { filters: JSON.stringify(filters) }
+						})}
 						className="flex-row items-center"
 					>
 						<Ionicons name="swap-vertical" size={16} color="#666" />
@@ -816,9 +721,6 @@ export default function Marketplace() {
 					<Ionicons name="add" size={28} color="#FFFFFF" />
 				</View>
 			</TouchableOpacity>
-
-			{/* Filter Modal */}
-			{renderFilterModal()}
 		</SafeAreaView>
 	);
 }

@@ -41,6 +41,7 @@ export default function TabsLayout() {
 					intensity={80}
 					tint={colorScheme === "dark" ? "dark" : "light"}
 					style={styles.blurView}
+					experimentalBlurMethod="dimezisBlurView"
 				>
 					<View style={[styles.tabBar, { borderTopColor: borderColor }]}>
 						{state.routes.map((route: any, index: number) => {

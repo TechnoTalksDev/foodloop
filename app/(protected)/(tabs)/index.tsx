@@ -19,7 +19,6 @@ import { format, subMonths, differenceInHours, isToday } from 'date-fns';
 import { weatherService, WeatherData } from "@/lib/weather-service";
 import { useNotifications } from "@/context/notification-provider";
 import { useAchievements } from "@/hooks/useAchievements";
-import { AchievementsModal } from "@/components/achievements-modal";
 
 // Sample food categories with eco-friendly icons
 const foodCategories = [
@@ -599,7 +598,6 @@ export default function Home() {
 
 	// Achievements data - using real hook
 	const { getStats, getNextMilestone, loading: achievementsLoading } = useAchievements();
-	const [achievementsModalVisible, setAchievementsModalVisible] = useState(false);
 	
 	const achievementStats = getStats();
 	const nextMilestone = getNextMilestone();
@@ -788,7 +786,7 @@ export default function Home() {
 				{/* Achievements/Milestones Widget */}
 				<TouchableOpacity 
 					className="mx-4 mb-6 p-5 bg-secondary/30 rounded-2xl border border-border"
-					onPress={() => setAchievementsModalVisible(true)}
+					onPress={() => router.push("/(protected)/achievements-modal")}
 					activeOpacity={0.7}
 				>
 					<View className="flex-row justify-between items-center mb-3">
@@ -796,7 +794,7 @@ export default function Home() {
 							<Text className="text-xl mr-2">🏆</Text>
 							<Text className="text-lg font-semibold">Milestones</Text>
 						</View>
-						<TouchableOpacity onPress={() => setAchievementsModalVisible(true)}>
+						<TouchableOpacity onPress={() => router.push("/(protected)/achievements-modal")}>
 							<Text className="text-primary font-medium text-sm">See All</Text>
 						</TouchableOpacity>
 					</View>
@@ -1060,12 +1058,6 @@ export default function Home() {
 
 			{/* Tab navigation is handled by the parent layout */}
 		</SafeAreaView>
-		
-		{/* Achievements Modal */}
-		<AchievementsModal 
-			visible={achievementsModalVisible}
-			onClose={() => setAchievementsModalVisible(false)}
-		/>
 		</>
 	);
 }
