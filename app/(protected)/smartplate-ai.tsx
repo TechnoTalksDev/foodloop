@@ -756,7 +756,7 @@ export default function SmartPlateAI() {
                 letterSpacing: 1,
               }}
             >
-              Powered by Intelligence
+              Powered by Google Gemini
             </Text>
           </Animated.View>
 
