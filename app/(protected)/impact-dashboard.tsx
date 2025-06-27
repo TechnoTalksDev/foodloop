@@ -17,7 +17,7 @@ import { useAuth } from '@/context/supabase-provider';
 import { supabase } from '@/config/supabase';
 import { useColorScheme } from '@/lib/useColorScheme';
 import { colors } from '@/constants/colors';
-import { format, subDays, subWeeks, subMonths } from 'date-fns';
+import { format, subDays, subWeeks, subMonths, startOfDay, endOfDay, differenceInDays } from 'date-fns';
 
 interface ImpactData {
   totalCO2Saved: number;
@@ -31,6 +31,8 @@ interface ImpactData {
   monthlyProgress: MonthlyProgress[];
   categoryBreakdown: CategoryImpact[];
   comparisonData: ComparisonData;
+  totalOrders: number;
+  averageOrderSavings: number;
 }
 
 interface MonthlyProgress {
@@ -38,6 +40,7 @@ interface MonthlyProgress {
   co2Saved: number;
   moneySaved: number;
   foodRescued: number;
+  orderCount: number;
 }
 
 interface CategoryImpact {
@@ -46,6 +49,7 @@ interface CategoryImpact {
   co2Saved: number;
   color: string;
   icon: string;
+  orderCount: number;
 }
 
 interface ComparisonData {
@@ -60,19 +64,24 @@ interface ComparisonData {
   };
 }
 
-// Database types that match Supabase schema
-interface DatabaseProduct {
+// Database types for order history system
+interface OrderHistoryItem {
+  id: number;
+  seller_id: string;
+  buyer_id: string;
+  product_id: number;
   price: number;
-  original_price: string | null;
-  trash: number | null;
-  name: string | null;
-  tags: Array<{ label: string }> | null;
-}
-
-interface DatabaseCartItem {
   quantity: number;
   created_at: string;
-  product: DatabaseProduct | null;
+  product?: {
+    id: number;
+    name: string;
+    price: number;
+    original_price: number | null;
+    trash: number | null;
+    tags: Array<{ label: string; icon: string }> | null;
+    amount: number | null;
+  };
 }
 
 const screenWidth = Dimensions.get('window').width;
@@ -84,8 +93,6 @@ export default function ImpactDashboard() {
   const [impactData, setImpactData] = useState<ImpactData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [timeRange, setTimeRange] = useState<'week' | 'month' | 'year' | 'all'>('month');
-
   const textColor = colorScheme === 'dark' ? colors.dark.foreground : colors.light.foreground;
   const mutedTextColor = colorScheme === 'dark' ? colors.dark.mutedForeground : colors.light.mutedForeground;
   const borderColor = colorScheme === 'dark' ? colors.dark.border : colors.light.border;
@@ -94,7 +101,7 @@ export default function ImpactDashboard() {
 
   useEffect(() => {
     fetchImpactData();
-  }, [session?.user?.id, timeRange]);
+  }, [session?.user?.id]);
 
   const fetchImpactData = async () => {
     if (!session?.user?.id) return;
@@ -102,83 +109,84 @@ export default function ImpactDashboard() {
     try {
       setLoading(true);
 
-      // Calculate date range
-      const now = new Date();
-      let startDate: Date;
-      
-      switch (timeRange) {
-        case 'week':
-          startDate = subWeeks(now, 1);
-          break;
-        case 'month':
-          startDate = subMonths(now, 1);
-          break;
-        case 'year':
-          startDate = subMonths(now, 12);
-          break;
-        default:
-          startDate = new Date(2024, 0, 1); // Beginning of platform
-      }
+      // Get all-time data (no date filtering for overall stats)
+      const startDate = new Date(2024, 0, 1); // Beginning of platform
 
-      // Fetch user transactions from cart_items (assuming completed purchases)
-      const { data: cartItems, error: cartError } = await supabase
-        .from('cart_items')
+      // Fetch user's purchase history from order_history table
+      const { data: orderHistory, error: orderError } = await supabase
+        .from('order_history')
         .select(`
-          quantity,
-          created_at,
-          product:product(price, original_price, trash, name, tags)
+          *,
+          product:product_id(
+            id,
+            name,
+            price,
+            original_price,
+            trash,
+            tags,
+            amount
+          )
         `)
-        .eq('user_id', session.user.id)
-        .gte('created_at', startDate.toISOString());
+        .eq('buyer_id', session.user.id)
+        .gte('created_at', startDate.toISOString())
+        .order('created_at', { ascending: false });
 
-      if (cartError) {
-        console.error('Error fetching cart items:', cartError);
+      if (orderError) {
+        console.error('Error fetching order history:', orderError);
         return;
       }
 
-      // Type assertion with proper error handling
-      const transactions = (cartItems as any[]) || [];
+      const orders = (orderHistory as OrderHistoryItem[]) || [];
 
-      // Calculate impact metrics
+      // Calculate impact metrics using more accurate environmental factors
       let totalCO2Saved = 0;
       let totalMoneySaved = 0;
       let totalFoodRescued = 0;
+      let totalOrders = orders.length;
       const monthlyData: { [key: string]: MonthlyProgress } = {};
       const categoryData: { [key: string]: CategoryImpact } = {};
 
-      transactions.forEach((transaction: any) => {
-        const product = transaction.product;
+      // Calculate streak days by checking consecutive days with orders
+      const streakDays = calculateStreakDays(orders);
+
+      orders.forEach((order) => {
+        const product = order.product;
         if (!product) return;
 
-        const quantity = transaction.quantity;
+        const quantity = order.quantity;
+        const paidPrice = order.price;
         
-        // CO2 savings (assuming each pound of food saves ~2.5kg CO2)
-        const trashAmount = product.trash ?? 1;
-        const co2Saved = trashAmount * quantity * 2.5;
-        totalCO2Saved += co2Saved;
-        
-        // Money savings
-        const originalPrice = product.original_price ? parseFloat(product.original_price) : 0;
-        const moneySaved = Math.max(0, (originalPrice - product.price) * quantity);
-        totalMoneySaved += moneySaved;
-        
-        // Food rescued
+        // Environmental impact calculations based on EPA data and research
+        // Food rescued calculation: use product trash amount or estimate based on product type
+        const trashAmount = product.trash ?? estimateTrashAmount(product);
         const foodRescued = trashAmount * quantity;
         totalFoodRescued += foodRescued;
         
+        // CO2 savings: EPA estimates ~2.2 kg CO2 per pound of food waste prevented
+        // Additional emissions from production, transport, processing (~6x multiplier)
+        const co2Saved = foodRescued * 2.2 * 1.6; // 1.6 accounts for upstream emissions
+        totalCO2Saved += co2Saved;
+        
+        // Money savings: difference between original price and discounted price
+        const originalPrice = product.original_price ?? (paidPrice * 1.5); // Fallback estimate
+        const moneySaved = Math.max(0, (originalPrice - paidPrice) * quantity);
+        totalMoneySaved += moneySaved;
+        
         // Monthly breakdown
-        const month = format(new Date(transaction.created_at), 'MMM yyyy');
+        const month = format(new Date(order.created_at), 'MMM yyyy');
         if (!monthlyData[month]) {
           monthlyData[month] = {
             month,
             co2Saved: 0,
             moneySaved: 0,
-            foodRescued: 0
+            foodRescued: 0,
+            orderCount: 0
           };
         }
         monthlyData[month].co2Saved += co2Saved;
         monthlyData[month].moneySaved += moneySaved;
         monthlyData[month].foodRescued += foodRescued;
+        monthlyData[month].orderCount += 1;
         
         // Category breakdown
         const category = getCategoryFromProduct(product);
@@ -188,34 +196,54 @@ export default function ImpactDashboard() {
             percentage: 0,
             co2Saved: 0,
             color: category.color,
-            icon: category.icon
+            icon: category.icon,
+            orderCount: 0
           };
         }
         categoryData[category.name].co2Saved += co2Saved;
+        categoryData[category.name].orderCount += 1;
       });
 
       // Calculate category percentages
       Object.values(categoryData).forEach(category => {
-        category.percentage = totalCO2Saved > 0 ? (category.co2Saved / totalCO2Saved) * 100 : 0;
+        category.percentage = totalFoodRescued > 0 ? (category.co2Saved / totalCO2Saved) * 100 : 0;
       });
 
-      // Calculate derived metrics
-      const totalMealsEquivalent = Math.floor(totalFoodRescued / 1.2); // ~1.2 lbs per meal
-      const totalWaterSaved = Math.round(totalFoodRescued * 25); // ~25 gallons per pound
-      const totalTreesEquivalent = Math.round((totalCO2Saved / 48) * 100) / 100; // ~48lbs CO2 per tree per year
+      // Calculate derived metrics using scientific estimates
+      const totalMealsEquivalent = Math.floor(totalFoodRescued / 1.2); // ~1.2 lbs per meal (USDA estimate)
+      const totalWaterSaved = Math.round(totalFoodRescued * 25); // ~25 gallons per pound (Water Footprint Network)
+      const totalTreesEquivalent = Math.round((totalCO2Saved / 22) * 100) / 100; // ~22kg CO2 per tree per year
 
-      // Mock comparison data (in real app, this would come from aggregated user data)
+      // Calculate ranking based on actual user data
+      const { data: allUsersStats } = await supabase
+        .from('order_history')
+        .select('buyer_id')
+        .gte('created_at', startDate.toISOString());
+
+      const userCounts = (allUsersStats || []).reduce((acc: Record<string, number>, order: any) => {
+        acc[order.buyer_id] = (acc[order.buyer_id] || 0) + 1;
+        return acc;
+      }, {});
+
+      const totalUsers = Object.keys(userCounts).length;
+      const usersWithFewerOrders = Object.values(userCounts).filter((count: number) => count < totalOrders).length;
+      const percentile = totalUsers > 0 ? Math.round((usersWithFewerOrders / totalUsers) * 100) : 50;
+
+      // More realistic comparison data based on actual performance
+      const avgOrdersPerUser = totalUsers > 0 ? Object.values(userCounts).reduce((sum: number, count: number) => sum + count, 0) / totalUsers : 1;
       const comparisonData: ComparisonData = {
         vsAverage: {
-          co2Percentage: totalCO2Saved > 10 ? 150 : 80, // 50% above or 20% below average
-          moneyPercentage: totalMoneySaved > 20 ? 120 : 90,
-          foodPercentage: totalFoodRescued > 5 ? 180 : 75
+          co2Percentage: avgOrdersPerUser > 0 ? Math.round((totalOrders / avgOrdersPerUser) * 100) : 100,
+          moneyPercentage: avgOrdersPerUser > 0 ? Math.round(((totalMoneySaved / totalOrders) / 5) * 100) : 100, // Assume $5 avg savings
+          foodPercentage: avgOrdersPerUser > 0 ? Math.round(((totalFoodRescued / totalOrders) / 2) * 100) : 100 // Assume 2lbs avg rescue
         },
         ranking: {
-          percentile: Math.min(85, Math.max(15, Math.round((totalCO2Saved / 50) * 85))),
-          totalUsers: 10000
+          percentile,
+          totalUsers
         }
       };
+
+      const averageOrderSavings = totalOrders > 0 ? Math.round((totalMoneySaved / totalOrders) * 100) / 100 : 0;
 
       const processedImpactData: ImpactData = {
         totalCO2Saved: Math.round(totalCO2Saved * 100) / 100,
@@ -224,11 +252,13 @@ export default function ImpactDashboard() {
         totalMealsEquivalent,
         totalWaterSaved,
         totalTreesEquivalent,
-        streakDays: Math.floor(Math.random() * 30) + 1, // Mock streak
-        impactRank: Math.floor(Math.random() * 1000) + 1,
+        streakDays,
+        impactRank: percentile,
         monthlyProgress: Object.values(monthlyData).slice(-6),
         categoryBreakdown: Object.values(categoryData).filter(cat => cat.percentage > 0),
-        comparisonData
+        comparisonData,
+        totalOrders,
+        averageOrderSavings
       };
 
       setImpactData(processedImpactData);
@@ -238,6 +268,57 @@ export default function ImpactDashboard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper function to calculate streak days
+  const calculateStreakDays = (orders: OrderHistoryItem[]): number => {
+    if (orders.length === 0) return 0;
+
+    const orderDates = orders
+      .map(order => startOfDay(new Date(order.created_at)))
+      .sort((a, b) => b.getTime() - a.getTime()) // Sort descending
+      .filter((date, index, arr) => index === 0 || date.getTime() !== arr[index - 1].getTime()); // Remove duplicates
+
+    if (orderDates.length === 0) return 0;
+
+    const today = startOfDay(new Date());
+    let streak = 0;
+    let currentDate = today;
+
+    // Check if there's an order today or yesterday to start streak
+    const daysSinceLastOrder = differenceInDays(today, orderDates[0]);
+    if (daysSinceLastOrder > 1) return 0;
+
+    for (const orderDate of orderDates) {
+      const daysDiff = differenceInDays(currentDate, orderDate);
+      
+      if (daysDiff === 0) {
+        streak++;
+        currentDate = subDays(currentDate, 1);
+      } else if (daysDiff === 1) {
+        streak++;
+        currentDate = orderDate;
+        currentDate = subDays(currentDate, 1);
+      } else {
+        break;
+      }
+    }
+
+    return streak;
+  };
+
+  // Helper function to estimate food waste amount if not provided
+  const estimateTrashAmount = (product: any): number => {
+    const name = product.name?.toLowerCase() || '';
+    const amount = product.amount || 1;
+    
+    // Estimate based on product type and amount
+    if (name.includes('bread') || name.includes('bakery')) return amount * 0.8;
+    if (name.includes('fruit') || name.includes('vegetable')) return amount * 0.6;
+    if (name.includes('dairy') || name.includes('milk')) return amount * 0.5;
+    if (name.includes('meat') || name.includes('protein')) return amount * 0.4;
+    
+    return amount * 0.5; // Default estimate
   };
 
   const onRefresh = async () => {
@@ -290,8 +371,9 @@ export default function ImpactDashboard() {
   const renderProgressChart = () => {
     if (!impactData?.monthlyProgress.length) return null;
 
-    const maxValue = Math.max(...impactData.monthlyProgress.map(p => p.co2Saved), 1);
-    const chartHeight = 120;
+    const maxCO2Value = Math.max(...impactData.monthlyProgress.map(p => p.co2Saved), 1);
+    const maxOrderValue = Math.max(...impactData.monthlyProgress.map(p => p.orderCount), 1);
+    const chartHeight = 140;
     const chartWidth = screenWidth - 64;
     const barWidth = Math.max((chartWidth - 60) / impactData.monthlyProgress.length, 40);
 
@@ -303,25 +385,46 @@ export default function ImpactDashboard() {
         <H3 className="mb-4">Monthly Progress</H3>
         <View style={{ width: chartWidth, height: chartHeight }}>
           {impactData.monthlyProgress.map((data, index) => {
-            const barHeight = Math.max((data.co2Saved / maxValue) * (chartHeight - 40), 5);
+            const co2BarHeight = Math.max((data.co2Saved / maxCO2Value) * (chartHeight - 60), 5);
+            const orderBarHeight = Math.max((data.orderCount / maxOrderValue) * (chartHeight - 60), 3);
             const x = index * barWidth + 30;
-            const y = chartHeight - barHeight - 20;
+            const co2Y = chartHeight - co2BarHeight - 40;
+            const orderY = chartHeight - orderBarHeight - 20;
             
             return (
-              <View key={index} style={{ position: 'absolute', left: x, top: y }}>
+              <View key={index} style={{ position: 'absolute', left: x }}>
+                {/* CO2 Bar */}
                 <View
                   style={{
-                    width: barWidth - 10,
-                    height: barHeight,
+                    position: 'absolute',
+                    top: co2Y,
+                    width: (barWidth - 10) * 0.6,
+                    height: co2BarHeight,
                     backgroundColor: '#10b981',
                     borderRadius: 4,
                     opacity: 0.8
                   }}
                 />
+                
+                {/* Orders Bar */}
+                <View
+                  style={{
+                    position: 'absolute',
+                    top: orderY,
+                    left: (barWidth - 10) * 0.4,
+                    width: (barWidth - 10) * 0.4,
+                    height: orderBarHeight,
+                    backgroundColor: '#8b5cf6',
+                    borderRadius: 4,
+                    opacity: 0.8
+                  }}
+                />
+                
+                {/* Month Label */}
                 <Text
                   style={{
                     position: 'absolute',
-                    top: barHeight + 5,
+                    top: chartHeight - 15,
                     left: (barWidth - 10) / 2,
                     fontSize: 10,
                     color: mutedTextColor,
@@ -331,28 +434,66 @@ export default function ImpactDashboard() {
                 >
                   {data.month.split(' ')[0]}
                 </Text>
+                
+                {/* CO2 Value */}
                 {data.co2Saved > 0 && (
                   <Text
                     style={{
                       position: 'absolute',
-                      top: -15,
-                      left: (barWidth - 10) / 2,
-                      fontSize: 9,
-                      color: textColor,
+                      top: co2Y - 15,
+                      left: 0,
+                      fontSize: 8,
+                      color: '#10b981',
                       textAlign: 'center',
-                      width: barWidth - 10
+                      width: (barWidth - 10) * 0.6
                     }}
                   >
                     {data.co2Saved.toFixed(1)}
+                  </Text>
+                )}
+                
+                {/* Order Count */}
+                {data.orderCount > 0 && (
+                  <Text
+                    style={{
+                      position: 'absolute',
+                      top: orderY - 15,
+                      left: (barWidth - 10) * 0.4,
+                      fontSize: 8,
+                      color: '#8b5cf6',
+                      textAlign: 'center',
+                      width: (barWidth - 10) * 0.4
+                    }}
+                  >
+                    {data.orderCount}
                   </Text>
                 )}
               </View>
             );
           })}
         </View>
-        <Text className="text-xs text-center mt-2" style={{ color: mutedTextColor }}>
-          CO₂ Saved (kg) per month
-        </Text>
+        
+        {/* Legend */}
+        <View className="flex-row justify-center mt-4 space-x-4">
+          <View className="flex-row items-center">
+            <View 
+              className="w-3 h-3 rounded mr-2" 
+              style={{ backgroundColor: '#10b981' }}
+            />
+            <Text className="text-xs" style={{ color: mutedTextColor }}>
+              CO₂ Saved (kg)
+            </Text>
+          </View>
+          <View className="flex-row items-center ml-4">
+            <View 
+              className="w-3 h-3 rounded mr-2" 
+              style={{ backgroundColor: '#8b5cf6' }}
+            />
+            <Text className="text-xs" style={{ color: mutedTextColor }}>
+              Orders
+            </Text>
+          </View>
+        </View>
       </View>
     );
   };
@@ -526,7 +667,7 @@ export default function ImpactDashboard() {
     );
   }
 
-  if (!impactData || (impactData.totalCO2Saved === 0 && impactData.totalMoneySaved === 0)) {
+  if (!impactData || (impactData.totalOrders === 0)) {
     return (
       <SafeAreaView className="flex-1 items-center justify-center p-4" style={{ backgroundColor: bgColor }}>
         <View className="items-center">
@@ -535,7 +676,7 @@ export default function ImpactDashboard() {
             Start Your Impact Journey
           </Text>
           <Text className="text-center mb-6" style={{ color: mutedTextColor }}>
-            Make your first purchase to see your environmental impact!
+            Make your first purchase through our messaging system to see your environmental impact!
           </Text>
           <Button
             onPress={() => router.push('/(protected)/(tabs)/marketplace')}
@@ -573,33 +714,8 @@ export default function ImpactDashboard() {
         {/* Subtitle */}
         <View className="px-4 py-4">
           <Text className="text-center" style={{ color: mutedTextColor }}>
-            See how you're making a difference with FoodLoop
+            Your environmental impact from sustainable purchases
           </Text>
-        </View>
-
-        {/* Time Range Selector */}
-        <View className="px-4 mb-6">
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {(['week', 'month', 'year', 'all'] as const).map((range) => (
-              <TouchableOpacity
-                key={range}
-                onPress={() => setTimeRange(range)}
-                className={`mr-3 px-4 py-2 rounded-full`}
-                style={{
-                  backgroundColor: timeRange === range ? '#10b981' : secondaryBg
-                }}
-              >
-                <Text 
-                  className="capitalize"
-                  style={{ 
-                    color: timeRange === range ? '#ffffff' : textColor
-                  }}
-                >
-                  {range === 'all' ? 'All Time' : `This ${range}`}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
         </View>
 
         {/* Main Impact Cards */}
@@ -608,19 +724,19 @@ export default function ImpactDashboard() {
             {renderImpactCard(
               'CO₂ Saved',
               `${impactData.totalCO2Saved} kg`,
-              `= ${impactData.totalTreesEquivalent} trees`,
+              `= ${impactData.totalTreesEquivalent} trees/year`,
               '🌍',
               '#10b981'
             )}
             {renderImpactCard(
               'Money Saved',
               `$${impactData.totalMoneySaved}`,
-              'vs. regular prices',
+              `Avg $${impactData.averageOrderSavings}/order`,
               '💰',
               '#f59e0b'
             )}
           </View>
-          <View className="flex-row">
+          <View className="flex-row mb-4">
             {renderImpactCard(
               'Food Rescued',
               `${impactData.totalFoodRescued} lbs`,
@@ -634,6 +750,22 @@ export default function ImpactDashboard() {
               'water conservation',
               '💧',
               '#06b6d4'
+            )}
+          </View>
+          <View className="flex-row">
+            {renderImpactCard(
+              'Orders Completed',
+              `${impactData.totalOrders}`,
+              'sustainable purchases',
+              '📦',
+              '#8b5cf6'
+            )}
+            {renderImpactCard(
+              'Impact Rank',
+              `Top ${100 - impactData.impactRank}%`,
+              `of ${impactData.comparisonData.ranking.totalUsers} users`,
+              '🏆',
+              '#f97316'
             )}
           </View>
         </View>
@@ -653,10 +785,13 @@ export default function ImpactDashboard() {
                   className="text-2xl font-bold"
                   style={{ color: colorScheme === 'dark' ? '#f59e0b' : '#d97706' }}
                 >
-                  {impactData.streakDays} Day Streak
+                  {impactData.streakDays} Day{impactData.streakDays !== 1 ? 's' : ''} Active
                 </Text>
                 <Text style={{ color: colorScheme === 'dark' ? '#fbbf24' : '#92400e' }}>
-                  Keep up the sustainable habits!
+                  {impactData.streakDays === 0 ? 'Make your first purchase!' : 
+                   impactData.streakDays === 1 ? 'Great start! Keep it up!' :
+                   impactData.streakDays < 7 ? 'Building momentum!' :
+                   'Fantastic sustainability streak!'}
                 </Text>
               </View>
             </View>

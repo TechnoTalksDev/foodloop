@@ -352,55 +352,64 @@ export default function Home() {
 				// Get data from the last 12 months
 				const twelveMonthsAgo = subMonths(new Date(), 12);
 
-				// Fetch user transactions from cart_items (assuming completed purchases)
-				const { data: cartItems, error: cartError } = await supabase
-					.from('cart_items')
+				// Fetch user purchase history from order_history table
+				const { data: orderHistory, error: orderError } = await supabase
+					.from('order_history')
 					.select(`
-						quantity,
-						created_at,
-						product:product(price, original_price, trash, name)
+						*,
+						product:product_id(
+							id,
+							name,
+							price,
+							original_price,
+							trash,
+							amount
+						)
 					`)
-					.eq('user_id', session.user.id)
+					.eq('buyer_id', session.user.id)
 					.gte('created_at', twelveMonthsAgo.toISOString());
 
-				if (cartError) {
-					console.error('Error fetching cart items:', cartError);
+				if (orderError) {
+					console.error('Error fetching order history:', orderError);
 					setRealImpact(prev => ({ ...prev, loading: false }));
 					return;
 				}
 
-				const transactions = (cartItems as any[]) || [];
+				const orders = (orderHistory as any[]) || [];
 
-				// Calculate real impact metrics
+				// Calculate real impact metrics using the same logic as impact dashboard
 				let totalCO2Saved = 0;
 				let totalMoneySaved = 0;
 				let totalItemsRescued = 0;
 
-				transactions.forEach((transaction: any) => {
-					const product = transaction.product;
+				orders.forEach((order: any) => {
+					const product = order.product;
 					if (!product) return;
 
-					const quantity = transaction.quantity;
+					const quantity = order.quantity;
+					const paidPrice = order.price;
 					
-					// CO2 savings (assuming each pound of food saves ~2.5kg CO2)
-					const trashAmount = product.trash ?? 1;
-					const co2Saved = trashAmount * quantity * 2.5;
+					// Environmental impact calculations based on EPA data
+					const trashAmount = product.trash ?? estimateTrashAmount(product);
+					const foodRescued = trashAmount * quantity;
+					totalItemsRescued += foodRescued;
+					
+					// CO2 savings: EPA estimates ~2.2 kg CO2 per pound of food waste prevented
+					// Additional emissions from production, transport, processing (~1.6x multiplier)
+					const co2Saved = foodRescued * 2.2 * 1.6;
 					totalCO2Saved += co2Saved;
 					
-					// Money savings
-					const originalPrice = product.original_price ? parseFloat(product.original_price) : 0;
-					const moneySaved = Math.max(0, (originalPrice - product.price) * quantity);
+					// Money savings: difference between original price and discounted price
+					const originalPrice = product.original_price ?? (paidPrice * 1.5); // Fallback estimate
+					const moneySaved = Math.max(0, (originalPrice - paidPrice) * quantity);
 					totalMoneySaved += moneySaved;
-					
-					// Items rescued
-					totalItemsRescued += quantity;
 				});
 
 				setRealImpact({
 					totalCO2Saved: Math.round(totalCO2Saved * 100) / 100,
 					totalMoneySaved: Math.round(totalMoneySaved * 100) / 100,
-					totalItemsRescued,
-					hasData: transactions.length > 0,
+					totalItemsRescued: Math.round(totalItemsRescued * 100) / 100,
+					hasData: orders.length > 0,
 					loading: false
 				});
 
@@ -408,6 +417,20 @@ export default function Home() {
 				console.error('Error fetching real impact data:', error);
 				setRealImpact(prev => ({ ...prev, loading: false }));
 			}
+		};
+
+		// Helper function to estimate food waste amount if not provided
+		const estimateTrashAmount = (product: any): number => {
+			const name = product.name?.toLowerCase() || '';
+			const amount = product.amount || 1;
+			
+			// Estimate based on product type and amount
+			if (name.includes('bread') || name.includes('bakery')) return amount * 0.8;
+			if (name.includes('fruit') || name.includes('vegetable')) return amount * 0.6;
+			if (name.includes('dairy') || name.includes('milk')) return amount * 0.5;
+			if (name.includes('meat') || name.includes('protein')) return amount * 0.4;
+			
+			return amount * 0.5; // Default estimate
 		};
 
 		fetchRealImpactData();
@@ -856,10 +879,10 @@ export default function Home() {
 									<Text className="text-xs text-muted-foreground">Money Saved</Text>
 								</View>
 								<View className="items-center">
-									<Text className="text-2xl font-bold text-amber-500">
-										{realImpact.totalItemsRescued}
+									<Text className="text-2xl font-bold text-blue-500">
+										{realImpact.totalItemsRescued} lbs
 									</Text>
-									<Text className="text-xs text-muted-foreground">Items Rescued</Text>
+									<Text className="text-xs text-muted-foreground">Food Rescued</Text>
 								</View>
 							</View>
 							
