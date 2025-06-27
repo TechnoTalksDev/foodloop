@@ -466,6 +466,7 @@ export default function MessagesScreen() {
 				<ScrollView
 					className="flex-1 pt-4"
 					showsVerticalScrollIndicator={false}
+					contentContainerStyle={{ paddingBottom: 100 }} // Add padding for tab bar (88px + extra space)
 					refreshControl={
 						<RefreshControl
 							refreshing={refreshing}
@@ -477,9 +478,6 @@ export default function MessagesScreen() {
 					}
 				>
 					{conversations.map(renderConversationItem)}
-					
-					{/* Bottom padding for last item */}
-					<View className="h-6" />
 				</ScrollView>
 			)}
 		</SafeAreaView>

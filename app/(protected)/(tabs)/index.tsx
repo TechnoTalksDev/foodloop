@@ -1,10 +1,8 @@
-// app/(protected)/(tabs)/index.tsx - PREMIUM PROFESSIONAL HOME SCREEN
-
 import { router } from "expo-router";
-import { Image, ScrollView, TouchableOpacity, View, Dimensions } from "react-native";
-import { useSharedValue, useAnimatedStyle, withTiming, withSpring, withSequence, withDelay, withRepeat, interpolate, Extrapolation } from "react-native-reanimated";
+import { Image, ScrollView, TouchableOpacity, View } from "react-native";
+import { useSharedValue } from "react-native-reanimated";
+import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from "react";
-import Animated from 'react-native-reanimated';
 
 import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
@@ -96,8 +94,6 @@ const PLANT_TYPE_ICONS = {
 	cucumbers: '🥒',
 };
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-
 export default function Home() {
 	const { session } = useAuth();
 	const { unreadCount } = useNotifications();
@@ -111,17 +107,6 @@ export default function Home() {
 		hasData: false,
 		loading: true
 	});
-
-	// Subtle 3D Animation Values
-	const card1Float = useSharedValue(0);
-	const card2Float = useSharedValue(0);
-	const card3Float = useSharedValue(0);
-	const card4Float = useSharedValue(0);
-	const card5Float = useSharedValue(0);
-	const card6Float = useSharedValue(0);
-	
-	const headerScale = useSharedValue(0.95);
-	const headerOpacity = useSharedValue(0);
 
 	// Weather state using the service
 	const [weather, setWeather] = useState<WeatherDisplay>({
@@ -142,98 +127,6 @@ export default function Home() {
 		plantsCheckedInToday: 0,
 		loading: true
 	});
-
-	// Subtle floating animations for cards
-	useEffect(() => {
-		// Header entrance
-		headerOpacity.value = withDelay(100, withTiming(1, { duration: 600 }));
-		headerScale.value = withDelay(100, withSpring(1, { damping: 15, stiffness: 120 }));
-
-		// Gentle floating animations
-		card1Float.value = withRepeat(
-			withSequence(
-				withTiming(-4, { duration: 4000 }),
-				withTiming(4, { duration: 4000 })
-			),
-			-1,
-			true
-		);
-
-		card2Float.value = withDelay(500, withRepeat(
-			withSequence(
-				withTiming(3, { duration: 3500 }),
-				withTiming(-3, { duration: 3500 })
-			),
-			-1,
-			true
-		));
-
-		card3Float.value = withDelay(1000, withRepeat(
-			withSequence(
-				withTiming(-3, { duration: 4500 }),
-				withTiming(5, { duration: 4500 })
-			),
-			-1,
-			true
-		));
-
-		card4Float.value = withDelay(1200, withRepeat(
-			withSequence(
-				withTiming(4, { duration: 3800 }),
-				withTiming(-2, { duration: 3800 })
-			),
-			-1,
-			true
-		));
-
-		card5Float.value = withDelay(1500, withRepeat(
-			withSequence(
-				withTiming(-5, { duration: 4200 }),
-				withTiming(2, { duration: 4200 })
-			),
-			-1,
-			true
-		));
-
-		card6Float.value = withDelay(1800, withRepeat(
-			withSequence(
-				withTiming(3, { duration: 3600 }),
-				withTiming(-4, { duration: 3600 })
-			),
-			-1,
-			true
-		));
-	}, []);
-
-	// Animated styles for each card with subtle effects
-	const headerAnimatedStyle = useAnimatedStyle(() => ({
-		opacity: headerOpacity.value,
-		transform: [{ scale: headerScale.value }],
-	}));
-
-	const card1AnimatedStyle = useAnimatedStyle(() => ({
-		transform: [{ translateY: card1Float.value }],
-	}));
-
-	const card2AnimatedStyle = useAnimatedStyle(() => ({
-		transform: [{ translateY: card2Float.value }],
-	}));
-
-	const card3AnimatedStyle = useAnimatedStyle(() => ({
-		transform: [{ translateY: card3Float.value }],
-	}));
-
-	const card4AnimatedStyle = useAnimatedStyle(() => ({
-		transform: [{ translateY: card4Float.value }],
-	}));
-
-	const card5AnimatedStyle = useAnimatedStyle(() => ({
-		transform: [{ translateY: card5Float.value }],
-	}));
-
-	const card6AnimatedStyle = useAnimatedStyle(() => ({
-		transform: [{ translateY: card6Float.value }],
-	}));
 	
 	useEffect(() => {
 		const fetchUser = async () => {
@@ -361,19 +254,6 @@ export default function Home() {
 			setPlantCheckIn(prev => ({ ...prev, loading: false }));
 		}
 	};
-
-	// Recommended items state
-	const [recommendedItems, setRecommendedItems] = useState<Array<{
-		id: number;
-		name: string;
-		business: string;
-		price: number;
-		originalPrice: number;
-		discount: string;
-		image: { uri: string } | any;
-		eco: string;
-	}>>([]);
-	const [loadingRecommendations, setLoadingRecommendations] = useState(true);
 
 	// Fetch recommended marketplace items
 	const fetchRecommendedItems = async () => {
@@ -533,6 +413,19 @@ export default function Home() {
 		fetchRealImpactData();
 	}, [session?.user?.id]);
 
+	// Recommended items state
+	const [recommendedItems, setRecommendedItems] = useState<Array<{
+		id: number;
+		name: string;
+		business: string;
+		price: number;
+		originalPrice: number;
+		discount: string;
+		image: { uri: string } | any;
+		eco: string;
+	}>>([]);
+	const [loadingRecommendations, setLoadingRecommendations] = useState(true);
+	
 	// Achievements data - using real hook
 	const { getStats, getNextMilestone, loading: achievementsLoading } = useAchievements();
 	
@@ -553,26 +446,16 @@ export default function Home() {
 	};
 
 	return (
-		<SafeAreaView className="flex-1 bg-background">
-			<ScrollView 
-				className="flex-1" 
-				showsVerticalScrollIndicator={false}
-				contentContainerStyle={{ paddingBottom: 24 }}
-			>
-				{/* Professional Header */}
-				<Animated.View 
-					className="flex-row justify-between items-center py-4 mb-2 px-4"
-					style={headerAnimatedStyle}
-				>
-					<TouchableOpacity 
-						onPress={() => router.push("/(protected)/notification-modal")}
-						className="relative p-2 -ml-2"
-					> 
-						<View className="w-8 h-8 items-center justify-center">
-							<Text className="text-xl">🔔</Text>
+		<SafeAreaView className="flex-1 bg-background pb-6">
+			<ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
+				{/* Header section */}
+				<View className="flex-row justify-between items-center px-4 py-3 mb-4">
+					<TouchableOpacity onPress={() => router.push("/(protected)/notification-modal")}> 
+						<View className="w-10 h-10 items-center justify-center">
+							<Text className="text-2xl">🔔</Text>
 							{unreadCount > 0 && (
-								<View className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full items-center justify-center shadow-sm">
-									<Text className="text-white text-xs font-semibold">
+								<View className="absolute top-0 right-0 w-5 h-5 bg-red-500 rounded-full items-center justify-center">
+									<Text className="text-white text-xs font-bold">
 										{unreadCount > 99 ? "99+" : unreadCount}
 									</Text>
 								</View>
@@ -580,494 +463,418 @@ export default function Home() {
 						</View>
 					</TouchableOpacity>
 
-					<View className="items-center">
-						<H1 className="text-2xl font-bold tracking-tight">My Garden</H1>
-						<Text className="text-muted-foreground text-sm">
-							{loadingUser ? "Welcome" : `Hello, ${username}`}
-						</Text>
-					</View>
+					<H1>My Garden</H1>
 
-					<TouchableOpacity 
-						onPress={() => router.push("/(protected)/(tabs)/profile")}
-						className="p-1"
-					> 
-						<View className="w-9 h-9 items-center justify-center overflow-hidden rounded-xl bg-card border border-border shadow-sm">
+					<TouchableOpacity onPress={() => router.push("/(protected)/(tabs)/profile")}> 
+						<View className="w-10 h-10 items-center justify-center overflow-hidden rounded-full">
 							{avatarUrl ? (
 								<Image 
 									source={{ uri: avatarUrl }} 
-									className="w-9 h-9 rounded-xl" 
+									className="w-10 h-10" 
 									resizeMode="cover"
 								/>
 							) : (
-								<View className="w-9 h-9 bg-primary rounded-xl items-center justify-center">
-									<Text className="text-primary-foreground text-base font-semibold">
+								<View className="w-10 h-10 bg-primary/80 rounded-full items-center justify-center">
+									<Text className="text-white text-lg font-bold">
 										{username ? username.charAt(0).toUpperCase() : "U"}
 									</Text>
 								</View>
 							)}
 						</View>
 					</TouchableOpacity>
-				</Animated.View>
+				</View>
 
-				{/* Plant Check-In Widget */}
-				<Animated.View 
-					className="mb-6 px-4"
-					style={card1AnimatedStyle}
+				{/* Plant Check-In Widget - Updated with real data */}
+				<TouchableOpacity 
+					className="mx-4 mb-6 p-5 bg-secondary/30 rounded-2xl shadow border border-border"
+					onPress={navigateToPlants}
+					activeOpacity={0.7}
 				>
-					<TouchableOpacity 
-						className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl shadow-lg"
-						onPress={navigateToPlants}
-						activeOpacity={0.95}
-					>
-						<View className="p-6">
-							<View className="flex-row items-center mb-4">
-								<View className="w-12 h-12 bg-green-50 dark:bg-green-950 rounded-xl items-center justify-center mr-4">
-									<Text className="text-2xl">🌱</Text>
-								</View>
-								<View className="flex-1">
-									<Text className="text-lg font-semibold text-foreground">Plant Check-In</Text>
-									<Text className="text-muted-foreground text-sm mt-0.5">
-										{plantCheckIn.loading 
-											? "Loading your plants..." 
-											: plantCheckIn.totalPlants === 0
-											? "Start your gardening journey"
-											: `${plantCheckIn.totalPlants} plants in your garden`
-										}
-									</Text>
-								</View>
-							</View>
-							
-							<View className="bg-muted/30 backdrop-blur-sm rounded-xl p-4">
-								{plantCheckIn.loading ? (
-									<View className="items-center py-6">
-										<View className="w-2 h-2 bg-muted-foreground/30 rounded-full animate-pulse" />
-										<Text className="text-muted-foreground text-sm mt-3">Loading plant data...</Text>
-									</View>
-								) : plantCheckIn.totalPlants === 0 ? (
-									<View className="items-center py-2">
-										<Text className="text-3xl mb-3">🌱</Text>
-										<Text className="text-lg font-medium text-center mb-2">Start Your Garden</Text>
-										<Text className="text-muted-foreground text-center text-sm mb-4 leading-relaxed">
-											Add your first plant to begin daily check-ins and track growth progress
-										</Text>
-										<Button
-											variant="default"
-											className="w-full"
-											onPress={() => router.push("/(protected)/plants/add-plant")}
-										>
-											<Text className="text-primary-foreground font-medium">Add Your First Plant</Text>
-										</Button>
-									</View>
-								) : plantCheckIn.plantsNeedingCheckIn.length === 0 ? (
-									<View className="items-center py-2">
-										<Text className="text-3xl mb-3">✅</Text>
-										<Text className="text-lg font-medium text-center mb-2">All Caught Up!</Text>
-										<Text className="text-muted-foreground text-center text-sm mb-4">
-											{plantCheckIn.plantsCheckedInToday > 0 
-												? `${plantCheckIn.plantsCheckedInToday} plants checked in today`
-												: "All your plants are up to date"
-											}
-										</Text>
-										<Button
-											variant="outline"
-											className="w-full"
-											onPress={navigateToPlants}
-										>
-											<Text className="font-medium">View All Plants</Text>
-										</Button>
-									</View>
-								) : (
-									<View>
-										<Text className="text-lg font-medium text-center mb-1">
-											{plantCheckIn.plantsNeedingCheckIn.length} plant{plantCheckIn.plantsNeedingCheckIn.length > 1 ? 's' : ''} need{plantCheckIn.plantsNeedingCheckIn.length === 1 ? 's' : ''} attention
-										</Text>
-										<Text className="text-muted-foreground text-center text-sm mb-4">
-											Track your plants' growth progress
-										</Text>
-										
-										{/* Show plants needing check-in */}
-										<View className="space-y-3 mb-4">
-											{plantCheckIn.plantsNeedingCheckIn.map((plant) => (
-												<TouchableOpacity
-													key={plant.id}
-													className="flex-row items-center p-3 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-800/50"
-													onPress={() => handlePlantCheckIn(plant.id)}
-													activeOpacity={0.8}
-												>
-													<View className="w-10 h-10 rounded-lg bg-background border border-border items-center justify-center mr-3">
-														{plant.image_url ? (
-															<Image
-																source={{ uri: plant.image_url }}
-																className="w-10 h-10 rounded-lg"
-																resizeMode="cover"
-															/>
-														) : (
-															<Text className="text-lg">
-																{getPlantTypeIcon(plant.plant_type)}
-															</Text>
-														)}
-													</View>
-													<View className="flex-1">
-														<Text className="font-medium text-sm">{plant.plant_name}</Text>
-														<Text className="text-xs text-muted-foreground">
-															{plant.hoursSinceLastCheckIn >= 999 
-																? "Never checked in" 
-																: `${Math.floor(plant.hoursSinceLastCheckIn)}h ago`
-															}
-														</Text>
-													</View>
-													<View className="bg-amber-100 dark:bg-amber-900/50 px-3 py-1.5 rounded-lg">
-														<Text className="text-amber-700 dark:text-amber-300 text-xs font-medium">
-															Check-in
-														</Text>
-													</View>
-												</TouchableOpacity>
-											))}
-										</View>
-
-										<Button
-											variant="default"
-											className="w-full"
-											onPress={navigateToPlants}
-										>
-											<Text className="text-primary-foreground font-medium">View All Plants</Text>
-										</Button>
-									</View>
-								)}
-							</View>
+					<View className="flex-row items-center mb-3">
+						<View className="rounded-full items-center justify-center mr-3">
+							<Text className="text-lg">🌱</Text>
 						</View>
-					</TouchableOpacity>
-				</Animated.View>
-
-				{/* Achievements Widget */}
-				<Animated.View 
-					className="mb-6 px-4"
-					style={card2AnimatedStyle}
-				>
-					<TouchableOpacity 
-						className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl shadow-lg"
-						onPress={() => router.push("/(protected)/achievements-modal")}
-						activeOpacity={0.95}
-					>
-						<View className="p-6">
-							<View className="flex-row justify-between items-center mb-4">
-								<View className="flex-row items-center">
-									<View className="w-12 h-12 bg-yellow-50 dark:bg-yellow-950 rounded-xl items-center justify-center mr-4">
-										<Text className="text-2xl">🏆</Text>
-									</View>
-									<View>
-										<Text className="text-lg font-semibold">Achievements</Text>
-										<Text className="text-muted-foreground text-sm">Track your progress</Text>
-									</View>
-								</View>
-								<TouchableOpacity onPress={() => router.push("/(protected)/achievements-modal")}>
-									<Text className="text-primary font-medium text-sm">View All</Text>
-								</TouchableOpacity>
-							</View>
-							
-							<View className="bg-muted/30 backdrop-blur-sm rounded-xl p-4">
-								{achievementsLoading ? (
-									<View className="items-center py-4">
-										<View className="w-2 h-2 bg-muted-foreground/30 rounded-full animate-pulse" />
-										<Text className="text-muted-foreground text-sm mt-3">Loading achievements...</Text>
-									</View>
-								) : nextMilestone ? (
-									<View>
-										<View className="flex-row items-center mb-3">
-											<Text className="text-2xl mr-3">{nextMilestone.achievement.icon}</Text>
-											<View className="flex-1">
-												<Text className="font-medium text-sm">{nextMilestone.achievement.name}</Text>
-												<Text className="text-xs text-muted-foreground">+{nextMilestone.achievement.points} points</Text>
-											</View>
-										</View>
-										<Text className="text-sm text-muted-foreground mb-3 leading-relaxed">
-											{nextMilestone.achievement.description}
-										</Text>
-										<View className="w-full h-2 bg-muted rounded-full overflow-hidden mb-2">
-											<View 
-												className="h-2 bg-green-500 rounded-full transition-all duration-300" 
-												style={{ width: `${nextMilestone.progressPercentage}%` }} 
-											/>
-										</View>
-										<View className="flex-row justify-between">
-											<Text className="text-muted-foreground text-xs">
-												{nextMilestone.current_progress} / {nextMilestone.achievement.target_value}
-											</Text>
-											<Text className="text-muted-foreground text-xs">{Math.round(nextMilestone.progressPercentage)}%</Text>
-										</View>
-									</View>
-								) : (
-									<View className="items-center py-2">
-										<Text className="text-3xl mb-3">🎉</Text>
-										<Text className="font-medium text-center mb-1">All Achievements Complete!</Text>
-										<Text className="text-muted-foreground text-sm text-center">
-											You're a FoodLoop champion
-										</Text>
-									</View>
-								)}
-								
-								<View className="mt-4 pt-4 border-t border-border">
-									<Text className="text-muted-foreground text-center text-sm">
-										{achievementStats.completedCount} of {achievementStats.totalAchievements} completed
-									</Text>
-								</View>
-							</View>
-						</View>
-					</TouchableOpacity>
-				</Animated.View>
-
-				{/* Weather Widget */}
-				<Animated.View 
-					className="mb-6 px-4"
-					style={card3AnimatedStyle}
-				>
-					<View className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl shadow-lg">
-						<View className="p-6">
-							<View className="flex-row justify-between items-center mb-4">
-								<View className="flex-row items-center">
-									<View className="w-12 h-12 bg-blue-50 dark:bg-blue-950 rounded-xl items-center justify-center mr-4">
-										<Text className="text-2xl">🌤️</Text>
-									</View>
-									<View>
-										<Text className="text-lg font-semibold">Weather</Text>
-										<Text className="text-muted-foreground text-sm">
-											{weather.loading ? "Loading..." : weather.location}
-										</Text>
-									</View>
-								</View>
-								<TouchableOpacity onPress={fetchWeather}>
-									<Text className="text-primary text-sm font-medium">Refresh</Text>
-								</TouchableOpacity>
-							</View>
-							
-							<View className="bg-muted/30 backdrop-blur-sm rounded-xl p-4">
-								{weather.loading ? (
-									<View className="items-center py-6">
-										<View className="w-2 h-2 bg-muted-foreground/30 rounded-full animate-pulse" />
-										<Text className="text-muted-foreground text-sm mt-3">Loading weather...</Text>
-									</View>
-								) : weather.error ? (
-									<View className="items-center py-4">
-										<Text className="text-red-500 text-sm mb-2">{weather.error}</Text>
-										<TouchableOpacity onPress={fetchWeather}>
-											<Text className="text-primary text-sm font-medium">Try Again</Text>
-										</TouchableOpacity>
-									</View>
-								) : (
-									<View>
-										<View className="flex-row items-center justify-between mb-4">
-											<View className="flex-row items-center">
-												<Text className="text-4xl mr-4">{weather.icon}</Text>
-												<View>
-													<Text className="text-2xl font-bold">{weather.temp}</Text>
-													<Text className="text-muted-foreground text-sm">{weather.condition}</Text>
-												</View>
-											</View>
-											{weather.advice && (
-												<View className="flex-1 ml-4">
-													<View className="bg-green-50 dark:bg-green-950/50 px-3 py-2 rounded-lg">
-														<Text className="text-green-700 dark:text-green-300 text-xs font-medium text-right">
-															{weather.advice}
-														</Text>
-													</View>
-												</View>
-											)}
-										</View>
-										
-										{weather.forecast.length > 0 && (
-											<View className="flex-row justify-between pt-4 border-t border-border">
-												{weather.forecast.map((day, index) => (
-													<View key={index} className="items-center flex-1">
-														<Text className="text-muted-foreground text-xs mb-1">{day.day}</Text>
-														<Text className="text-lg mb-1">{day.icon}</Text>
-														<Text className="font-medium text-sm">{day.temp}</Text>
-													</View>
-												))}
-											</View>
-										)}
-									</View>
-								)}
-							</View>
+						<View className="flex-1">
+							<Text className="text-lg font-semibold text-green-500">Plant Check-In</Text>
+							<Text className="text-muted-foreground text-sm">
+								{plantCheckIn.loading 
+									? "Loading your plants..." 
+									: `${plantCheckIn.totalPlants} plants in your garden`
+								}
+							</Text>
 						</View>
 					</View>
-				</Animated.View>
-
-				{/* Recommendations Widget */}
-				<Animated.View 
-					className="mb-6 px-4"
-					style={card4AnimatedStyle}
-				>
-					<View className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl shadow-lg">
-						<View className="p-6">
-							<View className="flex-row justify-between items-center mb-4">
-								<View className="flex-row items-center">
-									<View className="w-12 h-12 bg-purple-50 dark:bg-purple-950 rounded-xl items-center justify-center mr-4">
-										<Text className="text-2xl">🛒</Text>
-									</View>
-									<View>
-										<Text className="text-lg font-semibold">Recommended</Text>
-										<Text className="text-muted-foreground text-sm">Local deals for you</Text>
-									</View>
-								</View>
-								<TouchableOpacity onPress={() => router.push("/(protected)/(tabs)/marketplace")}>
-									<Text className="text-primary font-medium text-sm">See All</Text>
-								</TouchableOpacity>
+					
+					<View className="bg-secondary/50 rounded-xl p-4 mt-2">
+						{plantCheckIn.loading ? (
+							<View className="items-center py-4">
+								<Text className="text-muted-foreground">Loading plant data...</Text>
 							</View>
-							
-							{loadingRecommendations ? (
-								<View className="bg-muted/30 backdrop-blur-sm rounded-xl p-6 items-center">
-									<View className="w-2 h-2 bg-muted-foreground/30 rounded-full animate-pulse" />
-									<Text className="text-muted-foreground text-sm mt-3">Loading recommendations...</Text>
-								</View>
-							) : recommendedItems.length === 0 ? (
-								<View className="bg-muted/30 backdrop-blur-sm rounded-xl p-6 items-center">
-									<Text className="text-3xl mb-3">🛒</Text>
-									<Text className="font-medium mb-2">No Items Available</Text>
-									<Text className="text-center text-muted-foreground text-sm leading-relaxed">
-										Check back later for new products from local businesses
-									</Text>
-								</View>
-							) : (
-								<View className="flex-row flex-wrap justify-between">
-									{recommendedItems.slice(0, 2).map((item) => (
-										<ProductCard
-											key={item.id}
-											name={item.name}
-											business={item.business}
-											price={item.price}
-											originalPrice={item.originalPrice}
-											discount={item.discount}
-											image={item.image}
-											eco={item.eco}
-											onPress={() => router.push(`/(protected)/product/${item.id}`)}
-										/>
+						) : plantCheckIn.totalPlants === 0 ? (
+							<View className="items-center">
+								<Text className="text-4xl mb-2">🌱</Text>
+								<Text className="text-xl font-medium text-center mb-2">Start Your Garden</Text>
+								<Text className="text-muted-foreground text-center mb-3">
+									Add your first plant to begin daily check-ins
+								</Text>
+								<Button
+									variant="default"
+									className="w-full"
+									onPress={() => router.push("/(protected)/plants/add-plant")}
+								>
+									<Text className="text-primary-foreground font-medium">Add Your First Plant</Text>
+								</Button>
+							</View>
+						) : plantCheckIn.plantsNeedingCheckIn.length === 0 ? (
+							<View className="items-center">
+								<Text className="text-4xl mb-2">✅</Text>
+								<Text className="text-xl font-medium text-center mb-2">All Caught Up!</Text>
+								<Text className="text-muted-foreground text-center mb-3">
+									{plantCheckIn.plantsCheckedInToday > 0 
+										? `${plantCheckIn.plantsCheckedInToday} plants checked in today`
+										: "All your plants are up to date"
+									}
+								</Text>
+								<Button
+									variant="default"
+									className="w-full"
+									onPress={navigateToPlants}
+								>
+									<Text className="text-primary-foreground font-medium">View All Plants</Text>
+								</Button>
+							</View>
+						) : (
+							<View>
+								<Text className="text-xl font-medium text-center mb-2">
+									{plantCheckIn.plantsNeedingCheckIn.length} plant{plantCheckIn.plantsNeedingCheckIn.length > 1 ? 's' : ''} need{plantCheckIn.plantsNeedingCheckIn.length === 1 ? 's' : ''} check-in
+								</Text>
+								<Text className="text-muted-foreground text-center mb-3">
+									Track your plants' growth progress
+								</Text>
+								
+								{/* Show plants needing check-in */}
+								<View className="space-y-2 mb-4">
+									{plantCheckIn.plantsNeedingCheckIn.map((plant) => (
+										<TouchableOpacity
+											key={plant.id}
+											className="flex-row items-center p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800"
+											onPress={() => handlePlantCheckIn(plant.id)}
+											activeOpacity={0.7}
+										>
+											<View className="w-10 h-10 rounded-lg bg-muted items-center justify-center mr-3">
+												{plant.image_url ? (
+													<Image
+														source={{ uri: plant.image_url }}
+														className="w-10 h-10 rounded-lg"
+														resizeMode="cover"
+													/>
+												) : (
+													<Text className="text-lg">
+														{getPlantTypeIcon(plant.plant_type)}
+													</Text>
+												)}
+											</View>
+											<View className="flex-1">
+												<Text className="font-medium text-sm">{plant.plant_name}</Text>
+												<Text className="text-xs text-muted-foreground">
+													{plant.hoursSinceLastCheckIn >= 999 
+														? "Never checked in" 
+														: `${Math.floor(plant.hoursSinceLastCheckIn)}h ago`
+													}
+												</Text>
+											</View>
+											<View className="bg-yellow-200 dark:bg-yellow-800 px-2 py-1 rounded">
+												<Text className="text-yellow-800 dark:text-yellow-200 text-xs font-medium">
+													📸 Check-in
+												</Text>
+											</View>
+										</TouchableOpacity>
 									))}
 								</View>
-							)}
-						</View>
+
+								<Button
+									variant="default"
+									className="w-full"
+									onPress={navigateToPlants}
+								>
+									<Text className="text-primary-foreground font-medium">View All Plants</Text>
+								</Button>
+							</View>
+						)}
 					</View>
-				</Animated.View>
-				
-				{/* FoodLoop AI Section */}
-				<Animated.View 
-					className="mb-6 px-4"
-					style={card5AnimatedStyle}
+				</TouchableOpacity>
+
+{/* Achievements Widget */}
+				<TouchableOpacity 
+					className="mx-4 mb-6 p-5 bg-secondary/30 rounded-2xl border border-border"
+					onPress={() => router.push("/(protected)/achievements-modal")}
+					activeOpacity={0.7}
 				>
-					<View className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl shadow-lg overflow-hidden">
-						<View className="backdrop-blur-md dark:bg-slate-800/90 p-6" style={{ backgroundColor: '#2ac76c' }}>
-							<View className="flex-row items-center mb-4">
-								<View className="w-12 h-12 bg-slate-700 rounded-xl items-center justify-center mr-4">
-									<Image 
-										source={require('../../../assets/2.png')} 
-										className="w-7 h-7"
-										resizeMode="contain"
+					<View className="flex-row justify-between items-center mb-3">
+						<View className="flex-row items-center">
+							<Text className="text-xl mr-2">🏆</Text>
+							<Text className="text-lg font-semibold">Achievements</Text>
+						</View>
+						<TouchableOpacity onPress={() => router.push("/(protected)/achievements-modal")}>
+							<Text className="text-primary text-sm">View All</Text>
+						</TouchableOpacity>
+					</View>
+					
+					<View className="bg-secondary/50 rounded-xl p-4 mt-2">
+						{achievementsLoading ? (
+							<View className="items-center py-4">
+								<Text className="text-muted-foreground">Loading achievements...</Text>
+							</View>
+						) : nextMilestone ? (
+							<View>
+								<View className="flex-row items-center mb-3">
+									<Text className="text-2xl mr-3">{nextMilestone.achievement.icon}</Text>
+									<View className="flex-1">
+										<Text className="font-medium">{nextMilestone.achievement.name}</Text>
+										<Text className="text-xs text-muted-foreground">+{nextMilestone.achievement.points} points</Text>
+									</View>
+								</View>
+								<Text className="text-sm text-muted-foreground mb-3 leading-relaxed">
+									{nextMilestone.achievement.description}
+								</Text>
+								<View className="w-full h-2 bg-muted rounded-full overflow-hidden mb-2">
+									<View 
+										className="h-2 bg-green-500 rounded-full" 
+										style={{ width: `${nextMilestone.progressPercentage}%` }} 
 									/>
 								</View>
-								<View className="flex-1">
-									<Text className="text-white text-lg font-semibold">FoodLoop AI</Text>
-									<Text className="text-slate-300 text-sm">Multiple AI models to assist you</Text>
+								<View className="flex-row justify-between items-center">
+									<Text className="text-muted-foreground text-xs">
+										{nextMilestone.current_progress} / {nextMilestone.achievement.target_value}
+									</Text>
+									<Text className="text-muted-foreground text-xs">{Math.round(nextMilestone.progressPercentage)}%</Text>
 								</View>
 							</View>
-							
-							<Text className="text-slate-200 text-sm leading-relaxed mb-4">
-								Leverage our variety of AI models to maximize your food usage, minimize waste, and optimize savings.
-							</Text>
-							
-							<Button
-								className="w-full bg-white"
-								variant="secondary"
-								onPress={() => router.push("/(protected)/smartplate-ai")}
-							>
-								<View className="flex-row items-center">
-									<Text className="text-xl mr-2">🧠</Text>
-									<Text className="text-slate-900 font-medium">Start AI Chat</Text>
-								</View>
-							</Button>
-						</View>
+						) : (
+							<View className="items-center py-4">
+								<Text className="text-4xl mb-2">🎉</Text>
+								<Text className="text-xl font-medium text-center mb-2">All Achievements Complete!</Text>
+								<Text className="text-muted-foreground text-center">
+									You're a FoodLoop champion
+								</Text>
+							</View>
+						)}
 						
-						<View className="bg-muted/20 backdrop-blur-sm px-6 py-4">
-							<Text className="text-center text-xs text-muted-foreground">
-								Powered by Google Gemini • Helped save 245kg food waste this month
+						<View className="mt-4 pt-4 border-t border-border">
+							<Text className="text-muted-foreground text-center text-sm">
+								{achievementStats.completedCount} of {achievementStats.totalAchievements} completed
 							</Text>
 						</View>
 					</View>
-				</Animated.View>
+				</TouchableOpacity>
 
-				{/* Impact Tracker */}
-				<Animated.View 
-					className="mb-6 px-4"
-					style={card6AnimatedStyle}
-				>
-					<TouchableOpacity 
-						className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl shadow-lg"
-						onPress={() => router.push("/(protected)/impact-dashboard")}
-						activeOpacity={0.95}
-					>
-						<View className="p-6">
-							<View className="flex-row items-center justify-between mb-4">
+				{/* Local Weather Widget - Using Weather Service */}
+				<View className="mx-4 mb-6 p-5 bg-secondary/30 rounded-2xl border border-border">
+					<View className="flex-row justify-between items-center mb-3">
+						<View className="flex-row items-center">
+							<Text className="text-xl mr-2">☁️</Text>
+							<Text className="text-lg font-semibold">Local Weather</Text>
+						</View>
+						<TouchableOpacity onPress={fetchWeather}>
+							<Text className="text-primary text-sm">Refresh</Text>
+						</TouchableOpacity>
+					</View>
+					
+					{weather.loading ? (
+						<View className="items-center py-4">
+							<Text className="text-muted-foreground">Loading weather...</Text>
+						</View>
+					) : weather.error ? (
+						<View className="items-center py-4">
+							<Text className="text-red-500 text-sm">{weather.error}</Text>
+							<TouchableOpacity onPress={fetchWeather} className="mt-2">
+								<Text className="text-primary text-sm">Try Again</Text>
+							</TouchableOpacity>
+						</View>
+					) : (
+						<>
+							<Text className="text-muted-foreground text-sm mb-3">{weather.location}</Text>
+							
+							<View className="flex-row items-center justify-between mb-3">
 								<View className="flex-row items-center">
-									<View className="w-12 h-12 bg-emerald-50 dark:bg-emerald-950 rounded-xl items-center justify-center mr-4">
-										<Text className="text-2xl">🌍</Text>
-									</View>
+									<Text className="text-4xl mr-3">{weather.icon}</Text>
 									<View>
-										<Text className="text-lg font-semibold">Your Impact</Text>
-										<Text className="text-muted-foreground text-sm">Environmental contribution</Text>
+										<Text className="text-2xl font-bold">{weather.temp}</Text>
+										<Text className="text-muted-foreground">{weather.condition}</Text>
 									</View>
 								</View>
-								<TouchableOpacity onPress={() => router.push("/(protected)/impact-dashboard")}>
-									<Text className="text-primary font-medium text-sm">View Details</Text>
-								</TouchableOpacity>
+								<View className="flex-1 ml-4">
+									<Text className="text-green-500 text-sm font-medium text-right">
+										{weather.advice}
+									</Text>
+								</View>
 							</View>
+							
+							<View className="flex-row justify-between mt-2">
+								{weather.forecast.map((day, index) => (
+									<View key={index} className="items-center flex-1">
+										<Text className="text-muted-foreground text-xs">{day.day}</Text>
+										<Text className="text-xl my-1">{day.icon}</Text>
+										<Text className="font-medium text-sm">{day.temp}</Text>
+									</View>
+								))}
+							</View>
+						</>
+					)}
+				</View>
 
-							<View className="bg-muted/50 rounded-xl p-4">
-								{realImpact.loading ? (
-									<View className="items-center py-6">
-										<View className="w-2 h-2 bg-muted-foreground/30 rounded-full animate-pulse" />
-										<Text className="text-muted-foreground text-sm mt-3">Loading impact data...</Text>
-									</View>
-								) : !realImpact.hasData ? (
-									<View className="items-center py-4">
-										<Text className="text-3xl mb-3">🌱</Text>
-										<Text className="font-medium text-center mb-2">Start Your Journey</Text>
-										<Text className="text-center text-sm text-muted-foreground leading-relaxed">
-											Make your first purchase to begin tracking your environmental impact
-										</Text>
-									</View>
-								) : (
-									<View>
-										<View className="flex-row justify-between mb-4">
-											<View className="items-center flex-1">
-												<Text className="text-xl font-bold text-green-600 dark:text-green-400">
-													{realImpact.totalCO2Saved}
-												</Text>
-												<Text className="text-xs text-muted-foreground font-medium">kg CO₂ Saved</Text>
-											</View>
-											<View className="items-center flex-1">
-												<Text className="text-xl font-bold text-blue-600 dark:text-blue-400">
-													${realImpact.totalMoneySaved}
-												</Text>
-												<Text className="text-xs text-muted-foreground font-medium">Money Saved</Text>
-											</View>
-											<View className="items-center flex-1">
-												<Text className="text-xl font-bold text-amber-600 dark:text-amber-400">
-													{realImpact.totalItemsRescued}
-												</Text>
-												<Text className="text-xs text-muted-foreground font-medium">Items Rescued</Text>
-											</View>
-										</View>
-										
-										<View className="pt-4 border-t border-border">
-											<Text className="text-center text-sm text-muted-foreground">
-												Tap to explore your detailed environmental impact
-											</Text>
-										</View>
-									</View>
-								)}
+				{/* Recommendations Widget with real marketplace data */}
+				<View className="mx-4 mb-6">
+					<View className="flex-row justify-between items-center mb-4">
+						<Text className="text-lg font-semibold">Recommended For You</Text>
+						<TouchableOpacity onPress={() => router.push("/(protected)/(tabs)/marketplace")}>
+							<Text className="text-primary font-medium">See All</Text>
+						</TouchableOpacity>
+					</View>
+					
+					{loadingRecommendations ? (
+						<View className="items-center py-8">
+							<Text className="text-muted-foreground">Loading recommendations...</Text>
+						</View>
+					) : recommendedItems.length === 0 ? (
+						<View className="items-center py-8 bg-secondary/30 rounded-xl">
+							<Text className="text-4xl mb-2">🛒</Text>
+							<Text className="font-semibold mb-1">No items available</Text>
+							<Text className="text-center text-muted-foreground">
+								Check back later for new products from local businesses
+							</Text>
+						</View>
+					) : (
+						<View className="flex-row flex-wrap justify-between">
+							{recommendedItems.slice(0, 2).map((item) => (
+								<ProductCard
+									key={item.id}
+									name={item.name}
+									business={item.business}
+									price={item.price}
+									originalPrice={item.originalPrice}
+									discount={item.discount}
+									image={item.image}
+									eco={item.eco}
+									onPress={() => router.push(`/(protected)/product/${item.id}`)}
+								/>
+							))}
+						</View>
+					)}
+				</View>
+				
+				{/* SmartPlate AI section - Updated with navigation */}
+				<View className="mx-4 mb-6 rounded-2xl border border-border overflow-hidden">
+					<LinearGradient
+						colors={['rgba(33, 39, 41, 1)', 'rgba(33, 103, 63, 1)']}
+						start={{ x: 0, y: 0 }}
+						end={{ x: 1, y: 1 }}
+						locations={[0, 1]}
+						style={{ padding: 20, paddingBottom: 24 }}
+					>
+						<View className="flex-row items-center mb-3">
+							<View className="w-12 h-12 rounded-full items-center justify-center mr-3">
+								<Image 
+									source={require('../../../assets/2.png')} 
+									className="w-full h-full"
+									resizeMode="contain"
+								/>
+							</View>
+							<View>
+								<H3 className="text-white">SmartPlant AI</H3>
+								<Text className="text-green-100 opacity-80">Your gardening companion</Text>
 							</View>
 						</View>
-					</TouchableOpacity>
-				</Animated.View>
+						
+						<Text className="text-green-50 mb-0">
+							Got a plant question? Take a photo or chat with our AI garden expert for instant help with plant care, pest identification, and growing tips!
+						</Text>
+					</LinearGradient>
+					
+					<View className="bg-secondary/30 p-4">
+						<Button
+							className="w-full"
+							variant="default"
+							size="default"
+							onPress={() => router.push("/(protected)/smartplate-ai")}
+						>
+							<View className="flex-row items-center">
+								<Text className="text-xl mr-2">🌱</Text>
+								<Text className="text-primary-foreground font-medium">Ask Your Plant Expert</Text>
+							</View>
+						</Button>
+						
+						<Text className="text-center mt-2 text-xs text-muted-foreground">
+							Photo diagnosis • Growing tips • Pest help • Always available
+						</Text>
+					</View>
+				</View>
+
+				{/* Real Impact tracker - Updated with real data */}
+				<TouchableOpacity 
+					className="mx-4 mb-12 p-5 bg-secondary/30 rounded-xl border border-border"
+					onPress={() => router.push("/(protected)/impact-dashboard")}
+					activeOpacity={0.7}
+				>
+					<View className="flex-row items-center justify-between mb-4">
+						<View className="flex-row items-center">
+							<Text className="text-2xl mr-2">🌍</Text>
+							<H3>Your Impact</H3>
+						</View>
+						<TouchableOpacity onPress={() => router.push("/(protected)/impact-dashboard")}>
+							<Text className="text-primary font-medium">View Details</Text>
+						</TouchableOpacity>
+					</View>
+
+					{realImpact.loading ? (
+						<View className="flex-row justify-center py-4">
+							<Text className="text-muted-foreground">Loading your impact...</Text>
+						</View>
+					) : !realImpact.hasData ? (
+						<View className="items-center py-4">
+							<Text className="text-4xl mb-2">🌱</Text>
+							<Text className="text-center text-muted-foreground mb-2">
+								No impact data yet
+							</Text>
+							<Text className="text-center text-sm text-muted-foreground">
+								Make your first purchase to start tracking your environmental impact!
+							</Text>
+						</View>
+					) : (
+						<>
+							<View className="flex-row justify-between">
+								<View className="items-center">
+									<Text className="text-2xl font-bold text-green-500">
+										{realImpact.totalCO2Saved} kg
+									</Text>
+									<Text className="text-xs text-muted-foreground">CO₂ Saved</Text>
+								</View>
+								<View className="items-center">
+									<Text className="text-2xl font-bold text-primary">
+										${realImpact.totalMoneySaved}
+									</Text>
+									<Text className="text-xs text-muted-foreground">Money Saved</Text>
+								</View>
+								<View className="items-center">
+									<Text className="text-2xl font-bold text-amber-500">
+										{realImpact.totalItemsRescued}
+									</Text>
+									<Text className="text-xs text-muted-foreground">Items Rescued</Text>
+								</View>
+							</View>
+							
+							<View className="mt-3 pt-3 border-t border-border">
+								<Text className="text-center text-sm text-muted-foreground">
+									Tap to see your detailed environmental impact
+								</Text>
+							</View>
+						</>
+					)}
+				</TouchableOpacity>
+				
 			</ScrollView>
+
+			{/* Tab navigation is handled by the parent layout */}
 		</SafeAreaView>
 	);
 }

@@ -40,6 +40,7 @@ import { format } from 'date-fns';
 import Markdown from 'react-native-markdown-display';
 import { useChatContext } from '@/context/chat-provider';
 import { ProductSuggestion } from '@/lib/gemini';
+import { weatherService, WeatherData } from '@/lib/weather-service';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -88,7 +89,7 @@ const AI_MODES = [
     description: 'Weather-based farming and growing advice',
     color: '#1d4ed8',
     placeholder: 'Ask about weather patterns, seasonal planning, or climate adaptation...',
-    systemPrompt: 'You are WeatherWise AI, a climate and weather specialist for agriculture. Help users adapt their farming and gardening practices to weather conditions, plan for seasonal changes, and build resilience against climate challenges. Provide location-appropriate advice for sustainable agriculture.'
+    systemPrompt: 'You are WeatherWise AI, a climate and weather specialist for agriculture. You have access to real-time weather data including current conditions, 5-day forecasts, and location-specific information. Use this data to provide specific, actionable advice for farming, gardening, and agricultural activities. Help users adapt their practices to current weather conditions, plan for seasonal changes, and build resilience against climate challenges. Always reference the actual weather data provided and give location-appropriate advice for sustainable agriculture. Focus on practical tips like optimal planting times, watering schedules, crop protection, and harvest timing based on the real weather conditions.'
   },
   {
     id: 'wastewarrior',
@@ -110,6 +111,8 @@ export default function SmartPlateAI() {
   const [currentMode, setCurrentMode] = useState(AI_MODES[0]);
   const [showModeSelector, setShowModeSelector] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
+  const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
+  const [loadingWeather, setLoadingWeather] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
 
@@ -270,6 +273,29 @@ export default function SmartPlateAI() {
     }
   }, [currentMode.id, showIntro]);
 
+  // Fetch weather data when WeatherWise mode is selected
+  useEffect(() => {
+    if (currentMode.id === 'weatherwise' && !showIntro && !weatherData) {
+      fetchWeatherData();
+    }
+  }, [currentMode.id, showIntro]);
+
+  const fetchWeatherData = async () => {
+    try {
+      setLoadingWeather(true);
+      const weather = await weatherService.getWeatherData({
+        temperatureUnit: 'fahrenheit',
+        forecastDays: 5,
+        includeDetails: true
+      });
+      setWeatherData(weather);
+    } catch (error) {
+      console.error('Error fetching weather data:', error);
+    } finally {
+      setLoadingWeather(false);
+    }
+  };
+
   const handleSendMessage = async () => {
     if ((!inputText.trim() && selectedImages.length === 0) || isLoading) return;
     
@@ -280,14 +306,58 @@ export default function SmartPlateAI() {
     setSelectedImages([]);
     Keyboard.dismiss();
 
-    // Add mode context to the message
-    const contextualMessage = `[${currentMode.name} Mode] ${messageText}`;
+    // For WeatherWise mode, fetch current weather data
+    let weatherContext = '';
+    if (currentMode.id === 'weatherwise') {
+      try {
+        setLoadingWeather(true);
+        const weather = await weatherService.getWeatherData({
+          temperatureUnit: 'fahrenheit',
+          forecastDays: 5,
+          includeDetails: true
+        });
+        setWeatherData(weather);
+        
+        // Build weather context for AI
+        const farmingAdvice = weatherService.getFarmingAdvice(weather);
+        weatherContext = `\n\nCURRENT WEATHER DATA for ${weather.location.name}:
+📍 Location: ${weather.location.name}
+🌡️ Current: ${weather.temperature}°${weather.temperatureUnit === 'fahrenheit' ? 'F' : 'C'}
+${weather.icon} Condition: ${weather.condition}
+💧 Humidity: ${weather.humidity || 'N/A'}%
+💨 Wind: ${weather.windSpeed || 'N/A'} mph
+☀️ UV Index: ${weather.uvIndex || 'N/A'}
+🌡️ Feels like: ${weather.feelsLike || weather.temperature}°${weather.temperatureUnit === 'fahrenheit' ? 'F' : 'C'}
+
+5-DAY FORECAST:
+${weather.forecast.map(day => 
+  `${day.day}: ${day.icon} ${day.temperatureMax}°/${day.temperatureMin}° - ${day.condition}${day.precipitationProbability ? ` (${day.precipitationProbability}% rain)` : ''}`
+).join('\n')}
+
+FARMING ADVICE: ${farmingAdvice}
+
+Please provide specific advice based on these current weather conditions and forecast.`;
+      } catch (error) {
+        console.error('Error fetching weather data:', error);
+        weatherContext = '\n\n⚠️ Unable to fetch current weather data. Please provide general weather-based farming advice.';
+      } finally {
+        setLoadingWeather(false);
+      }
+    }
+
+    // Add mode context to the message with weather data if applicable
+    const contextualMessage = `[${currentMode.name} Mode] ${messageText}${weatherContext}`;
     await sendMessage(contextualMessage, images.length > 0 ? images : undefined);
   };
 
   const handleModeSelect = (mode: typeof AI_MODES[0]) => {
     setCurrentMode(mode);
     setShowModeSelector(false);
+    
+    // Clear weather data when switching away from WeatherWise
+    if (mode.id !== 'weatherwise') {
+      setWeatherData(null);
+    }
   };
 
   const showImagePickerOptions = () => {
@@ -431,7 +501,7 @@ export default function SmartPlateAI() {
       >
         {isUser ? (
           // User message - keep in bubble format
-          <View className="flex-row max-w-[85%] flex-row-reverse">
+          <View className="max-w-[85%] flex-row-reverse">
             <View className="w-8 h-8 rounded-full items-center justify-center ml-3 mt-1">
               <View className="w-8 h-8 bg-primary rounded-full items-center justify-center">
                 <Text className="text-primary-foreground text-xs font-bold">You</Text>
@@ -801,6 +871,65 @@ export default function SmartPlateAI() {
           <Ionicons name="refresh" size={24} color={textColor} />
         </TouchableOpacity>
       </View>
+
+      {/* Weather Widget for WeatherWise Mode */}
+      {currentMode.id === 'weatherwise' && (
+        <View className="px-4 py-3 border-b" style={{ borderBottomColor: borderColor, backgroundColor: secondaryBg }}>
+          {loadingWeather ? (
+            <View className="flex-row items-center justify-center py-2">
+              <ActivityIndicator size="small" color={currentMode.color} />
+              <Text className="ml-2" style={{ color: mutedTextColor }}>Loading weather data...</Text>
+            </View>
+          ) : weatherData ? (
+            <View>
+              <View className="flex-row items-center justify-between mb-2">
+                <View className="flex-row items-center">
+                  <Text className="text-2xl mr-2">{weatherData.icon}</Text>
+                  <View>
+                    <Text className="font-semibold" style={{ color: textColor }}>
+                      {weatherData.location.name}
+                    </Text>
+                    <Text className="text-xs" style={{ color: mutedTextColor }}>
+                      {weatherData.condition} • {weatherData.temperature}°{weatherData.temperatureUnit === 'fahrenheit' ? 'F' : 'C'}
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity onPress={fetchWeatherData}>
+                  <Ionicons name="refresh" size={20} color={mutedTextColor} />
+                </TouchableOpacity>
+              </View>
+              
+              {/* Quick forecast */}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="mt-2">
+                {weatherData.forecast.slice(0, 4).map((day, index) => (
+                  <View key={index} className="items-center mr-4 p-2 rounded-lg" style={{ backgroundColor: bgColor, minWidth: 60 }}>
+                    <Text className="text-xs mb-1" style={{ color: mutedTextColor }}>{day.day}</Text>
+                    <Text className="text-lg mb-1">{day.icon}</Text>
+                    <Text className="text-xs" style={{ color: textColor }}>
+                      {day.temperatureMax}°/{day.temperatureMin}°
+                    </Text>
+                  </View>
+                ))}
+              </ScrollView>
+              
+              {/* Farming advice */}
+              <View className="mt-2 p-2 rounded-lg" style={{ backgroundColor: bgColor }}>
+                <Text className="text-xs font-medium mb-1" style={{ color: textColor }}>
+                  🌱 Today's Farming Tip:
+                </Text>
+                <Text className="text-xs" style={{ color: mutedTextColor }}>
+                  {weatherService.getFarmingAdvice(weatherData)}
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={fetchWeatherData} className="flex-row items-center justify-center py-2">
+              <Ionicons name="cloud-download" size={20} color={currentMode.color} />
+              <Text className="ml-2" style={{ color: textColor }}>Tap to load weather data</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
 
       <KeyboardAvoidingView 
         className="flex-1"
