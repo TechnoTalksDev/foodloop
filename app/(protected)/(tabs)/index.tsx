@@ -561,7 +561,7 @@ export default function Home() {
 			>
 				{/* Professional Header */}
 				<Animated.View 
-					className="flex-row justify-between items-center px-6 py-4 mb-2"
+					className="flex-row justify-between items-center py-4 mb-2 px-4"
 					style={headerAnimatedStyle}
 				>
 					<TouchableOpacity 
@@ -611,7 +611,7 @@ export default function Home() {
 
 				{/* Plant Check-In Widget */}
 				<Animated.View 
-					className="mx-6 mb-6"
+					className="mb-6 px-4"
 					style={card1AnimatedStyle}
 				>
 					<TouchableOpacity 
@@ -741,7 +741,7 @@ export default function Home() {
 
 				{/* Achievements Widget */}
 				<Animated.View 
-					className="mx-6 mb-6"
+					className="mb-6 px-4"
 					style={card2AnimatedStyle}
 				>
 					<TouchableOpacity 
@@ -818,7 +818,7 @@ export default function Home() {
 
 				{/* Weather Widget */}
 				<Animated.View 
-					className="mx-6 mb-6"
+					className="mb-6 px-4"
 					style={card3AnimatedStyle}
 				>
 					<View className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl shadow-lg">
@@ -894,7 +894,7 @@ export default function Home() {
 
 				{/* Recommendations Widget */}
 				<Animated.View 
-					className="mx-6 mb-6"
+					className="mb-6 px-4"
 					style={card4AnimatedStyle}
 				>
 					<View className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl shadow-lg">
@@ -950,7 +950,7 @@ export default function Home() {
 				
 				{/* FoodLoop AI Section */}
 				<Animated.View 
-					className="mx-6 mb-6"
+					className="mb-6 px-4"
 					style={card5AnimatedStyle}
 				>
 					<View className="bg-card/80 backdrop-blur-xl border border-border/50 rounded-2xl shadow-lg overflow-hidden">
@@ -995,7 +995,7 @@ export default function Home() {
 
 				{/* Impact Tracker */}
 				<Animated.View 
-					className="mx-6 mb-6"
+					className="mb-6 px-4"
 					style={card6AnimatedStyle}
 				>
 					<TouchableOpacity 

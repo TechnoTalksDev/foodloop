@@ -176,7 +176,7 @@ export default function Profile() {
 
 	return (
 		<SafeAreaView className="flex-1 bg-background">
-			<ScrollView className="flex-1">
+			<ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 60 }}>
 				<View className="p-6">
 					{/* Header */}
 					<View className="items-center mb-8">
@@ -297,11 +297,11 @@ export default function Profile() {
 						<View className="bg-card p-4 rounded-lg">
 							<View className="flex-row items-center justify-between mb-3">
 								<H2>Recent Orders</H2>
-								{orderHistory.length > 3 && (
+								{/* {orderHistory.length > 1 && (
 									<TouchableOpacity onPress={handleViewAllOrders}>
-										<Text className="text-primary font-medium text-sm">View All</Text>
+										<Text className="text-foreground font-medium text-sm">View All</Text>
 									</TouchableOpacity>
-								)}
+								)} */}
 							</View>
 							
 							{orderLoading ? (
@@ -426,7 +426,7 @@ export default function Profile() {
 						</View>
 
 						{/* Preferences */}
-						<View className="bg-card p-4 rounded-lg">
+						{/* <View className="bg-card p-4 rounded-lg">
 							<H2 className="mb-3">Preferences</H2>
 							<View className="gap-y-3">
 								<View className="flex-row justify-between items-center">
@@ -442,7 +442,7 @@ export default function Profile() {
 									<Muted>Not set</Muted>
 								</View>
 							</View>
-						</View>
+						</View> */}
 
 						{/* Action Buttons */}
 						<View className="gap-y-3 mt-6">

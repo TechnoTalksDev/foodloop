@@ -55,14 +55,6 @@ export default function TabsLayout() {
 						},
 					]}
 				>
-					{focused && (
-						<View 
-							style={[
-								styles.activeIndicator, 
-								{ backgroundColor: activeColor }
-							]} 
-						/>
-					)}
 					<Ionicons
 						name={focused ? iconName : `${iconName}-outline`}
 						size={focused ? 26 : 24}
@@ -248,7 +240,7 @@ const styles = StyleSheet.create({
 		minHeight: 56,
 	},
 	tabButtonActive: {
-		backgroundColor: "rgba(16, 185, 129, 0.12)",
+		// backgroundColor: "rgba(16, 185, 129, 0.12)",
 	},
 	iconContainer: {
 		alignItems: "center",
@@ -259,12 +251,5 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		justifyContent: "center",
 		position: "relative",
-	},
-	activeIndicator: {
-		position: "absolute",
-		top: -10,
-		width: 4,
-		height: 4,
-		borderRadius: 2,
 	},
 });
