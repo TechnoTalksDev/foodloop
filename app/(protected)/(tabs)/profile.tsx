@@ -1,4 +1,4 @@
-import { View, ScrollView, TouchableOpacity } from "react-native";
+import { View, ScrollView, TouchableOpacity, RefreshControl } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useState, useEffect } from "react";
 import { useRouter } from "expo-router";
@@ -59,6 +59,9 @@ export default function Profile() {
 		totalCO2Saved: 0,
 	});
 	const { preferences, updatePreferences } = useNotifications();
+
+	// Pull to refresh state
+	const [refreshing, setRefreshing] = useState(false);
 
 	useEffect(() => {
 		if (session?.user?.id) {
@@ -174,9 +177,37 @@ export default function Profile() {
 		? new Date(user.created_at).getFullYear()
 		: new Date().getFullYear();
 
+	// Pull to refresh handler
+	const onRefresh = async () => {
+		if (!session?.user?.id) return;
+		
+		setRefreshing(true);
+		try {
+			await Promise.all([
+				fetchUserProfile(session.user.id),
+				fetchOrderHistory(session.user.id)
+			]);
+		} catch (error) {
+			console.error('Error refreshing profile data:', error);
+		} finally {
+			setRefreshing(false);
+		}
+	};
+
 	return (
 		<SafeAreaView className="flex-1 bg-background">
-			<ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 60 }}>
+			<ScrollView 
+				className="flex-1" 
+				contentContainerStyle={{ paddingBottom: 60 }}
+				refreshControl={
+					<RefreshControl
+						refreshing={refreshing}
+						onRefresh={onRefresh}
+						tintColor="#10b981"
+						colors={["#10b981"]}
+					/>
+				}
+			>
 				<View className="p-6">
 					{/* Header */}
 					<View className="items-center mb-8">

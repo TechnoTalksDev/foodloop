@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { Image, ScrollView, TouchableOpacity, View } from "react-native";
+import { Image, ScrollView, TouchableOpacity, View, RefreshControl } from "react-native";
 import { useSharedValue } from "react-native-reanimated";
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from "react";
@@ -127,26 +127,11 @@ export default function Home() {
 		plantsCheckedInToday: 0,
 		loading: true
 	});
+
+	// Pull to refresh state
+	const [refreshing, setRefreshing] = useState(false);
 	
 	useEffect(() => {
-		const fetchUser = async () => {
-			if (session?.user?.id) {
-				const { data, error } = await supabase
-					.from("users")
-					.select("username, name, avatar")
-					.eq("id", session.user.id)
-					.single();
-				if (data) {
-					setUsername(data.name || data.username || "there");
-					setAvatarUrl(data.avatar);
-				} else {
-					setUsername("there");
-				}
-			} else {
-				setUsername("there");
-			}
-			setLoadingUser(false);
-		};
 		fetchUser();
 	}, [session?.user?.id]);
 
@@ -468,9 +453,60 @@ export default function Home() {
 		router.push("/(protected)/(tabs)/plants");
 	};
 
+	// Pull to refresh handler
+	const onRefresh = async () => {
+		setRefreshing(true);
+		try {
+			// Refresh all data in parallel
+			await Promise.all([
+				fetchUser(),
+				fetchWeather(),
+				fetchPlantCheckInData(),
+				fetchRecommendedItems(),
+				// Note: Real impact data is fetched in useEffect based on session
+			]);
+		} catch (error) {
+			console.error('Error refreshing data:', error);
+		} finally {
+			setRefreshing(false);
+		}
+	};
+
+	// Helper function to refetch user data (extracted from useEffect)
+	const fetchUser = async () => {
+		if (session?.user?.id) {
+			const { data, error } = await supabase
+				.from("users")
+				.select("username, name, avatar")
+				.eq("id", session.user.id)
+				.single();
+			if (data) {
+				setUsername(data.name || data.username || "there");
+				setAvatarUrl(data.avatar);
+			} else {
+				setUsername("there");
+			}
+		} else {
+			setUsername("there");
+		}
+		setLoadingUser(false);
+	};
+
 	return (
 		<SafeAreaView className="flex-1 bg-background pb-6">
-			<ScrollView className="flex-1" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 32 }}>
+			<ScrollView 
+				className="flex-1" 
+				showsVerticalScrollIndicator={false} 
+				contentContainerStyle={{ paddingBottom: 32 }}
+				refreshControl={
+					<RefreshControl
+						refreshing={refreshing}
+						onRefresh={onRefresh}
+						tintColor="#10b981"
+						colors={["#10b981"]}
+					/>
+				}
+			>
 				{/* Header section */}
 				<View className="flex-row justify-between items-center px-4 py-3 mb-4">
 					<TouchableOpacity onPress={() => router.push("/(protected)/notification-modal")}> 

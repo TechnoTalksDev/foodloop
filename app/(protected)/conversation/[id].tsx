@@ -9,6 +9,7 @@ import {
 	ActivityIndicator,
 	Alert,
 	Image,
+	RefreshControl,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -69,6 +70,7 @@ export default function ConversationScreen() {
 	const [showOfferInput, setShowOfferInput] = useState(false);
 	const [offerAmount, setOfferAmount] = useState("");
 	const [processingOffer, setProcessingOffer] = useState<string | null>(null);
+	const [refreshing, setRefreshing] = useState(false);
 
 	// Check if current user is the seller
 	const isSeller = conversation?.seller_id === session?.user?.id;
@@ -324,6 +326,18 @@ export default function ConversationScreen() {
 	useEffect(() => {
 		fetchConversationData();
 	}, [id, session?.user?.id]);
+
+	// Pull to refresh handler
+	const onRefresh = async () => {
+		setRefreshing(true);
+		try {
+			await fetchConversationData();
+		} catch (error) {
+			console.error('Error refreshing conversation:', error);
+		} finally {
+			setRefreshing(false);
+		}
+	};
 	// Set up realtime subscriptions for messages and conversations
 	useEffect(() => {
 		if (!id || !session?.user?.id || loading) return;
@@ -587,6 +601,14 @@ export default function ConversationScreen() {
 					ref={scrollViewRef}
 					className="flex-1 px-4 py-4"
 					showsVerticalScrollIndicator={false}
+					refreshControl={
+						<RefreshControl
+							refreshing={refreshing}
+							onRefresh={onRefresh}
+							tintColor="#10b981"
+							colors={["#10b981"]}
+						/>
+					}
 				>
 					{messages.map(renderMessage)}
 				</ScrollView>

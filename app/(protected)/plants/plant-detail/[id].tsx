@@ -10,6 +10,7 @@ import {
 	TextInput,
 	Modal,
 	ActivityIndicator,
+	RefreshControl,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -95,7 +96,10 @@ export default function PlantDetailScreen() {
 	const [checkInHealth, setCheckInHealth] = useState("healthy");
 	const [submittingCheckIn, setSubmittingCheckIn] = useState(false);
 	const [uploadingImage, setUploadingImage] = useState(false);
-    const { addNotification } = useNotifications()
+    const { addNotification } = useNotifications();
+
+	// Pull to refresh state
+	const [refreshing, setRefreshing] = useState(false);
 
 	useEffect(() => {
 		if (id) {
@@ -150,6 +154,18 @@ export default function PlantDetailScreen() {
 			setCheckIns(data || []);
 		} catch (error) {
 			console.error("Error in fetchCheckIns:", error);
+		}
+	};
+
+	// Pull to refresh handler
+	const onRefresh = async () => {
+		setRefreshing(true);
+		try {
+			await Promise.all([fetchPlantDetail(), fetchCheckIns()]);
+		} catch (error) {
+			console.error('Error refreshing plant detail:', error);
+		} finally {
+			setRefreshing(false);
 		}
 	};
 
@@ -497,7 +513,18 @@ export default function PlantDetailScreen() {
 				</TouchableOpacity>
 			</View>
 
-			<ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+			<ScrollView 
+				className="flex-1" 
+				showsVerticalScrollIndicator={false}
+				refreshControl={
+					<RefreshControl
+						refreshing={refreshing}
+						onRefresh={onRefresh}
+						tintColor="#10b981"
+						colors={["#10b981"]}
+					/>
+				}
+			>
 				{/* Plant Image & Status */}
 				<View className="relative">
 					{plant.image_url ? (

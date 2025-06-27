@@ -7,6 +7,7 @@ import {
 	Dimensions,
 	ActivityIndicator,
 	Alert,
+	RefreshControl,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -93,6 +94,7 @@ export default function ProductDetailScreen() {
 	const [product, setProduct] = useState<ProductType>(PLACEHOLDER_PRODUCT);
 	const [loading, setLoading] = useState(true);
 	const [addingToCart, setAddingToCart] = useState(false);
+	const [refreshing, setRefreshing] = useState(false);
 	const screenWidth = Dimensions.get("window").width;
 	const scrollViewRef = React.useRef<ScrollView>(null);
 	// Cart functionality
@@ -101,63 +103,75 @@ export default function ProductDetailScreen() {
 	const existingCartItem = getCartItemByProductId(id || "");
 	const isInCart = !!existingCartItem;
 
-	useEffect(() => {
-		const fetchProduct = async () => {
-			try {
-				setLoading(true);
+	const fetchProduct = async () => {
+		try {
+			setLoading(true);
 
-				// Fetch the product with the given ID
-				const { data, error } = await supabase
-					.from("product")
-					.select("*")
-					.eq("id", id)
-					.single();
+			// Fetch the product with the given ID
+			const { data, error } = await supabase
+				.from("product")
+				.select("*")
+				.eq("id", id)
+				.single();
 
-				if (error) {
-					console.error("Error fetching product:", error);
-					return; // Keep using placeholder data
-				}
-
-				if (data) {
-					// Fetch business info based on user_id
-					let businessName = "Local Business"; // Default
-
-					if (data.user_id) {
-						const { data: userData, error: userError } = await supabase
-							.from("users")
-							.select("id, username, name")
-							.eq("id", data.user_id)
-							.single();
-
-						if (!userError && userData) {
-							businessName = userData.username || userData.name || businessName;
-						}
-					}
-
-					// Process the data to match our UI requirements
-					const formattedProduct = {
-						...data,
-						shop: businessName,
-						originalPrice: data.original_price
-							? parseFloat(data.original_price)
-							: undefined,
-						rating: 4.5, // Default rating since not in DB
-						// Make sure tags is an array with the correct structure
-						tags: Array.isArray(data.tags) ? data.tags : [],
-					};
-
-					setProduct(formattedProduct);
-				}
-			} catch (err) {
-				console.error("Error in fetch product:", err);
-				// Keep using placeholder data if there's an error
-			} finally {
-				setLoading(false);
+			if (error) {
+				console.error("Error fetching product:", error);
+				return; // Keep using placeholder data
 			}
-		};
 
+			if (data) {
+				// Fetch business info based on user_id
+				let businessName = "Local Business"; // Default
+
+				if (data.user_id) {
+					const { data: userData, error: userError } = await supabase
+						.from("users")
+						.select("id, username, name")
+						.eq("id", data.user_id)
+						.single();
+
+					if (!userError && userData) {
+						businessName = userData.username || userData.name || businessName;
+					}
+				}
+
+				// Process the data to match our UI requirements
+				const formattedProduct = {
+					...data,
+					shop: businessName,
+					originalPrice: data.original_price
+						? parseFloat(data.original_price)
+						: undefined,
+					rating: 4.5, // Default rating since not in DB
+					// Make sure tags is an array with the correct structure
+					tags: Array.isArray(data.tags) ? data.tags : [],
+				};
+
+				setProduct(formattedProduct);
+			}
+		} catch (err) {
+			console.error("Error in fetch product:", err);
+			// Keep using placeholder data if there's an error
+		} finally {
+			setLoading(false);
+		}
+	};
+
+	useEffect(() => {
 		fetchProduct();
 	}, [id]);
+
+	// Pull to refresh handler
+	const onRefresh = async () => {
+		setRefreshing(true);
+		try {
+			await fetchProduct();
+		} catch (error) {
+			console.error('Error refreshing product:', error);
+		} finally {
+			setRefreshing(false);
+		}
+	};
 
 	// Set initial quantity based on cart item if it exists
 	useEffect(() => {
@@ -290,7 +304,17 @@ export default function ProductDetailScreen() {
 
 	return (
 		<SafeAreaView className="flex-1" style={{ backgroundColor: bgColor }}>
-			<ScrollView className="flex-1">
+			<ScrollView 
+				className="flex-1"
+				refreshControl={
+					<RefreshControl
+						refreshing={refreshing}
+						onRefresh={onRefresh}
+						tintColor="#10b981"
+						colors={["#10b981"]}
+					/>
+				}
+			>
 				{/* Header with back button and favorite icon */}
 				<View className="flex-row justify-between items-center px-4 py-2 absolute top-0 left-0 right-0 z-10">
 					<TouchableOpacity

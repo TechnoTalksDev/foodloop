@@ -15,6 +15,7 @@ import {
   Modal,
   FlatList,
   Dimensions,
+  RefreshControl,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -113,6 +114,7 @@ export default function SmartPlateAI() {
   const [showIntro, setShowIntro] = useState(true);
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [loadingWeather, setLoadingWeather] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
 
@@ -293,6 +295,22 @@ export default function SmartPlateAI() {
       console.error('Error fetching weather data:', error);
     } finally {
       setLoadingWeather(false);
+    }
+  };
+
+  // Pull to refresh handler
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      // Refresh weather data if in weather mode
+      if (currentMode.id === 'weatherwise') {
+        await fetchWeatherData();
+      }
+      // Chat context is managed by the chat provider and doesn't need refreshing
+    } catch (error) {
+      console.error('Error refreshing AI data:', error);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -942,6 +960,14 @@ Please provide specific advice based on these current weather conditions and for
           className="flex-1 px-4"
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#10b981"
+              colors={["#10b981"]}
+            />
+          }
         >
           <View className="py-4">
             {/* Welcome message when no messages */}
