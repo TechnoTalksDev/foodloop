@@ -62,6 +62,14 @@ export default function PlantsScreen() {
 	const [error, setError] = useState<string | null>(null);
     const { unreadCount } = useNotifications();
 
+	// Helper function to determine season
+	const getSeason = (month: number): 'spring' | 'summer' | 'fall' | 'winter' => {
+		if (month >= 2 && month <= 4) return 'spring'; // March-May
+		if (month >= 5 && month <= 7) return 'summer'; // June-August  
+		if (month >= 8 && month <= 10) return 'fall'; // September-November
+		return 'winter'; // December-February
+	};
+
 	useEffect(() => {
 		fetchUserPlants();
 		fetchWeatherRecommendations();
@@ -112,55 +120,122 @@ export default function PlantsScreen() {
 			// Generate recommendations based on weather
 			const recommendations: WeatherRecommendation[] = [];
 			
-			// Temperature-based recommendations
-			if (weather.temperature < 35) {
+			// Get farming advice from weather service (it has proper temperature logic)
+			const farmingAdvice = weatherService.getFarmingAdvice(weather);
+			
+			// Temperature-based recommendations with correct frost threshold
+			if (weather.temperature <= 32) {
 				recommendations.push({
-					action: 'Protect Plants',
-					description: 'Frost warning! Cover sensitive plants and bring potted plants indoors.',
+					action: 'Frost Warning',
+					description: 'Freezing temperatures! Protect sensitive plants and harvest what you can.',
 					icon: '❄️',
+					priority: 'high'
+				});
+			} else if (weather.temperature < 40 && weather.temperature > 32) {
+				recommendations.push({
+					action: 'Cold Weather',
+					description: 'Near-freezing temperatures. Consider protecting sensitive plants.',
+					icon: '🥶',
+					priority: 'medium'
+				});
+			} else if (weather.temperature > 90) {
+				recommendations.push({
+					action: 'Extreme Heat',
+					description: 'Very hot weather! Water plants early morning/evening and provide shade.',
+					icon: '🔥',
 					priority: 'high'
 				});
 			} else if (weather.temperature > 85) {
 				recommendations.push({
-					action: 'Water & Shade',
-					description: 'Hot weather ahead. Water early morning and provide shade.',
+					action: 'Hot Weather',
+					description: 'Hot conditions. Water regularly and consider afternoon shade.',
 					icon: '🌡️',
-					priority: 'high'
+					priority: 'medium'
 				});
 			}
 
 			// Weather condition recommendations
-			if (weather.weatherCode >= 61 && weather.weatherCode <= 65) {
+			if (weather.weatherCode >= 95) { // Thunderstorms
 				recommendations.push({
-					action: 'Indoor Tasks',
-					description: 'Rainy weather perfect for planning and seed starting indoors.',
+					action: 'Storm Warning',
+					description: 'Severe weather expected. Secure plants and avoid outdoor work.',
+					icon: '⛈️',
+					priority: 'high'
+				});
+			} else if (weather.weatherCode >= 61 && weather.weatherCode <= 82) { // Rain
+				recommendations.push({
+					action: 'Rainy Day',
+					description: 'Good day for indoor tasks. Rain provides natural watering!',
 					icon: '🌧️',
 					priority: 'medium'
 				});
-			} else if (weather.weatherCode <= 2) {
+			} else if (weather.weatherCode >= 71 && weather.weatherCode <= 86) { // Snow
+				recommendations.push({
+					action: 'Snow Day',
+					description: 'Perfect time for planning and indoor seed starting.',
+					icon: '�️',
+					priority: 'medium'
+				});
+			} else if (weather.weatherCode <= 1) { // Clear/sunny
 				recommendations.push({
 					action: 'Perfect Garden Day',
-					description: 'Great weather for planting, harvesting, and garden maintenance.',
+					description: 'Excellent weather for harvesting and outdoor garden work!',
 					icon: '☀️',
+					priority: 'low'
+				});
+			} else if (weather.weatherCode <= 3) { // Partly cloudy/overcast
+				recommendations.push({
+					action: 'Good Garden Day',
+					description: 'Great conditions for most outdoor gardening activities.',
+					icon: '⛅',
 					priority: 'low'
 				});
 			}
 
-			// Seasonal recommendations
+			// Check upcoming forecast for frost warnings
+			if (weather.forecast && weather.forecast.length > 0) {
+				const tomorrowForecast = weather.forecast[1]; // Tomorrow
+				if (tomorrowForecast && tomorrowForecast.temperatureMin <= 32) {
+					recommendations.unshift({
+						action: 'Frost Alert Tomorrow',
+						description: `Frost expected tomorrow (low: ${tomorrowForecast.temperatureMin}°F). Prepare now!`,
+						icon: '⚠️',
+						priority: 'high'
+					});
+				}
+			}
+
+			// Seasonal recommendations based on current month
 			const month = new Date().getMonth();
-			if (month >= 2 && month <= 4) { // Spring
+			const currentSeason = getSeason(month);
+			
+			if (currentSeason === 'spring' && weather.temperature > 50 && weather.temperature < 80) {
 				recommendations.push({
 					action: 'Spring Planting',
-					description: 'Perfect time to start tomatoes, peppers, and herbs.',
+					description: 'Perfect spring weather for starting new plants!',
 					icon: '🌱',
 					priority: 'medium'
 				});
-			} else if (month >= 5 && month <= 7) { // Summer
+			} else if (currentSeason === 'summer' && weather.temperature < 85) {
 				recommendations.push({
-					action: 'Summer Care',
-					description: 'Focus on watering, harvesting, and pest management.',
+					action: 'Summer Garden Care',
+					description: 'Good weather for maintenance, watering, and harvesting.',
 					icon: '🌞',
+					priority: 'low'
+				});
+			} else if (currentSeason === 'fall' && weather.temperature > 40) {
+				recommendations.push({
+					action: 'Fall Harvest',
+					description: 'Great weather for harvesting and preparing for winter.',
+					icon: '�',
 					priority: 'medium'
+				});
+			} else if (currentSeason === 'winter' && weather.temperature > 45) {
+				recommendations.push({
+					action: 'Winter Planning',
+					description: 'Mild winter day - good for planning next season and indoor tasks.',
+					icon: '❄️',
+					priority: 'low'
 				});
 			}
 
