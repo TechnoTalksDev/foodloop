@@ -278,31 +278,36 @@ export default function AddPlantScreen() {
 	return (
 		<SafeAreaView className="flex-1 bg-background">
 			{/* Header */}
-			<View className="flex-row items-center justify-between px-4 py-3 border-b border-border">
-				<TouchableOpacity onPress={() => router.back()}>
-					<Ionicons name="chevron-back" size={24} color="#666" />
+			<View className="flex-row items-center justify-between px-6 py-4 border-b border-border">
+				<TouchableOpacity 
+					onPress={() => router.back()}
+					className="w-10 h-10 rounded-full bg-secondary/50 items-center justify-center"
+					activeOpacity={0.8}
+				>
+					<Ionicons name="chevron-back" size={20} color="#666" />
 				</TouchableOpacity>
 				<H1 className="flex-1 text-center">Add Plant</H1>
-				<View className="w-6" />
+				<View className="w-10" />
 			</View>
 
-			<ScrollView className="flex-1 px-4 py-6" showsVerticalScrollIndicator={false}>
+			<ScrollView className="flex-1 px-6 py-6" showsVerticalScrollIndicator={false}>
 				{/* Plant Type Selection */}
-				<View className="mb-6">
-					<Text className="text-lg font-semibold mb-3">What are you growing?</Text>
+				<View className="mb-8">
+					<Text className="text-lg font-semibold mb-4">What are you growing?</Text>
 					<View className="flex-row flex-wrap gap-3">
 						{plantTypes.map((type) => (
 							<TouchableOpacity
 								key={type.id}
 								onPress={() => setSelectedType(type.id)}
-								className={`p-3 rounded-xl border-2 ${
+								className={`p-4 rounded-2xl border-2 shadow-sm ${
 									selectedType === type.id
 										? "border-primary bg-primary/10"
 										: "border-border bg-secondary/30"
 								}`}
+								activeOpacity={0.8}
 							>
-								<Text className="text-2xl text-center mb-1">{type.emoji}</Text>
-								<Text className={`text-sm text-center font-medium ${
+								<Text className="text-3xl text-center mb-2">{type.emoji}</Text>
+								<Text className={`text-sm text-center font-semibold ${
 									selectedType === type.id ? "text-primary" : "text-foreground"
 								}`}>
 									{type.name}
@@ -316,26 +321,27 @@ export default function AddPlantScreen() {
 				</View>
 
 				{/* Plant Name */}
-				<View className="mb-6">
-					<Text className="text-lg font-semibold mb-3">Give it a name</Text>
+				<View className="mb-8">
+					<Text className="text-lg font-semibold mb-4">Give it a name</Text>
 					<TextInput
 						value={plantName}
 						onChangeText={setPlantName}
 						placeholder="e.g., My Cherry Tomatoes"
-						className="border border-border rounded-lg px-4 py-3 text-base text-foreground bg-background"
+						className="border border-border rounded-xl px-5 py-4 text-base text-foreground bg-background"
 						placeholderTextColor="#999"
 					/>
 				</View>
 
 				{/* Planted Date */}
-				<View className="mb-6">
-					<Text className="text-lg font-semibold mb-3">When did you plant it?</Text>
+				<View className="mb-8">
+					<Text className="text-lg font-semibold mb-4">When did you plant it?</Text>
 					<TouchableOpacity
 						onPress={() => setShowDatePicker(true)}
-						className="flex-row items-center border border-border rounded-lg px-4 py-3"
+						className="flex-row items-center border border-border rounded-xl px-5 py-4 bg-card"
+						activeOpacity={0.8}
 					>
-						<Ionicons name="calendar-outline" size={20} color="#666" style={{ marginRight: 12 }} />
-						<Text className="text-base text-foreground">
+						<Ionicons name="calendar-outline" size={22} color="#666" style={{ marginRight: 15 }} />
+						<Text className="text-base text-foreground font-medium">
 							{format(plantedDate, 'MMMM d, yyyy')}
 						</Text>
 					</TouchableOpacity>
@@ -354,50 +360,53 @@ export default function AddPlantScreen() {
 				</View>
 
 				{/* Photo Section */}
-				<View className="mb-6">
-					<Text className="text-lg font-semibold mb-3">Add a photo (optional)</Text>
+				<View className="mb-8">
+					<Text className="text-lg font-semibold mb-4">Add a photo (optional)</Text>
 					
 					{imageUri ? (
 						<View className="relative">
 							<Image
 								source={{ uri: imageUri }}
-								className="w-full h-64 rounded-lg"
+								className="w-full h-64 rounded-2xl"
 								resizeMode="cover"
 							/>
 							<TouchableOpacity
 								onPress={() => setImageUri(null)}
-								className="absolute top-2 right-2 bg-red-500 rounded-full p-2"
+								className="absolute top-3 right-3 bg-red-500 rounded-full p-2 shadow-lg"
+								activeOpacity={0.8}
 							>
-								<Ionicons name="close" size={16} color="white" />
+								<Ionicons name="close" size={18} color="white" />
 							</TouchableOpacity>
 							<TouchableOpacity
 								onPress={showImageOptions}
-								className="absolute bottom-2 right-2 bg-primary rounded-full p-2"
+								className="absolute bottom-3 right-3 bg-primary rounded-full p-3 shadow-lg"
+								activeOpacity={0.8}
 							>
-								<Ionicons name="camera" size={16} color="white" />
+								<Ionicons name="camera" size={18} color="white" />
 							</TouchableOpacity>
 						</View>
 					) : (
 						<TouchableOpacity
 							onPress={showImageOptions}
 							disabled={uploadingImage}
-							className="border-2 border-dashed border-border rounded-lg p-8 items-center"
+							className="border-2 border-dashed border-border rounded-2xl p-12 items-center bg-secondary/20"
+							activeOpacity={0.8}
 						>
 							{uploadingImage ? (
 								<>
 									<ActivityIndicator size="large" color="#10b981" />
-									<Text className="text-center text-muted-foreground mt-2">
+									<Text className="text-center text-muted-foreground mt-3 font-medium">
 										Processing image...
 									</Text>
 								</>
 							) : (
 								<>
 									<Ionicons name="camera" size={48} color="#999" />
-									<Text className="text-center text-muted-foreground mt-2">
+									<Text className="text-center text-muted-foreground mt-3 font-medium">
 										Tap to add a photo of your plant
 									</Text>
-									<Text className="text-center text-xs text-muted-foreground mt-1">
-										Photos help track growth progress
+									<Text className="text-center text-xs text-muted-foreground mt-2 leading-4">
+										Photos help track growth progress over time
 									</Text>
 								</>
 							)}
@@ -406,15 +415,15 @@ export default function AddPlantScreen() {
 				</View>
 
 				{/* Notes */}
-				<View className="mb-6">
-					<Text className="text-lg font-semibold mb-3">Notes (optional)</Text>
+				<View className="mb-8">
+					<Text className="text-lg font-semibold mb-4">Notes (optional)</Text>
 					<TextInput
 						value={notes}
 						onChangeText={setNotes}
 						placeholder="Any special notes about your plant..."
 						multiline
 						numberOfLines={4}
-						className="border border-border rounded-lg px-4 py-3 text-base text-foreground bg-background"
+						className="border border-border rounded-xl px-5 py-4 text-base text-foreground bg-background"
 						placeholderTextColor="#999"
 						textAlignVertical="top"
 					/>

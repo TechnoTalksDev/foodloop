@@ -497,7 +497,7 @@ export default function Home() {
 			<ScrollView 
 				className="flex-1" 
 				showsVerticalScrollIndicator={false} 
-				contentContainerStyle={{ paddingBottom: 32 }}
+				contentContainerStyle={{ paddingBottom: 80 }}
 				refreshControl={
 					<RefreshControl
 						refreshing={refreshing}

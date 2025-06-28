@@ -29,6 +29,7 @@ interface CartContextType {
   addToCart: (productId: string, quantity: number) => Promise<boolean>;
   updateCartItem: (cartItemId: string, quantity: number) => Promise<boolean>;
   removeFromCart: (cartItemId: string) => Promise<boolean>;
+  removeMultipleFromCart: (cartItemIds: string[]) => Promise<boolean>;
   getCartItemByProductId: (productId: string) => CartItem | null;
   getTotalItems: () => number;
   getTotalPrice: () => number;
@@ -206,6 +207,28 @@ export function CartProvider({ children }: PropsWithChildren) {
     }
   };
 
+  const removeMultipleFromCart = async (cartItemIds: string[]): Promise<boolean> => {
+    if (cartItemIds.length === 0) return true;
+
+    try {
+      const { error } = await supabase
+        .from('cart_items')
+        .delete()
+        .in('id', cartItemIds);
+
+      if (error) {
+        console.error('Error removing multiple items from cart:', error);
+        return false;
+      }
+
+      await refreshCart();
+      return true;
+    } catch (error) {
+      console.error('Error in removeMultipleFromCart:', error);
+      return false;
+    }
+  };
+
   const getCartItemByProductId = (productId: string): CartItem | null => {
     return cartItems.find(item => item.product_id === productId) || null;
   };
@@ -232,6 +255,7 @@ export function CartProvider({ children }: PropsWithChildren) {
     addToCart,
     updateCartItem,
     removeFromCart,
+    removeMultipleFromCart,
     getCartItemByProductId,
     getTotalItems,
     getTotalPrice,

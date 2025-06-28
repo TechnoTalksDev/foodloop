@@ -466,7 +466,7 @@ export default function MessagesScreen() {
 				<ScrollView
 					className="flex-1 pt-4"
 					showsVerticalScrollIndicator={false}
-					contentContainerStyle={{ paddingBottom: 100 }} // Add padding for tab bar (88px + extra space)
+					contentContainerStyle={{ paddingBottom: 120 }} // Add padding for tab bar (88px + extra space)
 					refreshControl={
 						<RefreshControl
 							refreshing={refreshing}

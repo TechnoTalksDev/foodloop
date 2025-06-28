@@ -580,6 +580,7 @@ export default function Community() {
 			<ScrollView
 				className="flex-1"
 				showsVerticalScrollIndicator={false}
+				contentContainerStyle={{ paddingBottom: 80 }}
 				refreshControl={
 					<RefreshControl
 						refreshing={refreshing}
@@ -720,7 +721,7 @@ export default function Community() {
 			</ScrollView>
 
 			{/* Floating Action Buttons */}
-			<View className="absolute bottom-14 right-6">
+			<View className="absolute right-6" style={{ bottom: 100 }}>
 				{/* Secondary FAB - Group creation (above main FAB) */}
 				{activeTab !== "groups" && (
 					<TouchableOpacity

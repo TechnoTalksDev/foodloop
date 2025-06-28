@@ -503,12 +503,12 @@ export default function PlantDetailScreen() {
 	return (
 		<SafeAreaView className="flex-1 bg-background">
 			{/* Header */}
-			<View className="flex-row items-center justify-between px-4 py-3 border-b border-border">
-				<TouchableOpacity onPress={() => router.back()}>
+			<View className="flex-row items-center justify-between px-6 py-4 border-b border-border">
+				<TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2">
 					<Ionicons name="chevron-back" size={24} color="#666" />
 				</TouchableOpacity>
 				<H1 className="flex-1 text-center">{plant.plant_name}</H1>
-				<TouchableOpacity onPress={confirmDeletePlant}>
+				<TouchableOpacity onPress={confirmDeletePlant} className="p-2 -mr-2">
 					<Ionicons name="trash-outline" size={24} color="#ef4444" />
 				</TouchableOpacity>
 			</View>
@@ -549,17 +549,17 @@ export default function PlantDetailScreen() {
 				</View>
 
 				{/* Plant Info */}
-				<View className="p-4">
-					<View className="flex-row justify-between items-center mb-4">
+				<View className="p-6">
+					<View className="flex-row justify-between items-center mb-6">
 						<View>
 							<Text className="text-2xl font-bold">{plant.plant_name}</Text>
-							<Text className="text-muted-foreground capitalize">{plant.plant_type}</Text>
+							<Text className="text-lg text-muted-foreground capitalize">{plant.plant_type}</Text>
 						</View>
 						
 						{canCheckIn() && (
 							<TouchableOpacity
 								onPress={() => setShowCheckInModal(true)}
-								className="bg-primary px-4 py-2 rounded-full"
+								className="bg-primary px-5 py-3 rounded-full"
 							>
 								<Text className="text-primary-foreground font-medium">📸 Check-in</Text>
 							</TouchableOpacity>
@@ -567,34 +567,34 @@ export default function PlantDetailScreen() {
 					</View>
 
 					{/* Stats */}
-					<View className="flex-row justify-between mb-6">
+					<View className="flex-row justify-between mb-8">
 						<View className="items-center flex-1">
-							<Text className="text-2xl font-bold text-primary">{getDaysGrowing()}</Text>
-							<Text className="text-sm text-muted-foreground">Days Growing</Text>
+							<Text className="text-3xl font-bold text-primary">{getDaysGrowing()}</Text>
+							<Text className="text-sm text-muted-foreground mt-1">Days Growing</Text>
 						</View>
 						<View className="items-center flex-1">
-							<Text className="text-2xl font-bold text-primary">
+							<Text className="text-3xl font-bold text-primary">
 								{getDaysUntilHarvest() !== null ? getDaysUntilHarvest() : '--'}
 							</Text>
-							<Text className="text-sm text-muted-foreground">Days to Harvest</Text>
+							<Text className="text-sm text-muted-foreground mt-1">Days to Harvest</Text>
 						</View>
 						<View className="items-center flex-1">
-							<Text className="text-2xl font-bold text-primary">{checkIns.length}</Text>
-							<Text className="text-sm text-muted-foreground">Check-ins</Text>
+							<Text className="text-3xl font-bold text-primary">{checkIns.length}</Text>
+							<Text className="text-sm text-muted-foreground mt-1">Check-ins</Text>
 						</View>
 					</View>
 
 					{/* Quick Actions */}
-					<View className="flex-row gap-3 mb-6">
+					<View className="flex-row gap-4 mb-8">
 						<TouchableOpacity
-							className="flex-1 bg-blue-600 p-3 rounded-lg"
+							className="flex-1 bg-blue-600 p-4 rounded-xl"
 							onPress={() => router.push("/(protected)/plants/ai-calendar" as any)}
 						>
 							<Text className="text-white text-center font-medium">📅 Calendar</Text>
 						</TouchableOpacity>
 						
 						<TouchableOpacity
-							className="flex-1 bg-green-600 p-3 rounded-lg"
+							className="flex-1 bg-green-600 p-4 rounded-xl"
 							onPress={() => router.push("/(protected)/(tabs)/community" as any)}
 						>
 							<Text className="text-white text-center font-medium">💬 Community</Text>
@@ -602,7 +602,7 @@ export default function PlantDetailScreen() {
 						
 						{plant.status === 'ready_to_harvest' && (
 							<TouchableOpacity
-								className="flex-1 bg-orange-600 p-3 rounded-lg"
+								className="flex-1 bg-orange-600 p-4 rounded-xl"
 								onPress={() => router.push("/(protected)/create-product-modal")}
 							>
 								<Text className="text-white text-center font-medium">🛒 Sell</Text>
@@ -612,21 +612,21 @@ export default function PlantDetailScreen() {
 
 					{/* Status Update */}
 					{plant.status !== 'harvested' && (
-						<View className="bg-secondary/30 p-4 rounded-xl mb-6">
-							<Text className="font-semibold mb-3">Update Plant Status</Text>
-							<View className="flex-row flex-wrap gap-2">
+						<View className="bg-secondary/30 p-5 rounded-xl mb-8">
+							<Text className="font-semibold text-lg mb-4">Update Plant Status</Text>
+							<View className="flex-row flex-wrap gap-3">
 								{Object.entries(STATUS_ICONS).map(([status, icon]) => (
 									<TouchableOpacity
 										key={status}
 										onPress={() => updatePlantStatus(status)}
 										disabled={plant.status === status}
-										className={`px-3 py-2 rounded-lg border ${
+										className={`px-4 py-3 rounded-xl border ${
 											plant.status === status 
 												? 'bg-primary border-primary' 
 												: 'bg-background border-border'
 										}`}
 									>
-										<Text className={`text-sm ${
+										<Text className={`text-sm font-medium ${
 											plant.status === status ? 'text-primary-foreground' : 'text-foreground'
 										}`}>
 											{icon} {status.replace('_', ' ')}
@@ -639,25 +639,25 @@ export default function PlantDetailScreen() {
 
 					{/* Recent Check-ins */}
 					<View>
-						<H3 className="mb-4">Recent Check-ins</H3>
+						<H3 className="mb-5">Recent Check-ins</H3>
 						{checkIns.length === 0 ? (
-							<View className="items-center py-8 bg-secondary/30 rounded-xl">
-								<Text className="text-4xl mb-2">📸</Text>
-								<Text className="font-semibold mb-1">No check-ins yet</Text>
+							<View className="items-center py-10 bg-secondary/30 rounded-xl">
+								<Text className="text-5xl mb-3">📸</Text>
+								<Text className="font-semibold text-lg mb-2">No check-ins yet</Text>
 								<Text className="text-center text-muted-foreground">
 									Take your first photo to track your plant's progress
 								</Text>
 							</View>
 						) : (
-							<View className="space-y-4">
+							<View className="space-y-5">
 								{checkIns.map((checkIn) => (
-									<View key={checkIn.id} className="bg-card p-4 rounded-xl border border-border">
-										<View className="flex-row items-center justify-between mb-3">
-											<Text className="font-medium">
+									<View key={checkIn.id} className="bg-card p-5 rounded-xl border border-border">
+										<View className="flex-row items-center justify-between mb-4">
+											<Text className="font-semibold text-lg">
 												{format(new Date(checkIn.created_at), 'MMM d, yyyy')}
 											</Text>
-											<View className="flex-row items-center">
-												<Text className="mr-2">
+											<View className="flex-row items-center bg-secondary/50 px-3 py-1 rounded-full">
+												<Text className="mr-2 text-lg">
 													{HEALTH_STATUS_OPTIONS.find(h => h.value === checkIn.health_status)?.icon}
 												</Text>
 												<Text className={`text-sm font-medium ${
@@ -671,19 +671,19 @@ export default function PlantDetailScreen() {
 										{checkIn.image_url && (
 											<Image
 												source={{ uri: checkIn.image_url }}
-												className="w-full h-48 rounded-lg mb-3"
+												className="w-full h-56 rounded-xl mb-4"
 												resizeMode="cover"
 											/>
 										)}
 
 										{checkIn.height_cm && (
-											<Text className="text-sm text-muted-foreground mb-2">
+											<Text className="text-sm text-muted-foreground mb-3 font-medium">
 												📏 Height: {checkIn.height_cm} cm
 											</Text>
 										)}
 
 										{checkIn.notes && (
-											<Text className="text-sm">{checkIn.notes}</Text>
+											<Text className="text-sm leading-relaxed">{checkIn.notes}</Text>
 										)}
 									</View>
 								))}
@@ -693,7 +693,7 @@ export default function PlantDetailScreen() {
 				</View>
 
 				{/* Bottom spacing */}
-				<View className="h-20" />
+				<View className="h-24" />
 			</ScrollView>
 
 			{/* Check-in Modal */}
@@ -703,9 +703,9 @@ export default function PlantDetailScreen() {
 				animationType="slide"
 				onRequestClose={() => setShowCheckInModal(false)}
 			>
-				<View className="flex-1 bg-black/50 items-center justify-center p-4">
+				<View className="flex-1 bg-black/50 items-center justify-center p-6">
 					<View className="bg-background rounded-2xl p-6 w-full max-w-md max-h-[90%]">
-						<View className="flex-row items-center justify-between mb-4">
+						<View className="flex-row items-center justify-between mb-6">
 							<Text className="text-xl font-bold">Daily Check-in</Text>
 							<TouchableOpacity onPress={() => setShowCheckInModal(false)}>
 								<Ionicons name="close" size={24} color="#666" />
@@ -714,18 +714,18 @@ export default function PlantDetailScreen() {
 
 						<ScrollView className="max-h-96" showsVerticalScrollIndicator={false}>
 							{/* Photo */}
-							<View className="mb-4">
-								<Text className="font-medium mb-2">Take a photo</Text>
+							<View className="mb-6">
+								<Text className="font-medium text-lg mb-3">Take a photo</Text>
 								{checkInImage ? (
 									<View className="relative">
 										<Image
 											source={{ uri: checkInImage }}
-											className="w-full h-48 rounded-lg"
+											className="w-full h-52 rounded-xl"
 											resizeMode="cover"
 										/>
 										<TouchableOpacity
 											onPress={() => setCheckInImage(null)}
-											className="absolute top-2 right-2 bg-red-500 rounded-full p-2"
+											className="absolute top-3 right-3 bg-red-500 rounded-full p-2"
 										>
 											<Ionicons name="close" size={16} color="white" />
 										</TouchableOpacity>
@@ -734,19 +734,19 @@ export default function PlantDetailScreen() {
 									<TouchableOpacity
 										onPress={showImageOptions}
 										disabled={uploadingImage}
-										className="border-2 border-dashed border-border rounded-lg p-6 items-center"
+										className="border-2 border-dashed border-border rounded-xl p-8 items-center"
 									>
 										{uploadingImage ? (
 											<>
 												<ActivityIndicator size="large" color="#10b981" />
-												<Text className="text-sm text-muted-foreground mt-2">
+												<Text className="text-sm text-muted-foreground mt-3">
 													Processing image...
 												</Text>
 											</>
 										) : (
 											<>
-												<Ionicons name="camera" size={32} color="#999" />
-												<Text className="text-sm text-muted-foreground mt-2 text-center">
+												<Ionicons name="camera" size={40} color="#999" />
+												<Text className="text-sm text-muted-foreground mt-3 text-center">
 													Tap to add a photo
 												</Text>
 											</>
@@ -756,20 +756,20 @@ export default function PlantDetailScreen() {
 							</View>
 
 							{/* Health Status */}
-							<View className="mb-4">
-								<Text className="font-medium mb-2">How's your plant doing?</Text>
-								<View className="flex-row flex-wrap gap-2">
+							<View className="mb-6">
+								<Text className="font-medium text-lg mb-3">How's your plant doing?</Text>
+								<View className="flex-row flex-wrap gap-3">
 									{HEALTH_STATUS_OPTIONS.map((option) => (
 										<TouchableOpacity
 											key={option.value}
 											onPress={() => setCheckInHealth(option.value)}
-											className={`px-3 py-2 rounded-lg border ${
+											className={`px-4 py-3 rounded-xl border ${
 												checkInHealth === option.value
 													? 'bg-primary border-primary'
 													: 'bg-background border-border'
 											}`}
 										>
-											<Text className={`text-sm ${
+											<Text className={`text-sm font-medium ${
 												checkInHealth === option.value ? 'text-primary-foreground' : 'text-foreground'
 											}`}>
 												{option.icon} {option.label}
@@ -780,27 +780,27 @@ export default function PlantDetailScreen() {
 							</View>
 
 							{/* Height */}
-							<View className="mb-4">
-								<Text className="font-medium mb-2">Height (cm) - Optional</Text>
+							<View className="mb-6">
+								<Text className="font-medium text-lg mb-3">Height (cm) - Optional</Text>
 								<TextInput
 									value={checkInHeight}
 									onChangeText={setCheckInHeight}
 									placeholder="e.g., 15.5"
 									keyboardType="decimal-pad"
-									className="border border-border rounded-lg px-3 py-2 text-foreground"
+									className="border border-border rounded-xl px-4 py-3 text-foreground text-base"
 								/>
 							</View>
 
 							{/* Notes */}
-							<View className="mb-6">
-								<Text className="font-medium mb-2">Notes - Optional</Text>
+							<View className="mb-8">
+								<Text className="font-medium text-lg mb-3">Notes - Optional</Text>
 								<TextInput
 									value={checkInNotes}
 									onChangeText={setCheckInNotes}
 									placeholder="Any observations about your plant..."
 									multiline
-									numberOfLines={3}
-									className="border border-border rounded-lg px-3 py-2 text-foreground"
+									numberOfLines={4}
+									className="border border-border rounded-xl px-4 py-3 text-foreground text-base"
 									textAlignVertical="top"
 								/>
 							</View>
@@ -810,17 +810,18 @@ export default function PlantDetailScreen() {
 						<Button
 							onPress={submitCheckIn}
 							disabled={submittingCheckIn || uploadingImage}
-							className="w-full"
+							className="w-full py-4"
+							size="lg"
 						>
 							{submittingCheckIn || uploadingImage ? (
 								<View className="flex-row items-center">
 									<ActivityIndicator size="small" color="white" />
-									<Text className="text-primary-foreground font-semibold ml-2">
+									<Text className="text-primary-foreground font-semibold ml-2 text-base">
 										{uploadingImage ? "Processing..." : "Saving..."}
 									</Text>
 								</View>
 							) : (
-								<Text className="text-primary-foreground font-semibold">
+								<Text className="text-primary-foreground font-semibold text-base">
 									Save Check-in
 								</Text>
 							)}

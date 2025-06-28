@@ -323,15 +323,25 @@ export default function PlantsScreen() {
 
 	return (
 		<SafeAreaView className="flex-1 bg-background">
-			<ScrollView>
-				{/* REPLACE the existing header with this updated version */}
-				<View className="flex-row justify-between items-center px-4 py-3 mb-4">
+			<ScrollView
+				showsVerticalScrollIndicator={false}
+				contentContainerStyle={{ paddingBottom: 80 }}
+				refreshControl={
+					<RefreshControl
+						refreshing={refreshing}
+						onRefresh={onRefresh}
+						colors={["#10b981"]}
+						tintColor="#10b981"
+					/>
+				}
+			>
+				{/* Header */}
+				<View className="flex-row justify-between items-center px-6 py-4 mb-2">
 					<TouchableOpacity onPress={() => router.push("/(protected)/notification-modal")}>
-						<View className="w-10 h-10 items-center justify-center">
+						<View className="w-11 h-11 items-center justify-center">
 							<Text className="text-2xl">🔔</Text>
-							{/* ADD THIS notification badge */}
 							{unreadCount > 0 && (
-								<View className="absolute top-0 right-0 w-4 h-4 bg-red-500 rounded-full items-center justify-center">
+								<View className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full items-center justify-center">
 									<Text className="text-white text-xs font-bold">
 										{unreadCount > 99 ? "99+" : unreadCount}
 									</Text>
@@ -343,7 +353,7 @@ export default function PlantsScreen() {
 					<H1>My Plants</H1>
 
 					<TouchableOpacity onPress={() => router.push("/(protected)/(tabs)/profile")}>
-						<View className="w-10 h-10 items-center justify-center">
+						<View className="w-11 h-11 items-center justify-center">
 							<Text className="text-2xl">👤</Text>
 						</View>
 					</TouchableOpacity>
@@ -351,12 +361,12 @@ export default function PlantsScreen() {
 
 				{/* Weather Section */}
 				{!weatherLoading && currentWeather && (
-					<View className="mx-4 mb-6 p-4 bg-secondary/30 rounded-2xl border border-border">
-						<View className="flex-row items-center justify-between mb-3">
+					<View className="mx-6 mb-6 p-5 bg-secondary/40 rounded-2xl border border-border">
+						<View className="flex-row items-center justify-between mb-4">
 							<View className="flex-row items-center">
-								<Text className="text-2xl mr-2">{currentWeather.icon}</Text>
+								<Text className="text-3xl mr-3">{currentWeather.icon}</Text>
 								<View>
-									<Text className="text-lg font-semibold">
+									<Text className="text-xl font-semibold">
 										{currentWeather.temperature}°F
 									</Text>
 									<Text className="text-sm text-muted-foreground">
@@ -366,28 +376,29 @@ export default function PlantsScreen() {
 							</View>
 							<TouchableOpacity
 								onPress={navigateToWeatherDetails}
+								className="px-3 py-2 bg-primary/10 rounded-lg"
 							>
-								<Text className="text-primary text-sm">5-Day Forecast</Text>
+								<Text className="text-primary text-sm font-medium">5-Day Forecast</Text>
 							</TouchableOpacity>
 						</View>
 
 						{weatherRecommendations.length > 0 && (
-							<View className="space-y-2">
+							<View className="space-y-3">
 								{weatherRecommendations.slice(0, 2).map((rec, index) => (
 									<View
 										key={index}
-										className={`flex-row items-center p-2 rounded-lg ${
+										className={`flex-row items-center p-3 rounded-xl mt-2 ${
 											rec.priority === 'high'
-												? 'bg-red-50 dark:bg-red-900/20'
+												? 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
 												: rec.priority === 'medium'
-												? 'bg-yellow-50 dark:bg-yellow-900/20'
-												: 'bg-green-50 dark:bg-green-900/20'
+												? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800'
+												: 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800'
 										}`}
 									>
-										<Text className="text-lg mr-2">{rec.icon}</Text>
+										<Text className="text-xl mr-3">{rec.icon}</Text>
 										<View className="flex-1">
-											<Text className="font-medium text-sm">{rec.action}</Text>
-											<Text className="text-xs text-muted-foreground">
+											<Text className="font-semibold text-sm">{rec.action}</Text>
+											<Text className="text-xs text-muted-foreground leading-4 mt-1">
 												{rec.description}
 											</Text>
 										</View>
@@ -399,40 +410,43 @@ export default function PlantsScreen() {
 				)}
 
 				{/* Quick Actions */}
-				<View className="px-4 mb-6">
-					<View className="flex-row gap-3">
+				<View className="px-6 mb-8">
+					<View className="flex-row gap-4">
 						<TouchableOpacity
-							className="flex-1 bg-primary p-4 rounded-xl items-center"
+							className="flex-1 bg-primary py-6 px-4 rounded-2xl items-center shadow-sm"
 							onPress={navigateToAddPlant}
+							activeOpacity={0.8}
 						>
-							<Text className="text-2xl mb-2">🌱</Text>
-							<Text className="text-primary-foreground font-medium">Add Plant</Text>
+							<Text className="text-3xl mb-3">🌱</Text>
+							<Text className="text-primary-foreground font-semibold text-center text-sm">Add Plant</Text>
 						</TouchableOpacity>
 
 						<TouchableOpacity
-							className="flex-1 bg-green-600 p-4 rounded-xl items-center"
+							className="flex-1 bg-green-600 py-6 px-4 rounded-2xl items-center shadow-sm"
 							onPress={navigateToAICalendar}
+							activeOpacity={0.8}
 						>
-							<Text className="text-2xl mb-2">📅</Text>
-							<Text className="text-white font-medium">AI Calendar</Text>
+							<Text className="text-3xl mb-3">📅</Text>
+							<Text className="text-white font-semibold text-center text-sm">AI Calendar</Text>
 						</TouchableOpacity>
 
 						<TouchableOpacity
-							className="flex-1 bg-blue-600 p-4 rounded-xl items-center"
+							className="flex-1 bg-blue-600 py-6 px-4 rounded-2xl items-center shadow-sm"
 							onPress={() => router.push("/(protected)/(tabs)/community")}
+							activeOpacity={0.8}
 						>
-							<Text className="text-2xl mb-2">💬</Text>
-							<Text className="text-white font-medium">Community</Text>
+							<Text className="text-3xl mb-3">💬</Text>
+							<Text className="text-white font-semibold text-center text-sm">Community</Text>
 						</TouchableOpacity>
 					</View>
 				</View>
 
 				{/* Error State */}
 				{error && (
-					<View className="mx-4 mb-6 p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
+					<View className="mx-6 mb-6 p-4 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
 						<View className="flex-row items-center">
 							<Ionicons name="warning" size={20} color="#ef4444" />
-							<Text className="ml-2 text-red-600 dark:text-red-400 font-medium">
+							<Text className="ml-3 text-red-600 dark:text-red-400 font-medium flex-1">
 								{error}
 							</Text>
 						</View>
@@ -441,9 +455,9 @@ export default function PlantsScreen() {
 								setError(null);
 								fetchUserPlants();
 							}}
-							className="mt-2"
+							className="mt-3 self-start"
 						>
-							<Text className="text-red-600 dark:text-red-400 text-sm underline">
+							<Text className="text-red-600 dark:text-red-400 text-sm font-medium underline">
 								Tap to retry
 							</Text>
 						</TouchableOpacity>
@@ -451,84 +465,87 @@ export default function PlantsScreen() {
 				)}
 
 				{/* My Plants Section */}
-				<View className="px-4 mb-6">
-					<View className="flex-row items-center justify-between mb-4">
+				<View className="px-6 mb-6">
+					<View className="flex-row items-center justify-between mb-5">
 						<H3>My Plants ({userPlants.length})</H3>
 						{userPlants.length > 0 && (
 							<TouchableOpacity
 								onPress={navigateToPlantList}
+								className="px-4 py-2 bg-primary/10 rounded-lg"
 							>
-								<Text className="text-primary font-medium">View All</Text>
+								<Text className="text-primary font-semibold text-sm">View All</Text>
 							</TouchableOpacity>
 						)}
 					</View>
 
 					{loading ? (
-						<View className="items-center py-8">
+						<View className="items-center py-12">
 							<ActivityIndicator size="large" color="#10b981" />
-							<Text className="text-muted-foreground mt-2">Loading your plants...</Text>
+							<Text className="text-muted-foreground mt-3">Loading your plants...</Text>
 						</View>
 					) : userPlants.length === 0 ? (
-						<View className="items-center py-8 bg-secondary/30 rounded-xl">
+						<View className="items-center py-12 px-6 bg-secondary/40 rounded-2xl">
 							<Text className="text-6xl mb-4">🌱</Text>
-							<Text className="text-xl font-semibold mb-2">Start Your Garden</Text>
-							<Text className="text-center text-muted-foreground mb-4">
-								Add your first plant to begin tracking your garden journey
+							<Text className="text-xl font-semibold mb-3">Start Your Garden</Text>
+							<Text className="text-center text-muted-foreground mb-6 leading-5">
+								Add your first plant to begin tracking your garden journey and get personalized care recommendations
 							</Text>
 							<Button
 								onPress={navigateToAddPlant}
+								className="px-6 py-3"
 							>
-								<Text>Add Your First Plant</Text>
+								<Text className="font-semibold">Add Your First Plant</Text>
 							</Button>
 						</View>
 					) : (
-						<View className="space-y-3">
+						<View className="space-y-4">
 							{userPlants.slice(0, 3).map((plant) => (
 								<TouchableOpacity
 									key={plant.id}
-									className="bg-card p-4 rounded-xl border border-border"
+									className="bg-card p-5 rounded-2xl border border-border shadow-sm "
 									onPress={() => navigateToPlantDetail(plant.id)}
+									activeOpacity={0.8}
 								>
 									<View className="flex-row items-center">
-										<View className="w-16 h-16 rounded-lg bg-muted items-center justify-center mr-4">
+										<View className="w-18 h-18 rounded-xl bg-muted items-center justify-center mr-5">
 											{plant.image_url ? (
 												<Image
 													source={{ uri: plant.image_url }}
-													className="w-16 h-16 rounded-lg"
+													className="w-18 h-18 rounded-xl"
 													resizeMode="cover"
 													onError={() => handleImageError(plant.plant_name)}
 													defaultSource={require("@/assets/foodloop.png")}
 												/>
 											) : (
-												<Text className="text-2xl">
+												<Text className="text-3xl">
 													{getPlantTypeIcon(plant.plant_type)}
 												</Text>
 											)}
 										</View>
 
 										<View className="flex-1">
-											<View className="flex-row items-center justify-between mb-1">
-												<Text className="font-semibold text-base">
+											<View className="flex-row items-center justify-between mb-2">
+												<Text className="font-semibold text-lg flex-1 mr-2">
 													{plant.plant_name}
 												</Text>
 												<View className="flex-row items-center">
-													<Text className="text-sm mr-1">
+													<Text className="text-base mr-2">
 														{getPlantStatusIcon(plant.status)}
 													</Text>
-													<Text className={`text-sm font-medium ${getPlantStatusColor(plant.status)}`}>
+													<Text className={`text-sm font-semibold ${getPlantStatusColor(plant.status)}`}>
 														{plant.status.replace('_', ' ')}
 													</Text>
 												</View>
 											</View>
 
-											<Text className="text-sm text-muted-foreground mb-2">
+											<Text className="text-sm text-muted-foreground mb-3">
 												Planted {format(new Date(plant.planted_date), 'MMM d, yyyy')}
 											</Text>
 
 											<View className="flex-row items-center justify-between">
 												{needsCheckin(plant) && (
-													<View className="bg-yellow-100 px-2 py-1 rounded">
-														<Text className="text-yellow-700 text-xs font-medium">
+													<View className="bg-yellow-100 dark:bg-yellow-900/30 px-3 py-2 rounded-lg">
+														<Text className="text-yellow-700 dark:text-yellow-300 text-xs font-semibold">
 															📸 Check-in Due
 														</Text>
 													</View>
@@ -536,12 +553,13 @@ export default function PlantsScreen() {
 
 												{canHarvest(plant) && (
 													<TouchableOpacity
-														className="bg-green-100 px-2 py-1 rounded"
+														className="bg-green-100 dark:bg-green-900/30 px-3 py-2 rounded-lg"
 														onPress={() =>
 															router.push("/(protected)/(tabs)/marketplace")
 														}
+														activeOpacity={0.8}
 													>
-														<Text className="text-green-700 text-xs font-medium">
+														<Text className="text-green-700 dark:text-green-300 text-xs font-semibold">
 															🛒 Ready to Sell
 														</Text>
 													</TouchableOpacity>
@@ -556,38 +574,39 @@ export default function PlantsScreen() {
 				</View>
 
 				{/* Marketplace Integration */}
-				<View className="px-4 mb-6">
-					<View className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 p-4 rounded-xl border border-border">
-						<View className="flex-row items-center justify-between mb-3">
-							<View>
-								<Text className="font-semibold text-lg">Marketplace</Text>
+				<View className="px-6 mb-8">
+					<View className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20 p-6 rounded-2xl border border-border">
+						<View className="flex-row items-center justify-between mb-5">
+							<View className="flex-1">
+								<Text className="font-bold text-lg mb-1">Marketplace</Text>
 								<Text className="text-sm text-muted-foreground">
-									Buy seeds or sell your harvest
+									Buy seeds & supplies or sell your harvest
 								</Text>
 							</View>
-							<Text className="text-3xl">🛒</Text>
+							<Text className="text-4xl">🛒</Text>
 						</View>
 
-						<View className="flex-row gap-2">
+						<View className="flex-row gap-3">
 							<TouchableOpacity
-								className="flex-1 bg-green-600 p-3 rounded-lg"
+								className="flex-1 bg-green-600 py-4 px-3 rounded-xl shadow-sm"
 								onPress={() => {
 									router.push("/(protected)/(tabs)/marketplace");
-									// Could add search params for seeds/plants
 								}}
+								activeOpacity={0.8}
 							>
-								<Text className="text-white text-center font-medium">
+								<Text className="text-white text-center font-semibold text-sm">
 									🌱 Buy Seeds
 								</Text>
 							</TouchableOpacity>
 
 							<TouchableOpacity
-								className="flex-1 bg-orange-600 p-3 rounded-lg"
+								className="flex-1 bg-orange-600 py-4 px-3 rounded-xl shadow-sm"
 								onPress={() =>
 									router.push("/(protected)/create-product-modal")
 								}
+								activeOpacity={0.8}
 							>
-								<Text className="text-white text-center font-medium">
+								<Text className="text-white text-center font-semibold text-sm">
 									🍅 Sell Harvest
 								</Text>
 							</TouchableOpacity>
@@ -595,41 +614,41 @@ export default function PlantsScreen() {
 					</View>
 				</View>
 
-				{/* Garden Statistics - New Section */}
+				{/* Garden Statistics */}
 				{userPlants.length > 0 && (
-					<View className="px-4 mb-6">
-						<View className="bg-secondary/30 p-4 rounded-xl border border-border">
-							<H3 className="mb-3">Garden Statistics</H3>
+					<View className="px-6 mb-8">
+						<View className="bg-secondary/40 p-6 rounded-2xl border border-border">
+							<H3 className="mb-5">Garden Statistics</H3>
 							<View className="flex-row justify-between">
 								<View className="items-center flex-1">
-									<Text className="text-2xl font-bold text-green-600">
+									<Text className="text-3xl font-bold text-green-600 mb-2">
 										{userPlants.filter(p => p.status === 'ready_to_harvest').length}
 									</Text>
-									<Text className="text-xs text-muted-foreground text-center">
+									<Text className="text-xs text-muted-foreground text-center leading-4">
 										Ready to Harvest
 									</Text>
 								</View>
 								<View className="items-center flex-1">
-									<Text className="text-2xl font-bold text-blue-600">
+									<Text className="text-3xl font-bold text-blue-600 mb-2">
 										{userPlants.filter(p => p.status === 'growing').length}
 									</Text>
-									<Text className="text-xs text-muted-foreground text-center">
+									<Text className="text-xs text-muted-foreground text-center leading-4">
 										Growing
 									</Text>
 								</View>
 								<View className="items-center flex-1">
-									<Text className="text-2xl font-bold text-yellow-600">
+									<Text className="text-3xl font-bold text-yellow-600 mb-2">
 										{userPlants.filter(p => needsCheckin(p)).length}
 									</Text>
-									<Text className="text-xs text-muted-foreground text-center">
+									<Text className="text-xs text-muted-foreground text-center leading-4">
 										Need Check-in
 									</Text>
 								</View>
 								<View className="items-center flex-1">
-									<Text className="text-2xl font-bold text-purple-600">
+									<Text className="text-3xl font-bold text-purple-600 mb-2">
 										{userPlants.filter(p => p.status === 'flowering').length}
 									</Text>
-									<Text className="text-xs text-muted-foreground text-center">
+									<Text className="text-xs text-muted-foreground text-center leading-4">
 										Flowering
 									</Text>
 								</View>
@@ -639,46 +658,46 @@ export default function PlantsScreen() {
 				)}
 
 				{/* Tips Section */}
-				<View className="px-4 mb-6">
-					<View className="bg-gradient-to-r from-purple-50 to-green-50 dark:from-purple-900/20 dark:to-green-900/20 p-4 rounded-xl border border-border">
-						<View className="flex-row items-center justify-between mb-3">
-							<View>
-								<Text className="font-semibold text-lg">💡 Garden Tips</Text>
+				<View className="px-6 mb-8">
+					<View className="bg-gradient-to-r from-purple-50 to-green-50 dark:from-purple-900/20 dark:to-green-900/20 p-6 rounded-2xl border border-border">
+						<View className="flex-row items-center justify-between mb-5">
+							<View className="flex-1">
+								<Text className="font-bold text-lg mb-1">💡 Garden Tips</Text>
 								<Text className="text-sm text-muted-foreground">
 									Smart advice for better growing
 								</Text>
 							</View>
-							<Text className="text-3xl">🌿</Text>
+							<Text className="text-4xl">🌿</Text>
 						</View>
 
-						<View className="space-y-2">
-							<Text className="text-sm">
+						<View className="space-y-3 mb-6">
+							<Text className="text-sm leading-5">
 								• Check your plants daily during growing season
 							</Text>
-							<Text className="text-sm">
+							<Text className="text-sm leading-5">
 								• Water deeply but less frequently for stronger roots
 							</Text>
-							<Text className="text-sm">
+							<Text className="text-sm leading-5">
 								• Use companion planting to naturally repel pests
 							</Text>
-							<Text className="text-sm">
+							<Text className="text-sm leading-5">
 								• Track your harvest dates to plan future plantings
 							</Text>
 						</View>
 
 						<TouchableOpacity
-							className="mt-3 bg-primary px-4 py-2 rounded-lg self-start"
+							className="bg-primary px-5 py-3 rounded-xl self-start shadow-sm"
 							onPress={() => router.push("/(protected)/smartplate-ai")}
+							activeOpacity={0.8}
 						>
-							<Text className="text-primary-foreground font-medium text-sm">
+							<Text className="text-primary-foreground font-semibold text-sm">
 								🤖 Get AI Garden Advice
 							</Text>
 						</TouchableOpacity>
 					</View>
 				</View>
 
-				{/* Bottom spacing */}
-				<View className="h-20" />
+
 			</ScrollView>
 		</SafeAreaView>
 	);

@@ -26,6 +26,7 @@ export default function Cart() {
 		refreshing,
 		updateCartItem,
 		removeFromCart,
+		removeMultipleFromCart,
 		getTotalPrice,
 		refreshCart,
 	} = useCart();
@@ -105,6 +106,7 @@ export default function Cart() {
 			}, {} as Record<string, typeof cartItems>);
 
 			const createdConversations = [];
+			const successfulCartItemIds: string[] = [];
 
 			// Create conversation for each business owner
 			for (const [sellerId, items] of Object.entries(businessGroups)) {
@@ -175,6 +177,8 @@ Could we discuss the details for pickup/delivery?`;
 							sellerId,
 							businessName: items[0].product?.shop || 'Local Business'
 						});
+						// Add cart item IDs for successful conversations
+						successfulCartItemIds.push(...items.map(item => item.id));
 					}
 
 				} catch (error) {
@@ -183,9 +187,18 @@ Could we discuss the details for pickup/delivery?`;
 			}
 
 			if (createdConversations.length > 0) {
+				// Remove successfully processed items from cart
+				if (successfulCartItemIds.length > 0) {
+					const removeSuccess = await removeMultipleFromCart(successfulCartItemIds);
+					if (!removeSuccess) {
+						console.error('Failed to remove items from cart after successful message creation');
+						// Don't fail the entire operation, just log the error
+					}
+				}
+
 				Alert.alert(
 					"Messages Sent!",
-					`Successfully started ${createdConversations.length} conversation(s) with business owners. You can now negotiate prices and arrange pickup details.`,
+					`Successfully started ${createdConversations.length} conversation(s) with business owners. The items have been processed and you can now negotiate prices and arrange pickup details.`,
 					[
 						{ text: "View Messages", onPress: () => router.push("/messages" as any) },
 						{ text: "OK", style: "default" }

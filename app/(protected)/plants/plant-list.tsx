@@ -8,6 +8,7 @@ import {
 	RefreshControl,
 	Image,
 	Alert,
+	ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -180,18 +181,27 @@ export default function PlantListScreen() {
 	return (
 		<SafeAreaView className="flex-1 bg-background">
 			{/* Header */}
-			<View className="flex-row items-center justify-between px-4 py-3 border-b border-border">
-				<TouchableOpacity onPress={() => router.back()}>
-					<Ionicons name="chevron-back" size={24} color="#666" />
+			<View className="flex-row items-center justify-between px-6 py-4 border-b border-border">
+				<TouchableOpacity 
+					onPress={() => router.back()}
+					className="w-10 h-10 rounded-full bg-secondary/50 items-center justify-center"
+					activeOpacity={0.8}
+				>
+					<Ionicons name="chevron-back" size={20} color="#666" />
 				</TouchableOpacity>
 				<H1 className="flex-1 text-center">All Plants ({userPlants.length})</H1>
-				<TouchableOpacity onPress={() => router.push("/(protected)/plants/add-plant" as any)}>
-					<Ionicons name="add" size={24} color="#10b981" />
+				<TouchableOpacity 
+					onPress={() => router.push("/(protected)/plants/add-plant" as any)}
+					className="w-10 h-10 rounded-full bg-primary/10 items-center justify-center"
+					activeOpacity={0.8}
+				>
+					<Ionicons name="add" size={20} color="#10b981" />
 				</TouchableOpacity>
 			</View>
 
 			<ScrollView
 				className="flex-1"
+				showsVerticalScrollIndicator={false}
 				refreshControl={
 					<RefreshControl
 						refreshing={refreshing}
@@ -202,52 +212,59 @@ export default function PlantListScreen() {
 				}
 			>
 				{/* Filter Tabs */}
-				<View className="px-4 pt-4 mb-4">
+				<View className="px-6 pt-5 mb-5">
 					<ScrollView horizontal showsHorizontalScrollIndicator={false}>
-						{statusFilters.map((filter) => (
-							<TouchableOpacity
-								key={filter.key}
-								onPress={() => setSelectedFilter(filter.key)}
-								className={`mr-3 px-4 py-2 rounded-full border ${
-									selectedFilter === filter.key
-										? 'bg-primary border-primary'
-										: 'bg-secondary border-border'
-								}`}
-							>
-								<View className="flex-row items-center">
-									<Text className="text-lg mr-1">{filter.icon}</Text>
-									<Text className={`font-medium ${
-										selectedFilter === filter.key ? 'text-primary-foreground' : 'text-foreground'
-									}`}>
-										{filter.label}
-									</Text>
-								</View>
-							</TouchableOpacity>
-						))}
+						<View className="flex-row gap-3 pr-6">
+							{statusFilters.map((filter) => (
+								<TouchableOpacity
+									key={filter.key}
+									onPress={() => setSelectedFilter(filter.key)}
+									className={`px-4 py-3 rounded-full border shadow-sm ${
+										selectedFilter === filter.key
+											? 'bg-primary border-primary'
+											: 'bg-card border-border'
+									}`}
+									activeOpacity={0.8}
+								>
+									<View className="flex-row items-center">
+										<Text className="text-lg mr-2">{filter.icon}</Text>
+										<Text className={`font-semibold ${
+											selectedFilter === filter.key ? 'text-primary-foreground' : 'text-foreground'
+										}`}>
+											{filter.label}
+										</Text>
+									</View>
+								</TouchableOpacity>
+							))}
+						</View>
 					</ScrollView>
 				</View>
 
 				{/* Plants List */}
-				<View className="px-4">
+				<View className="px-6">
 					{loading ? (
-						<View className="items-center py-8">
-							<Text className="text-muted-foreground">Loading your plants...</Text>
+						<View className="items-center py-12">
+							<ActivityIndicator size="large" color="#10b981" />
+							<Text className="text-muted-foreground mt-3">Loading your plants...</Text>
 						</View>
 					) : getFilteredPlants().length === 0 ? (
-						<View className="items-center py-8 bg-secondary/30 rounded-xl">
+						<View className="items-center py-12 px-6 bg-secondary/40 rounded-2xl">
 							<Text className="text-6xl mb-4">🌱</Text>
-							<H3 className="text-center mb-2">
+							<H3 className="text-center mb-3">
 								{selectedFilter === 'all' ? 'No Plants Yet' : `No ${statusFilters.find(f => f.key === selectedFilter)?.label}`}
 							</H3>
-							<Text className="text-center text-muted-foreground mb-4">
+							<Text className="text-center text-muted-foreground mb-6 leading-5">
 								{selectedFilter === 'all' 
 									? "Add your first plant to start tracking your garden journey"
 									: "No plants in this category yet"
 								}
 							</Text>
 							{selectedFilter === 'all' && (
-								<Button onPress={() => router.push("/(protected)/plants/add-plant" as any)}>
-									<Text>Add Your First Plant</Text>
+								<Button 
+									onPress={() => router.push("/(protected)/plants/add-plant" as any)}
+									className="px-6 py-3"
+								>
+									<Text className="font-semibold">Add Your First Plant</Text>
 								</Button>
 							)}
 						</View>
@@ -256,20 +273,21 @@ export default function PlantListScreen() {
 							{getFilteredPlants().map((plant) => (
 								<TouchableOpacity
 									key={plant.id}
-									className="bg-card p-4 rounded-xl border border-border"
+									className="bg-card p-5 rounded-2xl border border-border shadow-sm"
 									onPress={() => router.push(`/(protected)/plants/plant-detail/${plant.id}` as any)}
+									activeOpacity={0.8}
 								>
 									<View className="flex-row items-center">
 										{/* Plant Image/Icon */}
-										<View className="w-16 h-16 rounded-lg bg-muted items-center justify-center mr-4">
+										<View className="w-18 h-18 rounded-xl bg-muted items-center justify-center mr-5">
 											{plant.image_url ? (
 												<Image
 													source={{ uri: plant.image_url }}
-													className="w-16 h-16 rounded-lg"
+													className="w-18 h-18 rounded-xl"
 													resizeMode="cover"
 												/>
 											) : (
-												<Text className="text-2xl">
+												<Text className="text-3xl">
 													{getPlantTypeIcon(plant.plant_type)}
 												</Text>
 											)}
@@ -277,21 +295,21 @@ export default function PlantListScreen() {
 
 										{/* Plant Info */}
 										<View className="flex-1">
-											<View className="flex-row items-center justify-between mb-1">
-												<Text className="font-semibold text-base flex-1 mr-2">
+											<View className="flex-row items-center justify-between mb-2">
+												<Text className="font-semibold text-lg flex-1 mr-3">
 													{plant.plant_name}
 												</Text>
 												<View className="flex-row items-center">
-													<Text className="text-sm mr-1">
+													<Text className="text-base mr-2">
 														{getPlantStatusIcon(plant.status)}
 													</Text>
-													<Text className={`text-sm font-medium ${getPlantStatusColor(plant.status)}`}>
+													<Text className={`text-sm font-semibold ${getPlantStatusColor(plant.status)}`}>
 														{plant.status.replace('_', ' ')}
 													</Text>
 												</View>
 											</View>
 
-											<Text className="text-sm text-muted-foreground mb-2">
+											<Text className="text-sm text-muted-foreground mb-3 leading-4">
 												{PLANT_TYPES.find(t => t.id === plant.plant_type)?.name || plant.plant_type} • 
 												{' '}Planted {format(new Date(plant.planted_date), 'MMM d, yyyy')} • 
 												{' '}{getDaysGrowing(plant.planted_date)} days growing
@@ -301,16 +319,16 @@ export default function PlantListScreen() {
 											<View className="flex-row items-center justify-between">
 												<View className="flex-row gap-2">
 													{needsCheckin(plant) && (
-														<View className="bg-yellow-100 px-2 py-1 rounded">
-															<Text className="text-yellow-700 text-xs font-medium">
+														<View className="bg-yellow-100 dark:bg-yellow-900/30 px-3 py-2 rounded-lg">
+															<Text className="text-yellow-700 dark:text-yellow-300 text-xs font-semibold">
 																📸 Check-in Due
 															</Text>
 														</View>
 													)}
 
 													{canHarvest(plant) && (
-														<View className="bg-green-100 px-2 py-1 rounded">
-															<Text className="text-green-700 text-xs font-medium">
+														<View className="bg-green-100 dark:bg-green-900/30 px-3 py-2 rounded-lg">
+															<Text className="text-green-700 dark:text-green-300 text-xs font-semibold">
 																🍅 Ready to Harvest
 															</Text>
 														</View>
@@ -323,9 +341,10 @@ export default function PlantListScreen() {
 														e.stopPropagation();
 														deletePlant(plant.id, plant.plant_name);
 													}}
-													className="p-2"
+													className="p-2 rounded-lg bg-red-50 dark:bg-red-900/20"
+													activeOpacity={0.8}
 												>
-													<Ionicons name="trash-outline" size={20} color="#ef4444" />
+													<Ionicons name="trash-outline" size={18} color="#ef4444" />
 												</TouchableOpacity>
 											</View>
 										</View>
@@ -338,31 +357,34 @@ export default function PlantListScreen() {
 
 				{/* Quick Actions */}
 				{userPlants.length > 0 && (
-					<View className="px-4 mt-6 mb-6">
-						<H3 className="mb-4">Quick Actions</H3>
-						<View className="flex-row gap-3">
+					<View className="px-6 mt-8 mb-6">
+						<H3 className="mb-5">Quick Actions</H3>
+						<View className="flex-row gap-4">
 							<TouchableOpacity
-								className="flex-1 bg-primary p-4 rounded-xl items-center"
+								className="flex-1 bg-primary p-5 rounded-2xl items-center shadow-sm"
 								onPress={() => router.push("/(protected)/plants/add-plant" as any)}
+								activeOpacity={0.8}
 							>
-								<Text className="text-2xl mb-2">🌱</Text>
-								<Text className="text-primary-foreground font-medium">Add Plant</Text>
+								<Text className="text-3xl mb-2">🌱</Text>
+								<Text className="text-primary-foreground font-semibold">Add Plant</Text>
 							</TouchableOpacity>
 
 							<TouchableOpacity
-								className="flex-1 bg-green-600 p-4 rounded-xl items-center"
+								className="flex-1 bg-green-600 p-5 rounded-2xl items-center shadow-sm"
 								onPress={() => router.push("/(protected)/plants/ai-calendar" as any)}
+								activeOpacity={0.8}
 							>
-								<Text className="text-2xl mb-2">🤖</Text>
-								<Text className="text-white font-medium">AI Calendar</Text>
+								<Text className="text-3xl mb-2">🤖</Text>
+								<Text className="text-white font-semibold">AI Calendar</Text>
 							</TouchableOpacity>
 
 							<TouchableOpacity
-								className="flex-1 bg-orange-600 p-4 rounded-xl items-center"
+								className="flex-1 bg-orange-600 p-5 rounded-2xl items-center shadow-sm"
 								onPress={() => router.push("/(protected)/create-product-modal")}
+								activeOpacity={0.8}
 							>
-								<Text className="text-2xl mb-2">🛒</Text>
-								<Text className="text-white font-medium">Sell Harvest</Text>
+								<Text className="text-3xl mb-2">🛒</Text>
+								<Text className="text-white font-semibold">Sell Harvest</Text>
 							</TouchableOpacity>
 						</View>
 					</View>
@@ -370,33 +392,33 @@ export default function PlantListScreen() {
 
 				{/* Stats Summary */}
 				{userPlants.length > 0 && (
-					<View className="px-4 mb-6">
-						<View className="bg-secondary/30 p-4 rounded-xl">
-							<H3 className="mb-3">Garden Summary</H3>
+					<View className="px-6 mb-6">
+						<View className="bg-secondary/40 p-6 rounded-2xl border border-border">
+							<H3 className="mb-4">Garden Summary</H3>
 							<View className="flex-row justify-between">
 								<View className="items-center flex-1">
-									<Text className="text-2xl font-bold text-green-500">
+									<Text className="text-3xl font-bold text-green-500 mb-1">
 										{userPlants.filter(p => p.status === 'ready_to_harvest').length}
 									</Text>
-									<Text className="text-xs text-muted-foreground">Ready to Harvest</Text>
+									<Text className="text-xs text-muted-foreground text-center leading-4">Ready to Harvest</Text>
 								</View>
 								<View className="items-center flex-1">
-									<Text className="text-2xl font-bold text-blue-500">
+									<Text className="text-3xl font-bold text-blue-500 mb-1">
 										{userPlants.filter(p => p.status === 'growing').length}
 									</Text>
-									<Text className="text-xs text-muted-foreground">Growing</Text>
+									<Text className="text-xs text-muted-foreground text-center leading-4">Growing</Text>
 								</View>
 								<View className="items-center flex-1">
-									<Text className="text-2xl font-bold text-yellow-500">
+									<Text className="text-3xl font-bold text-yellow-500 mb-1">
 										{userPlants.filter(p => needsCheckin(p)).length}
 									</Text>
-									<Text className="text-xs text-muted-foreground">Need Check-in</Text>
+									<Text className="text-xs text-muted-foreground text-center leading-4">Need Check-in</Text>
 								</View>
 								<View className="items-center flex-1">
-									<Text className="text-2xl font-bold text-gray-500">
+									<Text className="text-3xl font-bold text-gray-500 mb-1">
 										{userPlants.filter(p => p.status === 'harvested').length}
 									</Text>
-									<Text className="text-xs text-muted-foreground">Harvested</Text>
+									<Text className="text-xs text-muted-foreground text-center leading-4">Harvested</Text>
 								</View>
 							</View>
 						</View>
@@ -404,7 +426,7 @@ export default function PlantListScreen() {
 				)}
 
 				{/* Bottom spacing */}
-				<View className="h-20" />
+				<View className="h-24" />
 			</ScrollView>
 		</SafeAreaView>
 	);

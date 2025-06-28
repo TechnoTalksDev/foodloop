@@ -367,12 +367,16 @@ Respond ONLY with a JSON array of tasks. Each task should be specific to the use
 	return (
 		<SafeAreaView className="flex-1 bg-background">
 			{/* Header */}
-			<View className="flex-row items-center justify-between px-4 py-3 border-b border-border">
-				<TouchableOpacity onPress={() => router.back()}>
+			<View className="flex-row items-center justify-between px-6 py-4 border-b border-border">
+				<TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2">
 					<Ionicons name="chevron-back" size={24} color="#666" />
 				</TouchableOpacity>
 				<H1 className="flex-1 text-center">AI Calendar</H1>
-				<TouchableOpacity onPress={generateAICalendarTasks} disabled={generatingTasks}>
+				<TouchableOpacity 
+					onPress={generateAICalendarTasks} 
+					disabled={generatingTasks}
+					className="p-2 -mr-2"
+				>
 					{generatingTasks ? (
 						<ActivityIndicator size="small" color="#10b981" />
 					) : (
@@ -393,37 +397,40 @@ Respond ONLY with a JSON array of tasks. Each task should be specific to the use
 				}
 			>
 				{/* AI Generation Button */}
-				<View className="mx-4 mt-4 mb-6 p-4 bg-gradient-to-r from-purple-50 to-green-50 dark:from-purple-900/20 dark:to-green-900/20 rounded-xl border border-border">
-					<View className="flex-row items-center justify-between mb-3">
-						<View>
-							<Text className="font-semibold text-lg">🤖 AI Plant Calendar</Text>
-							<Text className="text-sm text-muted-foreground">
+				<View className="mx-6 mt-6 mb-8 p-6 bg-gradient-to-r from-purple-50 to-green-50 dark:from-purple-900/20 dark:to-green-900/20 rounded-xl border border-border">
+					<View className="flex-row items-center justify-between mb-4">
+						<View className="flex-1">
+							<Text className="font-semibold text-xl">🤖 AI Plant Calendar</Text>
+							<Text className="text-sm text-muted-foreground mt-1">
 								Personalized care schedule based on your plants & weather
 							</Text>
 						</View>
-						<Text className="text-3xl">🌱</Text>
+						<Text className="text-4xl">🌱</Text>
 					</View>
 
 					<Button
 						onPress={generateAICalendarTasks}
 						disabled={generatingTasks || userPlants.length === 0}
-						className="w-full"
+						className="w-full py-4"
 						variant="default"
+						size="lg"
 					>
-						<Text className="text-primary-foreground font-medium">
-							{generatingTasks ? (
-								<View className="flex-row items-center">
-									<ActivityIndicator size="small" color="white" />
-									<Text className="text-primary-foreground ml-2">Generating AI Tasks...</Text>
-								</View>
-							) : (
-								"🤖 Generate AI Care Schedule"
-							)}
-						</Text>
+						{generatingTasks ? (
+							<View className="flex-row items-center">
+								<ActivityIndicator size="small" color="white" />
+								<Text className="text-primary-foreground font-medium ml-2 text-base">
+									Generating AI Tasks...
+								</Text>
+							</View>
+						) : (
+							<Text className="text-primary-foreground font-medium text-base">
+								🤖 Generate AI Care Schedule
+							</Text>
+						)}
 					</Button>
 					
 					{userPlants.length === 0 && (
-						<Text className="text-center text-xs text-muted-foreground mt-2">
+						<Text className="text-center text-xs text-muted-foreground mt-3">
 							Add plants first to generate AI tasks
 						</Text>
 					)}
@@ -431,16 +438,16 @@ Respond ONLY with a JSON array of tasks. Each task should be specific to the use
 
 				{/* Weather Forecast */}
 				{weatherForecast.length > 0 && (
-					<View className="mx-4 mb-6 p-4 bg-secondary/30 rounded-xl border border-border">
-						<Text className="font-semibold mb-3">7-Day Weather Forecast</Text>
+					<View className="mx-6 mb-8 p-5 bg-secondary/30 rounded-xl border border-border">
+						<Text className="font-semibold text-lg mb-4">7-Day Weather Forecast</Text>
 						<ScrollView horizontal showsHorizontalScrollIndicator={false}>
 							{weatherForecast.map((day, index) => (
-								<View key={index} className="items-center mr-4">
-									<Text className="text-xs text-muted-foreground mb-1">
+								<View key={index} className="items-center mr-6">
+									<Text className="text-sm text-muted-foreground mb-2 font-medium">
 										{index === 0 ? 'Today' : format(addDays(new Date(), index), 'EEE')}
 									</Text>
-									<Text className="text-2xl mb-1">{day.icon}</Text>
-									<Text className="text-xs font-medium">
+									<Text className="text-3xl mb-2">{day.icon}</Text>
+									<Text className="text-sm font-medium">
 										{day.temperatureMax}°/{day.temperatureMin}°
 									</Text>
 								</View>
@@ -450,17 +457,17 @@ Respond ONLY with a JSON array of tasks. Each task should be specific to the use
 				)}
 
 				{/* View Selector */}
-				<View className="px-4 mb-4">
-					<View className="flex-row bg-secondary/30 rounded-lg p-1">
+				<View className="px-6 mb-6">
+					<View className="flex-row bg-secondary/30 rounded-xl p-2">
 						{(['today', 'week', 'upcoming'] as const).map((view) => (
 							<TouchableOpacity
 								key={view}
 								onPress={() => setSelectedView(view)}
-								className={`flex-1 py-2 px-4 rounded-md ${
+								className={`flex-1 py-3 px-4 rounded-lg ${
 									selectedView === view ? 'bg-primary' : ''
 								}`}
 							>
-								<Text className={`text-center capitalize font-medium ${
+								<Text className={`text-center capitalize font-medium text-base ${
 									selectedView === view ? 'text-primary-foreground' : 'text-foreground'
 								}`}>
 									{view}
@@ -471,23 +478,23 @@ Respond ONLY with a JSON array of tasks. Each task should be specific to the use
 				</View>
 
 				{/* Events List */}
-				<View className="px-4">
+				<View className="px-6">
 					{loading ? (
-						<View className="items-center py-8">
+						<View className="items-center py-12">
 							<ActivityIndicator size="large" color="#10b981" />
-							<Text className="text-muted-foreground mt-2">Loading your calendar...</Text>
+							<Text className="text-muted-foreground mt-3 text-base">Loading your calendar...</Text>
 						</View>
 					) : getFilteredEvents().length === 0 ? (
-						<View className="items-center py-8 bg-secondary/30 rounded-xl">
-							<Text className="text-4xl mb-4">📅</Text>
-							<Text className="text-xl font-semibold mb-2">No tasks {selectedView === 'today' ? 'today' : 'upcoming'}</Text>
-							<Text className="text-center text-muted-foreground mb-4">
+						<View className="items-center py-12 bg-secondary/30 rounded-xl">
+							<Text className="text-5xl mb-5">📅</Text>
+							<Text className="text-xl font-semibold mb-3">No tasks {selectedView === 'today' ? 'today' : 'upcoming'}</Text>
+							<Text className="text-center text-muted-foreground mb-6 leading-relaxed">
 								{selectedView === 'today' 
 									? "You're all caught up for today! Generate AI tasks or add plants."
 									: "Generate AI-powered care tasks based on your plants and weather."
 								}
 							</Text>
-							<View className="flex-row gap-2">
+							<View className="flex-row gap-3">
 								<Button
 									onPress={() => router.push("/(protected)/plants/add-plant" as any)}
 									variant="outline"
@@ -505,7 +512,7 @@ Respond ONLY with a JSON array of tasks. Each task should be specific to the use
 							</View>
 						</View>
 					) : (
-						<View className="space-y-3">
+						<View className="space-y-4">
 							{getFilteredEvents().map((event) => {
 								const status = getEventStatus(event);
 								const eventType = event.event_type as keyof typeof EVENT_ICONS;
@@ -513,23 +520,23 @@ Respond ONLY with a JSON array of tasks. Each task should be specific to the use
 								return (
 									<View
 										key={event.id}
-										className={`p-4 rounded-xl border ${
+										className={`p-5 rounded-xl border ${
 											event.completed ? 'bg-green-50 border-green-200' : 'bg-card border-border'
 										}`}
 									>
-										<View className="flex-row items-start justify-between mb-2">
+										<View className="flex-row items-start justify-between mb-3">
 											<View className="flex-row items-center flex-1">
-												<Text className="text-2xl mr-3">
+												<Text className="text-3xl mr-4">
 													{EVENT_ICONS[eventType] || EVENT_ICONS.custom}
 												</Text>
 												<View className="flex-1">
-													<Text className={`font-semibold text-base ${
+													<Text className={`font-semibold text-lg ${
 														event.completed ? 'line-through text-muted-foreground' : ''
 													}`}>
 														{event.title}
 													</Text>
 													{event.plant_name && (
-														<Text className="text-sm text-muted-foreground">
+														<Text className="text-base text-muted-foreground mt-1">
 															{event.plant_name}
 														</Text>
 													)}
@@ -537,7 +544,7 @@ Respond ONLY with a JSON array of tasks. Each task should be specific to the use
 											</View>
 											
 											<View className="items-end">
-												<View className="flex-row items-center">
+												<View className="flex-row items-center bg-secondary/50 px-3 py-1 rounded-full">
 													<Text className="text-sm mr-1">
 														{getStatusIcon(status)}
 													</Text>
@@ -546,13 +553,13 @@ Respond ONLY with a JSON array of tasks. Each task should be specific to the use
 													</Text>
 												</View>
 												{event.ai_generated && (
-													<Text className="text-xs text-purple-600 mt-1">🤖 AI</Text>
+													<Text className="text-xs text-purple-600 mt-2 font-medium">🤖 AI</Text>
 												)}
 											</View>
 										</View>
 
 										{event.description && (
-											<Text className="text-sm text-muted-foreground mb-3">
+											<Text className="text-sm text-muted-foreground mb-4 leading-relaxed">
 												{event.description}
 											</Text>
 										)}
@@ -574,40 +581,40 @@ Respond ONLY with a JSON array of tasks. Each task should be specific to the use
 				</View>
 
 				{/* AI Features Info */}
-				<View className="px-4 mt-6 mb-6">
-					<View className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-4 rounded-xl border border-border">
-						<View className="flex-row items-center justify-between mb-3">
-							<View>
-								<Text className="font-semibold text-lg">🧠 How AI Helps</Text>
-								<Text className="text-sm text-muted-foreground">
+				<View className="px-6 mt-8 mb-8">
+					<View className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-5 rounded-xl border border-border">
+						<View className="flex-row items-center justify-between mb-4">
+							<View className="flex-1">
+								<Text className="font-semibold text-xl">🧠 How AI Helps</Text>
+								<Text className="text-sm text-muted-foreground mt-1">
 									Smart recommendations personalized for you
 								</Text>
 							</View>
-							<Text className="text-3xl">✨</Text>
+							<Text className="text-4xl">✨</Text>
 						</View>
 
-						<View className="space-y-2">
+						<View className="space-y-3">
 							<View className="flex-row items-center">
-								<Text className="text-lg mr-2">🌤️</Text>
-								<Text className="text-sm text-muted-foreground flex-1">
+								<Text className="text-xl mr-3">🌤️</Text>
+								<Text className="text-sm text-muted-foreground flex-1 leading-relaxed">
 									Weather-based watering and protection advice
 								</Text>
 							</View>
 							<View className="flex-row items-center">
-								<Text className="text-lg mr-2">📊</Text>
-								<Text className="text-sm text-muted-foreground flex-1">
+								<Text className="text-xl mr-3">📊</Text>
+								<Text className="text-sm text-muted-foreground flex-1 leading-relaxed">
 									Growth stage-specific care recommendations
 								</Text>
 							</View>
 							<View className="flex-row items-center">
-								<Text className="text-lg mr-2">🕐</Text>
-								<Text className="text-sm text-muted-foreground flex-1">
+								<Text className="text-xl mr-3">🕐</Text>
+								<Text className="text-sm text-muted-foreground flex-1 leading-relaxed">
 									Optimal timing for fertilizing, pruning & harvesting
 								</Text>
 							</View>
 							<View className="flex-row items-center">
-								<Text className="text-lg mr-2">🐛</Text>
-								<Text className="text-sm text-muted-foreground flex-1">
+								<Text className="text-xl mr-3">🐛</Text>
+								<Text className="text-sm text-muted-foreground flex-1 leading-relaxed">
 									Seasonal pest monitoring and prevention
 								</Text>
 							</View>
@@ -616,7 +623,7 @@ Respond ONLY with a JSON array of tasks. Each task should be specific to the use
 				</View>
 
 				{/* Bottom spacing */}
-				<View className="h-20" />
+				<View className="h-24" />
 			</ScrollView>
 		</SafeAreaView>
 	);

@@ -426,7 +426,7 @@ export default function Marketplace() {
 	return (
 		<SafeAreaView className="flex-1 bg-background">
 			<ScrollView
-				contentContainerStyle={{ paddingBottom: 50 }}
+				contentContainerStyle={{ paddingBottom: 120 }}
 				showsVerticalScrollIndicator={false}
 			>
 				{/* REPLACE the existing header with this updated version */}

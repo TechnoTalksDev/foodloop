@@ -198,7 +198,7 @@ export default function Profile() {
 		<SafeAreaView className="flex-1 bg-background">
 			<ScrollView 
 				className="flex-1" 
-				contentContainerStyle={{ paddingBottom: 60 }}
+				contentContainerStyle={{ paddingBottom: 120 }}
 				refreshControl={
 					<RefreshControl
 						refreshing={refreshing}
