@@ -170,7 +170,7 @@ export default function AICalendarScreen() {
 
 	const generateAICalendarTasks = async () => {
 		if (!session?.user?.id || userPlants.length === 0) {
-			Alert.alert("No Plants", "Add some plants first to generate AI calendar tasks!");
+			Alert.alert("No Plants", "Add some plants first to generate SmartCalendar tasks!");
 			return;
 		}
 
@@ -295,13 +295,13 @@ Respond ONLY with a JSON array of tasks. Each task should be specific to the use
 			await fetchCalendarData();
 
 			Alert.alert(
-				"AI Calendar Generated! 🤖", 
+				"SmartCalendar Generated! 🤖", 
 				`Generated ${tasksToInsert.length} personalized care tasks based on your plants and weather conditions.`
 			);
 
 		} catch (error) {
 			console.error("Error generating AI tasks:", error);
-			Alert.alert("AI Error", "Failed to generate AI calendar. Please try again.");
+			Alert.alert("AI Error", "Failed to generate SmartCalendar. Please try again.");
 		} finally {
 			setGeneratingTasks(false);
 		}
@@ -371,7 +371,7 @@ Respond ONLY with a JSON array of tasks. Each task should be specific to the use
 				<TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2">
 					<Ionicons name="chevron-back" size={24} color="#666" />
 				</TouchableOpacity>
-				<H1 className="flex-1 text-center">AI Calendar</H1>
+				<H1 className="flex-1 text-center">SmartCalendar</H1>
 				<TouchableOpacity 
 					onPress={generateAICalendarTasks} 
 					disabled={generatingTasks}
@@ -400,7 +400,7 @@ Respond ONLY with a JSON array of tasks. Each task should be specific to the use
 				<View className="mx-6 mt-6 mb-8 p-6 bg-gradient-to-r from-purple-50 to-green-50 dark:from-purple-900/20 dark:to-green-900/20 rounded-xl border border-border">
 					<View className="flex-row items-center justify-between mb-4">
 						<View className="flex-1">
-							<Text className="font-semibold text-xl">🤖 AI Plant Calendar</Text>
+							<Text className="font-semibold text-xl">🤖 AI SmartCalendar</Text>
 							<Text className="text-sm text-muted-foreground mt-1">
 								Personalized care schedule based on your plants & weather
 							</Text>
@@ -419,19 +419,19 @@ Respond ONLY with a JSON array of tasks. Each task should be specific to the use
 							<View className="flex-row items-center">
 								<ActivityIndicator size="small" color="white" />
 								<Text className="text-primary-foreground font-medium ml-2 text-base">
-									Generating AI Tasks...
+									Generating SmartCalendar Tasks...
 								</Text>
 							</View>
 						) : (
 							<Text className="text-primary-foreground font-medium text-base">
-								🤖 Generate AI Care Schedule
+								🤖 Generate SmartCalendar Schedule
 							</Text>
 						)}
 					</Button>
 					
 					{userPlants.length === 0 && (
 						<Text className="text-center text-xs text-muted-foreground mt-3">
-							Add plants first to generate AI tasks
+							Add plants first to generate SmartCalendar tasks
 						</Text>
 					)}
 				</View>

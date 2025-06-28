@@ -498,11 +498,13 @@ export default function PlantsScreen() {
 							</Button>
 						</View>
 					) : (
-						<View className="space-y-4">
-							{userPlants.slice(0, 3).map((plant) => (
+						<View>
+							{userPlants.slice(0, 3).map((plant, index) => (
 								<TouchableOpacity
 									key={plant.id}
-									className="bg-card p-5 rounded-2xl border border-border shadow-sm "
+									className={`bg-card p-6 rounded-2xl border border-border shadow-sm ${
+										index < userPlants.slice(0, 3).length - 1 ? 'mb-6' : ''
+									}`}
 									onPress={() => navigateToPlantDetail(plant.id)}
 									activeOpacity={0.8}
 								>

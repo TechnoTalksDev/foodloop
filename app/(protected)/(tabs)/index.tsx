@@ -81,6 +81,25 @@ interface PlantCheckInData {
 	loading: boolean;
 }
 
+// Calendar Events interface
+interface CalendarEvent {
+	id: number;
+	title: string;
+	description: string | null;
+	event_type: 'water' | 'fertilize' | 'prune' | 'harvest' | 'transplant' | 'pest_check' | 'custom';
+	scheduled_date: string;
+	completed: boolean;
+	plant_id: number | null;
+	plant_name?: string;
+}
+
+interface CalendarData {
+	upcomingEvents: CalendarEvent[];
+	totalEvents: number;
+	completedToday: number;
+	loading: boolean;
+}
+
 const PLANT_TYPE_ICONS = {
 	tomatoes: '🍅',
 	lettuce: '🥬',
@@ -92,6 +111,16 @@ const PLANT_TYPE_ICONS = {
 	radishes: '🔴',
 	beans: '🫘',
 	cucumbers: '🥒',
+};
+
+const EVENT_TYPE_ICONS = {
+	water: "💧",
+	fertilize: "🌱",
+	prune: "✂️",
+	harvest: "🍅",
+	transplant: "🪴",
+	pest_check: "🔍",
+	custom: "📝",
 };
 
 export default function Home() {
@@ -125,6 +154,14 @@ export default function Home() {
 		plantsNeedingCheckIn: [],
 		totalPlants: 0,
 		plantsCheckedInToday: 0,
+		loading: true
+	});
+
+	// Calendar data state
+	const [calendarData, setCalendarData] = useState<CalendarData>({
+		upcomingEvents: [],
+		totalEvents: 0,
+		completedToday: 0,
 		loading: true
 	});
 
@@ -240,6 +277,67 @@ export default function Home() {
 		}
 	};
 
+	// Fetch calendar data
+	const fetchCalendarData = async () => {
+		if (!session?.user?.id) {
+			setCalendarData(prev => ({ ...prev, loading: false }));
+			return;
+		}
+
+		try {
+			setCalendarData(prev => ({ ...prev, loading: true }));
+
+			// Fetch all upcoming events (not just 7 days)
+			const today = new Date();
+
+			const { data: eventsData, error: eventsError } = await supabase
+				.from('plant_calendar_events')
+				.select(`
+					id, 
+					title, 
+					description, 
+					event_type, 
+					scheduled_date, 
+					completed, 
+					plant_id,
+					user_plants(plant_name)
+				`)
+				.eq('user_id', session.user.id)
+				.gte('scheduled_date', today.toISOString().split('T')[0])
+				.eq('completed', false)
+				.order('scheduled_date', { ascending: true })
+				.limit(20);
+
+			if (eventsError) {
+				console.error('Error fetching calendar events:', eventsError);
+				setCalendarData(prev => ({ ...prev, loading: false }));
+				return;
+			}
+
+			const events = (eventsData || []).map(event => ({
+				...event,
+				plant_name: event.user_plants?.[0]?.plant_name || null
+			}));
+
+			// Count total events and completed events for today
+			const totalEvents = events.length;
+			const completedToday = events.filter(event => {
+				return isToday(new Date(event.scheduled_date)) && event.completed;
+			}).length;
+
+			setCalendarData({
+				upcomingEvents: events,
+				totalEvents,
+				completedToday,
+				loading: false
+			});
+
+		} catch (error) {
+			console.error('Error fetching calendar data:', error);
+			setCalendarData(prev => ({ ...prev, loading: false }));
+		}
+	};
+
 	// Fetch recommended marketplace items
 	const fetchRecommendedItems = async () => {
 		try {
@@ -321,6 +419,11 @@ export default function Home() {
 	// Fetch plant data on component mount
 	useEffect(() => {
 		fetchPlantCheckInData();
+	}, [session?.user?.id]);
+
+	// Fetch calendar data on component mount
+	useEffect(() => {
+		fetchCalendarData();
 	}, [session?.user?.id]);
 
 	// Fetch real impact data
@@ -463,6 +566,7 @@ export default function Home() {
 				fetchWeather(),
 				fetchPlantCheckInData(),
 				fetchRecommendedItems(),
+				fetchCalendarData(),
 				// Note: Real impact data is fetched in useEffect based on session
 			]);
 		} catch (error) {
@@ -777,6 +881,147 @@ export default function Home() {
 										<Text className="font-medium text-sm">{day.temp}</Text>
 									</View>
 								))}
+							</View>
+						</>
+					)}
+				</View>
+
+				{/* Calendar Tasks Widget */}
+				<View className="mx-4 mb-6 p-5 bg-secondary/30 rounded-2xl border border-border">
+					<View className="flex-row justify-between items-center mb-4">
+						<View className="flex-row items-center">
+							<Text className="text-xl mr-2">📅</Text>
+							<Text className="text-lg font-semibold">SmartCalendar Tasks</Text>
+						</View>
+						<TouchableOpacity onPress={() => router.push("/(protected)/plants/ai-calendar")}>
+							<Text className="text-primary font-medium">See All</Text>
+						</TouchableOpacity>
+					</View>
+
+					{calendarData.loading ? (
+						<View className="items-center py-4">
+							<Text className="text-muted-foreground">Loading tasks...</Text>
+						</View>
+					) : calendarData.upcomingEvents.length === 0 ? (
+						<View className="items-center py-6 bg-green-50 dark:bg-green-900/20 rounded-xl">
+							<Text className="text-4xl mb-2">✅</Text>
+							<Text className="font-semibold mb-1">All caught up!</Text>
+							<Text className="text-center text-muted-foreground text-sm">
+								No upcoming tasks scheduled
+							</Text>
+						</View>
+					) : (
+						<>
+							{/* Upcoming Tasks List - Prioritized by Today -> This Week -> Future */}
+							<View className="space-y-3">
+								{(() => {
+									const today = new Date();
+									const startOfWeek = new Date(today);
+									startOfWeek.setDate(today.getDate() - today.getDay());
+									const endOfWeek = new Date(startOfWeek);
+									endOfWeek.setDate(startOfWeek.getDate() + 6);
+
+									// Categorize tasks by priority
+									const todayTasks = calendarData.upcomingEvents.filter(event => 
+										new Date(event.scheduled_date).toDateString() === today.toDateString()
+									);
+									
+									const thisWeekTasks = calendarData.upcomingEvents.filter(event => {
+										const eventDate = new Date(event.scheduled_date);
+										return eventDate >= startOfWeek && eventDate <= endOfWeek && 
+											   eventDate.toDateString() !== today.toDateString();
+									});
+									
+									const futureTasks = calendarData.upcomingEvents.filter(event => {
+										const eventDate = new Date(event.scheduled_date);
+										return eventDate > endOfWeek;
+									});
+
+									// Select up to 3 tasks with priority: Today -> This Week -> Future
+									let tasksToShow: CalendarEvent[] = [];
+									let sections: Array<{ label: string; tasks: CalendarEvent[] }> = [];
+
+									// Add today's tasks first (up to 3)
+									if (todayTasks.length > 0) {
+										const todayTasksToShow = todayTasks.slice(0, 3);
+										sections.push({ label: "Today", tasks: todayTasksToShow });
+										tasksToShow = [...todayTasksToShow];
+									}
+
+									// Add this week's tasks if we have room (up to 3 total)
+									if (tasksToShow.length < 3 && thisWeekTasks.length > 0) {
+										const remainingSlots = 3 - tasksToShow.length;
+										const weekTasksToShow = thisWeekTasks.slice(0, remainingSlots);
+										if (weekTasksToShow.length > 0) {
+											sections.push({ label: "This Week", tasks: weekTasksToShow });
+											tasksToShow = [...tasksToShow, ...weekTasksToShow];
+										}
+									}
+
+									// Add future tasks if we still have room (up to 3 total)
+									if (tasksToShow.length < 3 && futureTasks.length > 0) {
+										const remainingSlots = 3 - tasksToShow.length;
+										const futureTasksToShow = futureTasks.slice(0, remainingSlots);
+										if (futureTasksToShow.length > 0) {
+											sections.push({ label: "Upcoming", tasks: futureTasksToShow });
+											tasksToShow = [...tasksToShow, ...futureTasksToShow];
+										}
+									}
+
+									return (
+										<>
+											{sections.map((section, sectionIndex) => (
+												<View key={section.label}>
+													<Text className="text-sm font-medium text-muted-foreground mb-2">
+														{section.label}
+													</Text>
+													{section.tasks.map((event) => {
+														const isToday = new Date(event.scheduled_date).toDateString() === today.toDateString();
+														const eventDate = new Date(event.scheduled_date);
+											
+														return (
+															<View
+																key={event.id}
+																className={`flex-row items-center p-3 rounded-xl border mb-2 ${
+																	event.completed 
+																		? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' 
+																		: isToday 
+																			? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+																			: 'bg-background border-border'
+																}`}
+															>
+																<View className="w-10 h-10 rounded-full bg-primary/20 items-center justify-center mr-3">
+																	<Text className="text-lg">{EVENT_TYPE_ICONS[event.event_type as keyof typeof EVENT_TYPE_ICONS]}</Text>
+																</View>
+																
+																<View className="flex-1">
+																	<Text className={`font-semibold ${event.completed ? 'line-through text-muted-foreground' : ''}`}>
+																		{event.title}
+																	</Text>
+																	{event.plant_name && (
+																		<Text className="text-sm text-muted-foreground">
+																			🌱 {event.plant_name}
+																		</Text>
+																	)}
+																	<View className="flex-row items-center mt-1">
+																		<Text className="text-xs text-muted-foreground">
+																			{isToday ? 'Today' : format(eventDate, 'MMM d')}
+																		</Text>
+																		{event.completed && (
+																			<View className="ml-2 px-2 py-1 bg-green-500 rounded-full">
+																				<Text className="text-white text-xs font-bold">✓</Text>
+																			</View>
+																		)}
+																	</View>
+																</View>
+															</View>
+														);
+													})}
+												</View>
+											))}
+										</>
+									);
+								})()}
 							</View>
 						</>
 					)}
