@@ -129,6 +129,8 @@ export default function SmartPlateAI() {
   const introOpacity = useSharedValue(1);
   const backgroundGlow = useSharedValue(0);
   const particleOpacity = useSharedValue(0);
+  const aiScale = useSharedValue(0);
+  const aiOpacity = useSharedValue(0);
 
   // Colors based on theme
   const textColor = colorScheme === 'dark' ? colors.dark.foreground : colors.light.foreground;
@@ -142,11 +144,11 @@ export default function SmartPlateAI() {
     if (showIntro) {
       const startAnimation = () => {
         // Particle effects
-        particleOpacity.value = withTiming(1, { duration: 500 });
+        particleOpacity.value = withTiming(1, { duration: 250 }); // was 500
         
         // Background glow effect
         backgroundGlow.value = withRepeat(
-          withTiming(1, { duration: 2000, easing: Easing.inOut(Easing.quad) }),
+          withTiming(1, { duration: 1000, easing: Easing.inOut(Easing.quad) }), // was 2000
           -1,
           true
         );
@@ -154,7 +156,7 @@ export default function SmartPlateAI() {
         // Face entrance - dramatic spin and scale
         faceScale.value = withSequence(
           withTiming(0, { duration: 0 }),
-          withDelay(300, withSpring(1.3, { 
+          withDelay(150, withSpring(1.3, { 
             damping: 8, 
             stiffness: 100,
             mass: 1.2 
@@ -164,55 +166,65 @@ export default function SmartPlateAI() {
 
         faceRotation.value = withSequence(
           withTiming(-360, { duration: 0 }),
-          withDelay(300, withTiming(0, { 
-            duration: 800, 
+          withDelay(150, withTiming(0, { 
+            duration: 400, // was 800
             easing: Easing.out(Easing.back(1.7)) 
           }))
         );
 
         faceOpacity.value = withSequence(
           withTiming(0, { duration: 0 }),
-          withDelay(300, withTiming(1, { duration: 600 }))
+          withDelay(150, withTiming(1, { duration: 300 })) // was 600
         );
 
         // Blink sequence - happens after face settles
         setTimeout(() => {
           // First blink
           showWink.value = withSequence(
-            withTiming(1, { duration: 80 }),
-            withTiming(0, { duration: 80 }),
+            withTiming(1, { duration: 40 }), // was 80
+            withTiming(0, { duration: 40 }),
             // Second blink after delay
-            withDelay(400, withTiming(1, { duration: 80 })),
-            withTiming(0, { duration: 80 }),
+            withDelay(200, withTiming(1, { duration: 40 })), // was 400/80
+            withTiming(0, { duration: 40 }),
             // Third blink
-            withDelay(600, withTiming(1, { duration: 80 })),
-            withTiming(0, { duration: 120 })
+            withDelay(300, withTiming(1, { duration: 40 })), // was 600/80
+            withTiming(0, { duration: 60 }) // was 120
           );
-        }, 1200);
+        }, 600); // was 1200
 
         // Text entrance - epic slide and rotate
         setTimeout(() => {
-          textOpacity.value = withTiming(1, { duration: 800 });
+          textOpacity.value = withTiming(1, { duration: 400 }); // was 800
           textScale.value = withSequence(
             withTiming(0, { duration: 0 }),
             withSpring(1.2, { damping: 6, stiffness: 120 }),
             withSpring(1, { damping: 8, stiffness: 150 })
           );
           textRotation.value = withTiming(0, { 
-            duration: 1000, 
+            duration: 500, // was 1000
             easing: Easing.out(Easing.back(1.5)) 
           });
-        }, 1800);
+
+          // AI badge animation
+          aiScale.value = withDelay(
+            200, // was 400
+            withSequence(
+              withSpring(1.3, { damping: 4, stiffness: 150 }),
+              withSpring(1, { damping: 8, stiffness: 120 })
+            )
+          );
+          aiOpacity.value = withDelay(200, withTiming(1, { duration: 400 })); // was 800
+        }, 900); // was 1800
 
         // Fade out intro and show main app
         setTimeout(() => {
           introOpacity.value = withTiming(0, { 
-            duration: 1000, 
+            duration: 500, // was 1000
             easing: Easing.inOut(Easing.quad) 
           }, () => {
             runOnJS(setShowIntro)(false);
           });
-        }, 4500);
+        }, 2250); // was 4500
       };
 
       startAnimation();
@@ -256,6 +268,13 @@ export default function SmartPlateAI() {
   const particleAnimatedStyle = useAnimatedStyle(() => {
     return {
       opacity: particleOpacity.value,
+    };
+  });
+
+  const aiAnimatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: aiScale.value }],
+      opacity: aiOpacity.value,
     };
   });
 
@@ -771,16 +790,17 @@ Please provide specific advice based on these current weather conditions and for
           style={[
             {
               flex: 1,
-              justifyContent: 'center',
+              justifyContent: 'space-around', // Better distribution for different screen sizes
               alignItems: 'center',
               paddingHorizontal: 20,
-              paddingBottom: 120, // Add bottom padding to account for loading indicator
+              paddingTop: Math.max(60, SCREEN_HEIGHT * 0.08), // Responsive top padding
+              paddingBottom: Math.max(120, SCREEN_HEIGHT * 0.15), // Responsive bottom padding
             },
             introAnimatedStyle
           ]}
         >
           {/* Epic Face Animation */}
-          <Animated.View style={[faceAnimatedStyle, { marginBottom: 40 }]}>
+          <Animated.View style={[faceAnimatedStyle, { marginBottom: 50 }]}>
             <View style={{ position: 'relative' }}>
               {/* Normal face (1.png) */}
               <Animated.View
@@ -791,8 +811,8 @@ Please provide specific advice based on these current weather conditions and for
                 <Image
                   source={require('@/assets/2.png')}
                   style={{
-                    width: 200,
-                    height: 200,
+                    width: Math.min(180, SCREEN_WIDTH * 0.45), // Responsive size
+                    height: Math.min(180, SCREEN_WIDTH * 0.45), // Responsive size
                     resizeMode: 'contain',
                   }}
                 />
@@ -810,8 +830,8 @@ Please provide specific advice based on these current weather conditions and for
                 <Image
                   source={require('@/assets/1.png')}
                   style={{
-                    width: 200,
-                    height: 200,
+                    width: Math.min(180, SCREEN_WIDTH * 0.45), // Responsive size
+                    height: Math.min(180, SCREEN_WIDTH * 0.45), // Responsive size
                     resizeMode: 'contain',
                   }}
                 />
@@ -819,38 +839,73 @@ Please provide specific advice based on these current weather conditions and for
             </View>
           </Animated.View>
 
-          {/* Epic Text Animation */}
-          <Animated.View style={textAnimatedStyle}>
-            <Text 
-              style={{
-                fontSize: 36,
-                fontWeight: 'bold',
-                color: 'white',
-                textAlign: 'center',
-                textShadowColor: 'rgba(0, 0, 0, 0.5)',
-                textShadowOffset: { width: 2, height: 2 },
-                textShadowRadius: 10,
-                letterSpacing: 2,
-              }}
-            >
-              FoodLoop AI
-            </Text>
-            <Text 
-              style={{
-                fontSize: 12,
-                color: 'rgba(255, 255, 255, 0.9)',
-                textAlign: 'center',
-                marginTop: 10,
-                letterSpacing: 1,
-              }}
-            >
-              Powered by Google Gemini
-            </Text>
+          {/* Amazing Animated Text */}
+          <Animated.View style={[textAnimatedStyle, { alignItems: 'center' }]}>
+            {/* SmartPlant text with glow effect */}
+            <Animated.View style={aiAnimatedStyle}>
+              <View style={{
+                backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                paddingHorizontal: 20,
+                paddingVertical: 8,
+                borderRadius: 20,
+                borderWidth: 2,
+                borderColor: 'rgba(255, 255, 255, 0.3)',
+                shadowColor: '#10b981',
+                shadowOffset: { width: 0, height: 0 },
+                shadowOpacity: 0.8,
+                shadowRadius: 20,
+                elevation: 10,
+              }}>
+                <Text
+                  style={{
+                    fontSize: Math.min(24, SCREEN_WIDTH * 0.06),
+                    fontWeight: 'bold',
+                    color: '#ffffff',
+                    textAlign: 'center',
+                    textShadowColor: 'rgba(16, 185, 129, 0.8)',
+                    textShadowOffset: { width: 0, height: 0 },
+                    textShadowRadius: 10,
+                    letterSpacing: 2,
+                  }}
+                >
+                  SmartPlant
+                </Text>
+              </View>
+            </Animated.View>
+
+            {/* Floating particles around text */}
+            <Animated.View style={particleAnimatedStyle}>
+              {[...Array(6)].map((_, i) => (
+                <View
+                  key={i}
+                  style={{
+                    position: 'absolute',
+                    width: 4,
+                    height: 4,
+                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+                    borderRadius: 2,
+                    left: Math.random() * 300 - 150,
+                    top: Math.random() * 100 - 50,
+                  }}
+                />
+              ))}
+            </Animated.View>
           </Animated.View>
 
           {/* Loading indicator */}
-          <View style={{ marginTop: 40, position: 'absolute', bottom: 80 }}>
+          <View style={{ 
+            alignItems: 'center',
+            marginTop: 20, // Use margin instead of absolute positioning
+          }}>
             <ActivityIndicator size="large" color="white" />
+            <Text style={{
+              color: 'rgba(255, 255, 255, 0.7)',
+              fontSize: Math.min(14, SCREEN_WIDTH * 0.035), // Responsive font size
+              marginTop: 8,
+              textAlign: 'center',
+            }}>
+              Loading AI...
+            </Text>
           </View>
         </Animated.View>
       </View>
