@@ -4,7 +4,9 @@ import { supabase } from "@/config/supabase";
 
 export function useOnboarding() {
 	const { session } = useAuth();
-	const [isOnboardingComplete, setIsOnboardingComplete] = useState<boolean | null>(null);
+	const [isOnboardingComplete, setIsOnboardingComplete] = useState<
+		boolean | null
+	>(null);
 	const [loading, setLoading] = useState(true);
 
 	useEffect(() => {

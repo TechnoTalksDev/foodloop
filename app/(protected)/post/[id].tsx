@@ -339,15 +339,11 @@ export default function PostDetailPage() {
 	};
 
 	const showReplyImageOptions = () => {
-		Alert.alert(
-			"Add Image",
-			"Choose how you'd like to add an image",
-			[
-				{ text: "Camera", onPress: takeReplyPhoto },
-				{ text: "Photo Library", onPress: pickReplyImages },
-				{ text: "Cancel", style: "cancel" },
-			]
-		);
+		Alert.alert("Add Image", "Choose how you'd like to add an image", [
+			{ text: "Camera", onPress: takeReplyPhoto },
+			{ text: "Photo Library", onPress: pickReplyImages },
+			{ text: "Cancel", style: "cancel" },
+		]);
 	};
 
 	const renderReply = ({ item }: { item: PostReply }) => (
@@ -420,8 +416,8 @@ export default function PostDetailPage() {
 						<TouchableOpacity
 							onPress={() => handleReplyVote(item.id, "up")}
 							className={`flex-row items-center mr-4 px-2 py-1 rounded-full ${
-								item.user_vote === "up" 
-									? "bg-green-100 dark:bg-green-900/30" 
+								item.user_vote === "up"
+									? "bg-green-100 dark:bg-green-900/30"
 									: "bg-secondary/50"
 							}`}
 							activeOpacity={0.7}
@@ -434,8 +430,8 @@ export default function PostDetailPage() {
 							/>
 							<Text
 								className={`ml-1 text-sm ${
-									item.user_vote === "up" 
-										? "text-green-600 dark:text-green-400 font-semibold" 
+									item.user_vote === "up"
+										? "text-green-600 dark:text-green-400 font-semibold"
 										: "text-muted-foreground"
 								}`}
 							>
@@ -446,8 +442,8 @@ export default function PostDetailPage() {
 						<TouchableOpacity
 							onPress={() => handleReplyVote(item.id, "down")}
 							className={`flex-row items-center px-2 py-1 rounded-full ${
-								item.user_vote === "down" 
-									? "bg-red-100 dark:bg-red-900/30" 
+								item.user_vote === "down"
+									? "bg-red-100 dark:bg-red-900/30"
 									: "bg-secondary/50"
 							}`}
 							activeOpacity={0.7}
@@ -460,8 +456,8 @@ export default function PostDetailPage() {
 							/>
 							<Text
 								className={`ml-1 text-sm ${
-									item.user_vote === "down" 
-										? "text-red-600 dark:text-red-400 font-semibold" 
+									item.user_vote === "down"
+										? "text-red-600 dark:text-red-400 font-semibold"
 										: "text-muted-foreground"
 								}`}
 							>

@@ -16,17 +16,21 @@ export default function TabsLayout() {
 	const isDark = colorScheme === "dark";
 	const borderColor = isDark ? colors.dark.border : colors.light.border;
 	const textColor = isDark ? colors.dark.foreground : colors.light.foreground;
-	const mutedTextColor = isDark 
-		? colors.dark.mutedForeground 
+	const mutedTextColor = isDark
+		? colors.dark.mutedForeground
 		: colors.light.mutedForeground;
-	const backgroundColor = isDark 
-		? 'rgba(18, 18, 18, 0.95)' 
-		: 'rgba(255, 255, 255, 0.95)';
-	const activeColor = isDark ? '#10B981' : '#059669';
+	const backgroundColor = isDark
+		? "rgba(18, 18, 18, 0.95)"
+		: "rgba(255, 255, 255, 0.95)";
+	const activeColor = isDark ? "#10B981" : "#059669";
 
 	const createTabBarIcon = (iconName: any, focused: boolean, color: string) => {
-		const scaleAnim = React.useRef(new Animated.Value(focused ? 1 : 0.9)).current;
-		const opacityAnim = React.useRef(new Animated.Value(focused ? 1 : 0.6)).current;
+		const scaleAnim = React.useRef(
+			new Animated.Value(focused ? 1 : 0.9),
+		).current;
+		const opacityAnim = React.useRef(
+			new Animated.Value(focused ? 1 : 0.6),
+		).current;
 
 		React.useEffect(() => {
 			Animated.parallel([
@@ -74,22 +78,26 @@ export default function TabsLayout() {
 					style={styles.blurView}
 					experimentalBlurMethod="dimezisBlurView"
 				>
-					<View 
+					<View
 						style={[
-							styles.tabBar, 
-							{ 
+							styles.tabBar,
+							{
 								borderTopColor: borderColor,
-							}
+							},
 						]}
 					>
 						{/* Subtle top highlight */}
-						<View 
+						<View
 							style={[
 								styles.topHighlight,
-								{ backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.8)' }
-							]} 
+								{
+									backgroundColor: isDark
+										? "rgba(255,255,255,0.1)"
+										: "rgba(255,255,255,0.8)",
+								},
+							]}
 						/>
-						
+
 						{state.routes.map((route: any, index: number) => {
 							const { options } = descriptors[route.key];
 							const isFocused = state.index === index;
@@ -116,7 +124,7 @@ export default function TabsLayout() {
 									onPress={onPress}
 									style={[
 										styles.tabButton,
-										isFocused && styles.tabButtonActive
+										isFocused && styles.tabButtonActive,
 									]}
 									activeOpacity={0.7}
 								>

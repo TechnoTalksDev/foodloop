@@ -94,16 +94,19 @@ export default function Cart() {
 			setConfirming(true);
 
 			// Group cart items by business owner (user_id)
-			const businessGroups = cartItems.reduce((groups, item) => {
-				const sellerId = item.product?.user_id;
-				if (!sellerId) return groups;
+			const businessGroups = cartItems.reduce(
+				(groups, item) => {
+					const sellerId = item.product?.user_id;
+					if (!sellerId) return groups;
 
-				if (!groups[sellerId]) {
-					groups[sellerId] = [];
-				}
-				groups[sellerId].push(item);
-				return groups;
-			}, {} as Record<string, typeof cartItems>);
+					if (!groups[sellerId]) {
+						groups[sellerId] = [];
+					}
+					groups[sellerId].push(item);
+					return groups;
+				},
+				{} as Record<string, typeof cartItems>,
+			);
 
 			const createdConversations = [];
 			const successfulCartItemIds: string[] = [];
@@ -113,11 +116,11 @@ export default function Cart() {
 				try {
 					// Check if conversation already exists
 					const { data: existingConversation } = await supabase
-						.from('conversations')
-						.select('id')
-						.eq('buyer_id', session.user.id)
-						.eq('seller_id', sellerId)
-						.eq('product_id', items[0].product?.id)
+						.from("conversations")
+						.select("id")
+						.eq("buyer_id", session.user.id)
+						.eq("seller_id", sellerId)
+						.eq("product_id", items[0].product?.id)
 						.single();
 
 					let conversationId;
@@ -126,19 +129,20 @@ export default function Cart() {
 						conversationId = existingConversation.id;
 					} else {
 						// Create new conversation
-						const { data: newConversation, error: conversationError } = await supabase
-							.from('conversations')
-							.insert({
-								buyer_id: session.user.id,
-								seller_id: sellerId,
-								product_id: items[0].product?.id, // Use first product as reference
-								status: 'active'
-							})
-							.select('id')
-							.single();
+						const { data: newConversation, error: conversationError } =
+							await supabase
+								.from("conversations")
+								.insert({
+									buyer_id: session.user.id,
+									seller_id: sellerId,
+									product_id: items[0].product?.id, // Use first product as reference
+									status: "active",
+								})
+								.select("id")
+								.single();
 
 						if (conversationError) {
-							console.error('Error creating conversation:', conversationError);
+							console.error("Error creating conversation:", conversationError);
 							continue;
 						}
 
@@ -146,12 +150,16 @@ export default function Cart() {
 					}
 
 					// Create initial message with cart items details
-					const itemsList = items.map(item => 
-						`${item.quantity}x ${item.product?.name} - $${(item.product?.price || 0).toFixed(2)} each`
-					).join('\n');
+					const itemsList = items
+						.map(
+							(item) =>
+								`${item.quantity}x ${item.product?.name} - $${(item.product?.price || 0).toFixed(2)} each`,
+						)
+						.join("\n");
 
-					const totalPrice = items.reduce((sum, item) => 
-						sum + (item.product?.price || 0) * item.quantity, 0
+					const totalPrice = items.reduce(
+						(sum, item) => sum + (item.product?.price || 0) * item.quantity,
+						0,
 					);
 
 					const messageContent = `Hi! I'm interested in purchasing the following items from your listing:
@@ -163,35 +171,41 @@ Total: $${totalPrice.toFixed(2)}
 Could we discuss the details for pickup/delivery?`;
 
 					const { error: messageError } = await supabase
-						.from('messages')
+						.from("messages")
 						.insert({
 							conversation_id: conversationId,
 							sender_id: session.user.id,
 							content: messageContent,
-							message_type: 'text'
+							message_type: "text",
 						});
 
 					if (!messageError) {
 						createdConversations.push({
 							conversationId,
 							sellerId,
-							businessName: items[0].product?.shop || 'Local Business'
+							businessName: items[0].product?.shop || "Local Business",
 						});
 						// Add cart item IDs for successful conversations
-						successfulCartItemIds.push(...items.map(item => item.id));
+						successfulCartItemIds.push(...items.map((item) => item.id));
 					}
-
 				} catch (error) {
-					console.error(`Error creating conversation with seller ${sellerId}:`, error);
+					console.error(
+						`Error creating conversation with seller ${sellerId}:`,
+						error,
+					);
 				}
 			}
 
 			if (createdConversations.length > 0) {
 				// Remove successfully processed items from cart
 				if (successfulCartItemIds.length > 0) {
-					const removeSuccess = await removeMultipleFromCart(successfulCartItemIds);
+					const removeSuccess = await removeMultipleFromCart(
+						successfulCartItemIds,
+					);
 					if (!removeSuccess) {
-						console.error('Failed to remove items from cart after successful message creation');
+						console.error(
+							"Failed to remove items from cart after successful message creation",
+						);
 						// Don't fail the entire operation, just log the error
 					}
 				}
@@ -200,18 +214,23 @@ Could we discuss the details for pickup/delivery?`;
 					"Messages Sent!",
 					`Successfully started ${createdConversations.length} conversation(s) with business owners. The items have been processed and you can now negotiate prices and arrange pickup details.`,
 					[
-						{ text: "View Messages", onPress: () => router.push("/messages" as any) },
-						{ text: "OK", style: "default" }
-					]
+						{
+							text: "View Messages",
+							onPress: () => router.push("/messages" as any),
+						},
+						{ text: "OK", style: "default" },
+					],
 				);
 				return true;
 			} else {
-				Alert.alert("Error", "Failed to create conversations. Please try again.");
+				Alert.alert(
+					"Error",
+					"Failed to create conversations. Please try again.",
+				);
 				return false;
 			}
-
 		} catch (error) {
-			console.error('Error in createConversationsAndMessages:', error);
+			console.error("Error in createConversationsAndMessages:", error);
 			Alert.alert("Error", "Failed to process your request. Please try again.");
 			return false;
 		} finally {
@@ -233,9 +252,9 @@ Could we discuss the details for pickup/delivery?`;
 							// Optionally clear cart or navigate away
 							router.back();
 						}
-					}
-				}
-			]
+					},
+				},
+			],
 		);
 	};
 
@@ -334,14 +353,19 @@ Could we discuss the details for pickup/delivery?`;
 							{/* Info Banner */}
 							<View className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
 								<View className="flex-row items-center mb-2">
-									<Ionicons name="information-circle" size={20} color="#3b82f6" />
+									<Ionicons
+										name="information-circle"
+										size={20}
+										color="#3b82f6"
+									/>
 									<Text className="ml-2 font-semibold text-blue-700 dark:text-blue-300">
 										How it works
 									</Text>
 								</View>
 								<Text className="text-blue-600 dark:text-blue-400 text-sm">
-									After confirming, we'll start conversations with each business owner. 
-									You can then negotiate prices, arrange pickup times, and finalize details directly with them.
+									After confirming, we'll start conversations with each business
+									owner. You can then negotiate prices, arrange pickup times,
+									and finalize details directly with them.
 								</Text>
 							</View>
 
@@ -492,7 +516,8 @@ Could we discuss the details for pickup/delivery?`;
 								</View>
 
 								<Muted className="mb-4">
-									Final prices and arrangements will be negotiated with each business owner
+									Final prices and arrangements will be negotiated with each
+									business owner
 								</Muted>
 
 								{/* Environmental Impact */}

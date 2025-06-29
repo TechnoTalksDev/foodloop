@@ -159,7 +159,11 @@ export default function ConversationScreen() {
 	) => {
 		if (!session?.user?.id || !id || !content.trim()) return;
 
-		console.log(`📤 [Conversation ${id}] Sending message:`, { content, messageType, metadata });
+		console.log(`📤 [Conversation ${id}] Sending message:`, {
+			content,
+			messageType,
+			metadata,
+		});
 
 		// Filter profanity from the message content
 		const originalContent = content.trim();
@@ -196,14 +200,17 @@ export default function ConversationScreen() {
 				// Restore input if there was an error
 				setNewMessage(originalContent);
 				return;
-			}console.log(`✅ [Conversation ${id}] Message sent successfully`);
-			console.log(`📅 [Conversation ${id}] Updating conversation last_message_at`);
+			}
+			console.log(`✅ [Conversation ${id}] Message sent successfully`);
+			console.log(
+				`📅 [Conversation ${id}] Updating conversation last_message_at`,
+			);
 			await supabase
 				.from("conversations")
 				.update({ last_message_at: new Date().toISOString() })
-				.eq("id", id);			// Don't fetch conversation data - realtime will handle adding the message
+				.eq("id", id); // Don't fetch conversation data - realtime will handle adding the message
 			// await fetchConversationData(); // REMOVED - this was the bottleneck!
-			
+
 			// Input fields already cleared optimistically above
 
 			// Scroll to bottom after a brief delay to allow realtime message to appear
@@ -236,16 +243,16 @@ export default function ConversationScreen() {
 
 	const handleAcceptOffer = async (message: Message) => {
 		if (!message.metadata || !conversation?.product) return;
-		
+
 		setProcessingOffer(message.id);
-		
+
 		try {
 			const offerAmount = message.metadata.amount;
 			const quantity = message.metadata.quantity || 1; // Default to 1 if not specified
-			
+
 			// Update product quantity in database
 			const newAmount = conversation.product.amount - quantity;
-			
+
 			if (newAmount < 0) {
 				Alert.alert("Error", "This product is no longer available");
 				return;
@@ -281,22 +288,24 @@ export default function ConversationScreen() {
 					.from("product")
 					.update({ amount: conversation.product.amount })
 					.eq("id", conversation.product.id);
-				Alert.alert("Error", "Failed to complete transaction. Please try again.");
+				Alert.alert(
+					"Error",
+					"Failed to complete transaction. Please try again.",
+				);
 				return;
 			}
 
 			// Send acceptance message
 			const acceptanceContent = `✅ Offer accepted! $${offerAmount.toFixed(2)} for ${quantity}x ${conversation.product.name}. Transaction completed. Please coordinate pickup/delivery details.`;
 			await sendMessage(acceptanceContent, "text");
-					Alert.alert(
+			Alert.alert(
 				"Transaction Completed!",
 				`You've accepted the offer of $${offerAmount.toFixed(2)} for ${quantity}x ${conversation.product.name}. The transaction has been recorded.`,
-				[{ text: "OK" }]
+				[{ text: "OK" }],
 			);
-			
+
 			// Don't refresh conversation - realtime will handle the message update
 			// await fetchConversationData(); // REMOVED - this was another bottleneck!
-			
 		} catch (error) {
 			console.error("Error accepting offer:", error);
 			Alert.alert("Error", "Failed to accept offer. Please try again.");
@@ -307,15 +316,14 @@ export default function ConversationScreen() {
 
 	const handleDeclineOffer = async (message: Message) => {
 		if (!message.metadata || !conversation?.product) return;
-		
+
 		setProcessingOffer(message.id);
-		
+
 		try {
 			const offerAmount = message.metadata.amount;
 			const declineContent = `❌ Offer declined. The offer of $${offerAmount.toFixed(2)} for ${conversation.product.name} was not accepted.`;
-			
+
 			await sendMessage(declineContent, "text");
-			
 		} catch (error) {
 			console.error("Error declining offer:", error);
 			Alert.alert("Error", "Failed to decline offer. Please try again.");
@@ -333,7 +341,7 @@ export default function ConversationScreen() {
 		try {
 			await fetchConversationData();
 		} catch (error) {
-			console.error('Error refreshing conversation:', error);
+			console.error("Error refreshing conversation:", error);
 		} finally {
 			setRefreshing(false);
 		}
@@ -342,45 +350,53 @@ export default function ConversationScreen() {
 	useEffect(() => {
 		if (!id || !session?.user?.id || loading) return;
 
-		console.log(`📡 [Conversation ${id}] Setting up realtime subscriptions for user:`, session.user.id);
+		console.log(
+			`📡 [Conversation ${id}] Setting up realtime subscriptions for user:`,
+			session.user.id,
+		);
 
 		// Subscribe to new messages in this conversation
 		const messagesChannel = supabase
 			.channel(`messages-${id}`)
 			.on(
-				'postgres_changes',
+				"postgres_changes",
 				{
-					event: 'INSERT',
-					schema: 'public',
-					table: 'messages',
+					event: "INSERT",
+					schema: "public",
+					table: "messages",
 					filter: `conversation_id=eq.${id}`,
 				},
 				(payload) => {
-					console.log(`✉️ [Conversation ${id}] New message received:`, payload.new);
+					console.log(
+						`✉️ [Conversation ${id}] New message received:`,
+						payload.new,
+					);
 					const newMessage = payload.new as Message;
 					setMessages((prev) => {
 						// Avoid duplicates by checking if message already exists
-						if (prev.some(msg => msg.id === newMessage.id)) {
-							console.log(`⚠️ [Conversation ${id}] Duplicate message detected, skipping`);
+						if (prev.some((msg) => msg.id === newMessage.id)) {
+							console.log(
+								`⚠️ [Conversation ${id}] Duplicate message detected, skipping`,
+							);
 							return prev;
 						}
 						console.log(`✅ [Conversation ${id}] Adding new message to state`);
 						return [...prev, newMessage];
 					});
-					
+
 					// Mark new messages as read if they're not from the current user
 					if (newMessage.sender_id !== session.user.id) {
 						console.log(`👁️ [Conversation ${id}] Marking new message as read`);
 						markMessagesAsRead();
 					}
-				}
+				},
 			)
 			.on(
-				'postgres_changes',
+				"postgres_changes",
 				{
-					event: 'UPDATE',
-					schema: 'public',
-					table: 'messages',
+					event: "UPDATE",
+					schema: "public",
+					table: "messages",
 					filter: `conversation_id=eq.${id}`,
 				},
 				(payload) => {
@@ -388,10 +404,10 @@ export default function ConversationScreen() {
 					const updatedMessage = payload.new as Message;
 					setMessages((prev) =>
 						prev.map((msg) =>
-							msg.id === updatedMessage.id ? updatedMessage : msg
-						)
+							msg.id === updatedMessage.id ? updatedMessage : msg,
+						),
 					);
-				}
+				},
 			)
 			.subscribe((status) => {
 				console.log(`📡 [Conversation ${id}] Messages channel status:`, status);
@@ -401,21 +417,27 @@ export default function ConversationScreen() {
 		const conversationChannel = supabase
 			.channel(`conversation-${id}`)
 			.on(
-				'postgres_changes',
+				"postgres_changes",
 				{
-					event: 'UPDATE',
-					schema: 'public',
-					table: 'conversations',
+					event: "UPDATE",
+					schema: "public",
+					table: "conversations",
 					filter: `id=eq.${id}`,
 				},
 				(payload) => {
-					console.log(`💬 [Conversation ${id}] Conversation updated:`, payload.new);
+					console.log(
+						`💬 [Conversation ${id}] Conversation updated:`,
+						payload.new,
+					);
 					// Refresh conversation data when conversation is updated
 					fetchConversationData();
-				}
+				},
 			)
 			.subscribe((status) => {
-				console.log(`📡 [Conversation ${id}] Conversation channel status:`, status);
+				console.log(
+					`📡 [Conversation ${id}] Conversation channel status:`,
+					status,
+				);
 			});
 
 		console.log(`🚀 [Conversation ${id}] Realtime subscriptions active`);
@@ -472,9 +494,7 @@ export default function ConversationScreen() {
 					</Text>
 
 					{/* Add Accept/Decline buttons for sellers receiving offers */}
-					{message.message_type === "offer" && 
-					 !isOwnMessage && 
-					 isSeller && (
+					{message.message_type === "offer" && !isOwnMessage && isSeller && (
 						<View className="flex-row gap-2 mt-3">
 							<Button
 								onPress={() => handleDeclineOffer(message)}
@@ -570,7 +590,8 @@ export default function ConversationScreen() {
 						</Text>
 						{product && (
 							<Text className="text-sm text-muted-foreground">
-								{product.name} • ${product.price.toFixed(2)} • {product.amount} left
+								{product.name} • ${product.price.toFixed(2)} • {product.amount}{" "}
+								left
 							</Text>
 						)}
 					</View>
@@ -654,7 +675,7 @@ export default function ConversationScreen() {
 							<Ionicons name="cash" size={24} color="#10b981" />
 						</TouchableOpacity>
 					)}
-					
+
 					<View className="flex-1 flex-row items-center border border-border rounded-full px-4 py-2">
 						<TextInput
 							value={newMessage}

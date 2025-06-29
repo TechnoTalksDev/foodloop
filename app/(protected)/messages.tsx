@@ -177,16 +177,19 @@ export default function MessagesScreen() {
 		await fetchConversations();
 		setRefreshing(false);
 	};
-	
+
 	useEffect(() => {
 		fetchConversations();
-	}, [session?.user?.id]);	
-	
+	}, [session?.user?.id]);
+
 	// Set up realtime subscriptions for conversations and messages
 	useEffect(() => {
 		if (!session?.user?.id || loading) return;
 
-		console.log('📡 [Messages] Setting up realtime subscriptions for user:', session.user.id);
+		console.log(
+			"📡 [Messages] Setting up realtime subscriptions for user:",
+			session.user.id,
+		);
 
 		let refreshTimeout: ReturnType<typeof setTimeout> | null = null;
 
@@ -196,70 +199,70 @@ export default function MessagesScreen() {
 				clearTimeout(refreshTimeout);
 			}
 			refreshTimeout = setTimeout(() => {
-				console.log('🔄 [Messages] Debounced refresh triggered');
+				console.log("🔄 [Messages] Debounced refresh triggered");
 				fetchConversations();
 			}, 500); // Wait 500ms before refreshing
 		};
 
 		// Subscribe to new messages (to update last message and unread counts)
 		const messagesChannel = supabase
-			.channel('messages-updates')
+			.channel("messages-updates")
 			.on(
-				'postgres_changes',
+				"postgres_changes",
 				{
-					event: 'INSERT',
-					schema: 'public',
-					table: 'messages',
+					event: "INSERT",
+					schema: "public",
+					table: "messages",
 				},
 				(payload) => {
-					console.log('✉️ [Messages] New message received:', payload.new);
+					console.log("✉️ [Messages] New message received:", payload.new);
 					// Always refresh when a new message is received
 					// We'll filter relevance during the fetch process
 					debouncedRefresh();
-				}
+				},
 			)
 			.on(
-				'postgres_changes',
+				"postgres_changes",
 				{
-					event: 'UPDATE',
-					schema: 'public',
-					table: 'messages',
+					event: "UPDATE",
+					schema: "public",
+					table: "messages",
 				},
 				(payload) => {
-					console.log('📝 [Messages] Message updated:', payload.new);
+					console.log("📝 [Messages] Message updated:", payload.new);
 					// Refresh when messages are read (affects unread counts)
 					debouncedRefresh();
-				}
+				},
 			)
 			.subscribe((status) => {
-				console.log('📡 [Messages] Messages channel status:', status);
+				console.log("📡 [Messages] Messages channel status:", status);
 			});
 
 		// Subscribe to conversation changes
 		const conversationsChannel = supabase
-			.channel('conversations-updates')
+			.channel("conversations-updates")
 			.on(
-				'postgres_changes',
+				"postgres_changes",
 				{
-					event: '*',
-					schema: 'public',
-					table: 'conversations',
+					event: "*",
+					schema: "public",
+					table: "conversations",
 				},
 				(payload) => {
-					console.log('💬 [Messages] Conversation changed:', payload);
+					console.log("💬 [Messages] Conversation changed:", payload);
 					// Always refresh when conversations change
 					debouncedRefresh();
-				}
+				},
 			)
 			.subscribe((status) => {
-				console.log('📡 [Messages] Conversations channel status:', status);
+				console.log("📡 [Messages] Conversations channel status:", status);
 			});
 
-		console.log('🚀 [Messages] Realtime subscriptions active');
+		console.log("🚀 [Messages] Realtime subscriptions active");
 
 		// Cleanup subscriptions and timeout on unmount
 		return () => {
-			console.log('🧹 [Messages] Cleaning up realtime subscriptions');
+			console.log("🧹 [Messages] Cleaning up realtime subscriptions");
 			if (refreshTimeout) {
 				clearTimeout(refreshTimeout);
 			}
@@ -320,7 +323,9 @@ export default function MessagesScreen() {
 					{/* Conversation Details */}
 					<View className="flex-1 mr-3">
 						<View className="flex-row items-center justify-between mb-2">
-							<Text className={`font-semibold text-lg ${isUnread ? "text-foreground" : "text-foreground/90"}`}>
+							<Text
+								className={`font-semibold text-lg ${isUnread ? "text-foreground" : "text-foreground/90"}`}
+							>
 								{displayName}
 							</Text>
 							<Text className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
@@ -343,8 +348,8 @@ export default function MessagesScreen() {
 						{lastMessage && (
 							<Text
 								className={`text-sm leading-5 ${
-									isUnread 
-										? "text-foreground font-medium" 
+									isUnread
+										? "text-foreground font-medium"
 										: "text-muted-foreground"
 								}`}
 								numberOfLines={2}
@@ -370,7 +375,7 @@ export default function MessagesScreen() {
 								/>
 							</View>
 						)}
-						
+
 						<View className="flex-row items-center space-x-1">
 							{isUnread && (
 								<View className="bg-primary rounded-full min-w-[20px] h-5 items-center justify-center px-1.5">
@@ -379,11 +384,11 @@ export default function MessagesScreen() {
 									</Text>
 								</View>
 							)}
-							<Ionicons 
-								name="chevron-forward" 
-								size={14} 
-								color="#a1a1aa" 
-								className="opacity-60" 
+							<Ionicons
+								name="chevron-forward"
+								size={14}
+								color="#a1a1aa"
+								className="opacity-60"
 							/>
 						</View>
 					</View>
@@ -412,21 +417,22 @@ export default function MessagesScreen() {
 			{/* Premium Header */}
 			<View className="px-4 py-6 bg-card border-b border-border/50">
 				<View className="flex-row items-center justify-between">
-					<TouchableOpacity 
+					<TouchableOpacity
 						onPress={() => router.back()}
 						className="w-10 h-10 rounded-xl bg-muted items-center justify-center active:scale-95 transition-all"
 					>
 						<Ionicons name="chevron-back" size={20} color="#6b7280" />
 					</TouchableOpacity>
-					
+
 					<View className="flex-1 items-center">
 						<H1 className="text-2xl font-bold text-foreground">Messages</H1>
 						<Text className="text-sm text-muted-foreground font-medium">
-							{conversations.length} {conversations.length === 1 ? 'conversation' : 'conversations'}
+							{conversations.length}{" "}
+							{conversations.length === 1 ? "conversation" : "conversations"}
 						</Text>
 					</View>
-					
-					<TouchableOpacity 
+
+					<TouchableOpacity
 						onPress={onRefresh}
 						className="w-10 h-10 rounded-xl bg-muted items-center justify-center active:scale-95 transition-all"
 					>
@@ -442,12 +448,15 @@ export default function MessagesScreen() {
 						<View className="w-20 h-20 rounded-full bg-muted items-center justify-center mx-auto mb-6">
 							<Ionicons name="chatbubbles-outline" size={32} color="#6b7280" />
 						</View>
-						
-						<H3 className="text-center mb-3 text-xl font-bold">No conversations yet</H3>
+
+						<H3 className="text-center mb-3 text-xl font-bold">
+							No conversations yet
+						</H3>
 						<Text className="text-center text-muted-foreground mb-8 leading-6">
-							Connect with sellers and buyers to start meaningful conversations about products you're interested in.
+							Connect with sellers and buyers to start meaningful conversations
+							about products you're interested in.
 						</Text>
-						
+
 						<TouchableOpacity
 							className="bg-primary py-4 px-6 rounded-xl shadow-sm active:scale-95 transition-all"
 							onPress={() => {

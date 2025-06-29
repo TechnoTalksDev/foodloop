@@ -1,217 +1,238 @@
-import React, { createContext, useContext, useState, useCallback, PropsWithChildren } from 'react';
-import { ChatMessage, GeminiService, ProductSuggestion } from '@/lib/gemini';
-import { nanoid } from 'nanoid';
+import React, {
+	createContext,
+	useContext,
+	useState,
+	useCallback,
+	PropsWithChildren,
+} from "react";
+import { ChatMessage, GeminiService, ProductSuggestion } from "@/lib/gemini";
+import { nanoid } from "nanoid";
 
 interface ChatContextType {
-  messages: ChatMessage[];
-  isLoading: boolean;
-  sendMessage: (content: string, images?: string[]) => Promise<void>;
-  clearChat: () => void;
-  generateRecipes: (ingredients: string[]) => Promise<void>;
-  getSustainabilityTips: () => Promise<void>;
-  analyzeImage: (imageBase64: string, context?: string) => Promise<void>;
-  searchProducts: (query: string) => Promise<ProductSuggestion[]>;
+	messages: ChatMessage[];
+	isLoading: boolean;
+	sendMessage: (content: string, images?: string[]) => Promise<void>;
+	clearChat: () => void;
+	generateRecipes: (ingredients: string[]) => Promise<void>;
+	getSustainabilityTips: () => Promise<void>;
+	analyzeImage: (imageBase64: string, context?: string) => Promise<void>;
+	searchProducts: (query: string) => Promise<ProductSuggestion[]>;
 }
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export const useChatContext = () => {
-  const context = useContext(ChatContext);
-  if (!context) {
-    throw new Error('useChatContext must be used within a ChatProvider');
-  }
-  return context;
+	const context = useContext(ChatContext);
+	if (!context) {
+		throw new Error("useChatContext must be used within a ChatProvider");
+	}
+	return context;
 };
 
 export const ChatProvider: React.FC<PropsWithChildren> = ({ children }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const geminiService = GeminiService.getInstance();
+	const [messages, setMessages] = useState<ChatMessage[]>([]);
+	const [isLoading, setIsLoading] = useState(false);
+	const geminiService = GeminiService.getInstance();
 
-  const sendMessage = useCallback(async (content: string, images?: string[]) => {
-    if ((!content.trim() && (!images || images.length === 0)) || isLoading) return;
+	const sendMessage = useCallback(
+		async (content: string, images?: string[]) => {
+			if ((!content.trim() && (!images || images.length === 0)) || isLoading)
+				return;
 
-    const userMessage: ChatMessage = {
-      id: nanoid(),
-      role: 'user',
-      content: content.trim() || '📸 Image shared',
-      timestamp: new Date(),
-      images: images
-    };
+			const userMessage: ChatMessage = {
+				id: nanoid(),
+				role: "user",
+				content: content.trim() || "📸 Image shared",
+				timestamp: new Date(),
+				images: images,
+			};
 
-    // Add user message immediately
-    setMessages(prevMessages => [...prevMessages, userMessage]);
-    setIsLoading(true);
+			// Add user message immediately
+			setMessages((prevMessages) => [...prevMessages, userMessage]);
+			setIsLoading(true);
 
-    try {
-      // Get current messages for API call
-      const currentMessages = [...messages, userMessage];
-      const result = await geminiService.sendMessage(currentMessages);
-      
-      const assistantMessage: ChatMessage = {
-        id: nanoid(),
-        role: 'assistant',
-        content: result.response,
-        timestamp: new Date(),
-        productSuggestions: result.productSuggestions
-      };
+			try {
+				// Get current messages for API call
+				const currentMessages = [...messages, userMessage];
+				const result = await geminiService.sendMessage(currentMessages);
 
-      // Add assistant message
-      setMessages(prevMessages => [...prevMessages, assistantMessage]);
-      
-    } catch (error) {
-      console.error('Error sending message:', error);
-      
-      const errorMessage: ChatMessage = {
-        id: nanoid(),
-        role: 'assistant',
-        content: 'Sorry, I encountered an error. Please try again.',
-        timestamp: new Date(),
-      };
+				const assistantMessage: ChatMessage = {
+					id: nanoid(),
+					role: "assistant",
+					content: result.response,
+					timestamp: new Date(),
+					productSuggestions: result.productSuggestions,
+				};
 
-      setMessages(prevMessages => [...prevMessages, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [messages, isLoading, geminiService]);
+				// Add assistant message
+				setMessages((prevMessages) => [...prevMessages, assistantMessage]);
+			} catch (error) {
+				console.error("Error sending message:", error);
 
-  const generateRecipes = useCallback(async (ingredients: string[]) => {
-    if (ingredients.length === 0 || isLoading) return;
+				const errorMessage: ChatMessage = {
+					id: nanoid(),
+					role: "assistant",
+					content: "Sorry, I encountered an error. Please try again.",
+					timestamp: new Date(),
+				};
 
-    setIsLoading(true);
+				setMessages((prevMessages) => [...prevMessages, errorMessage]);
+			} finally {
+				setIsLoading(false);
+			}
+		},
+		[messages, isLoading, geminiService],
+	);
 
-    try {
-      const result = await geminiService.generateRecipes(ingredients);
-      
-      const assistantMessage: ChatMessage = {
-        id: nanoid(),
-        role: 'assistant',
-        content: result.response,
-        timestamp: new Date(),
-        productSuggestions: result.productSuggestions
-      };
+	const generateRecipes = useCallback(
+		async (ingredients: string[]) => {
+			if (ingredients.length === 0 || isLoading) return;
 
-      setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error('Error generating recipes:', error);
-      
-      const errorMessage: ChatMessage = {
-        id: nanoid(),
-        role: 'assistant',
-        content: 'Sorry, I encountered an error while generating recipes. Please try again.',
-        timestamp: new Date(),
-      };
+			setIsLoading(true);
 
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [isLoading, geminiService]);
+			try {
+				const result = await geminiService.generateRecipes(ingredients);
 
-  const getSustainabilityTips = useCallback(async () => {
-    if (isLoading) return;
+				const assistantMessage: ChatMessage = {
+					id: nanoid(),
+					role: "assistant",
+					content: result.response,
+					timestamp: new Date(),
+					productSuggestions: result.productSuggestions,
+				};
 
-    setIsLoading(true);
+				setMessages((prev) => [...prev, assistantMessage]);
+			} catch (error) {
+				console.error("Error generating recipes:", error);
 
-    try {
-      const result = await geminiService.getSustainabilityTips();
-      
-      const assistantMessage: ChatMessage = {
-        id: nanoid(),
-        role: 'assistant',
-        content: result.response,
-        timestamp: new Date(),
-        productSuggestions: result.productSuggestions
-      };
+				const errorMessage: ChatMessage = {
+					id: nanoid(),
+					role: "assistant",
+					content:
+						"Sorry, I encountered an error while generating recipes. Please try again.",
+					timestamp: new Date(),
+				};
 
-      setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error('Error getting sustainability tips:', error);
-      
-      const errorMessage: ChatMessage = {
-        id: nanoid(),
-        role: 'assistant',
-        content: 'Sorry, I encountered an error while getting sustainability tips. Please try again.',
-        timestamp: new Date(),
-      };
+				setMessages((prev) => [...prev, errorMessage]);
+			} finally {
+				setIsLoading(false);
+			}
+		},
+		[isLoading, geminiService],
+	);
 
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [isLoading, geminiService]);
+	const getSustainabilityTips = useCallback(async () => {
+		if (isLoading) return;
 
-  const analyzeImage = useCallback(async (imageBase64: string, context?: string) => {
-    if (isLoading) return;
+		setIsLoading(true);
 
-    setIsLoading(true);
+		try {
+			const result = await geminiService.getSustainabilityTips();
 
-    // Add user message with image
-    const userMessage: ChatMessage = {
-      id: nanoid(),
-      role: 'user',
-      content: context || '📸 Please analyze this image',
-      timestamp: new Date(),
-      images: [imageBase64]
-    };
+			const assistantMessage: ChatMessage = {
+				id: nanoid(),
+				role: "assistant",
+				content: result.response,
+				timestamp: new Date(),
+				productSuggestions: result.productSuggestions,
+			};
 
-    setMessages(prev => [...prev, userMessage]);
+			setMessages((prev) => [...prev, assistantMessage]);
+		} catch (error) {
+			console.error("Error getting sustainability tips:", error);
 
-    try {
-      const result = await geminiService.analyzeImage(imageBase64, context);
-      
-      const assistantMessage: ChatMessage = {
-        id: nanoid(),
-        role: 'assistant',
-        content: result.response,
-        timestamp: new Date(),
-        productSuggestions: result.productSuggestions
-      };
+			const errorMessage: ChatMessage = {
+				id: nanoid(),
+				role: "assistant",
+				content:
+					"Sorry, I encountered an error while getting sustainability tips. Please try again.",
+				timestamp: new Date(),
+			};
 
-      setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error('Error analyzing image:', error);
-      
-      const errorMessage: ChatMessage = {
-        id: nanoid(),
-        role: 'assistant',
-        content: 'Sorry, I encountered an error while analyzing the image. Please try again.',
-        timestamp: new Date(),
-      };
+			setMessages((prev) => [...prev, errorMessage]);
+		} finally {
+			setIsLoading(false);
+		}
+	}, [isLoading, geminiService]);
 
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [isLoading, geminiService]);
+	const analyzeImage = useCallback(
+		async (imageBase64: string, context?: string) => {
+			if (isLoading) return;
 
-  const searchProducts = useCallback(async (query: string): Promise<ProductSuggestion[]> => {
-    try {
-      return await geminiService.searchProducts(query);
-    } catch (error) {
-      console.error('Error searching products:', error);
-      return [];
-    }
-  }, [geminiService]);
+			setIsLoading(true);
 
-  const clearChat = useCallback(() => {
-    setMessages([]);
-  }, []);
+			// Add user message with image
+			const userMessage: ChatMessage = {
+				id: nanoid(),
+				role: "user",
+				content: context || "📸 Please analyze this image",
+				timestamp: new Date(),
+				images: [imageBase64],
+			};
 
-  return (
-    <ChatContext.Provider
-      value={{
-        messages,
-        isLoading,
-        sendMessage,
-        clearChat,
-        generateRecipes,
-        getSustainabilityTips,
-        analyzeImage,
-        searchProducts,
-      }}
-    >
-      {children}
-    </ChatContext.Provider>
-  );
+			setMessages((prev) => [...prev, userMessage]);
+
+			try {
+				const result = await geminiService.analyzeImage(imageBase64, context);
+
+				const assistantMessage: ChatMessage = {
+					id: nanoid(),
+					role: "assistant",
+					content: result.response,
+					timestamp: new Date(),
+					productSuggestions: result.productSuggestions,
+				};
+
+				setMessages((prev) => [...prev, assistantMessage]);
+			} catch (error) {
+				console.error("Error analyzing image:", error);
+
+				const errorMessage: ChatMessage = {
+					id: nanoid(),
+					role: "assistant",
+					content:
+						"Sorry, I encountered an error while analyzing the image. Please try again.",
+					timestamp: new Date(),
+				};
+
+				setMessages((prev) => [...prev, errorMessage]);
+			} finally {
+				setIsLoading(false);
+			}
+		},
+		[isLoading, geminiService],
+	);
+
+	const searchProducts = useCallback(
+		async (query: string): Promise<ProductSuggestion[]> => {
+			try {
+				return await geminiService.searchProducts(query);
+			} catch (error) {
+				console.error("Error searching products:", error);
+				return [];
+			}
+		},
+		[geminiService],
+	);
+
+	const clearChat = useCallback(() => {
+		setMessages([]);
+	}, []);
+
+	return (
+		<ChatContext.Provider
+			value={{
+				messages,
+				isLoading,
+				sendMessage,
+				clearChat,
+				generateRecipes,
+				getSustainabilityTips,
+				analyzeImage,
+				searchProducts,
+			}}
+		>
+			{children}
+		</ChatContext.Provider>
+	);
 };

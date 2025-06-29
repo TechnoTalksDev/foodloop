@@ -21,9 +21,8 @@ import { H1, H3 } from "@/components/ui/typography";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/supabase-provider";
 import { supabase } from "@/config/supabase";
-import { format, differenceInDays } from "date-fns";
+import { format, differenceInDays, addDays } from "date-fns";
 import { useNotifications } from "@/context/notification-provider";
-import { addDays } from "date-fns";
 
 interface PlantDetail {
 	id: string;
@@ -47,35 +46,40 @@ interface CheckIn {
 }
 
 const HEALTH_STATUS_OPTIONS = [
-	{ value: 'healthy', label: 'Healthy', icon: '🌱', color: 'text-green-600' },
-	{ value: 'needs_attention', label: 'Needs Attention', icon: '⚠️', color: 'text-yellow-600' },
-	{ value: 'sick', label: 'Sick', icon: '🤒', color: 'text-red-600' },
-	{ value: 'dying', label: 'Dying', icon: '💀', color: 'text-red-800' },
+	{ value: "healthy", label: "Healthy", icon: "🌱", color: "text-green-600" },
+	{
+		value: "needs_attention",
+		label: "Needs Attention",
+		icon: "⚠️",
+		color: "text-yellow-600",
+	},
+	{ value: "sick", label: "Sick", icon: "🤒", color: "text-red-600" },
+	{ value: "dying", label: "Dying", icon: "💀", color: "text-red-800" },
 ];
 
 const STATUS_COLORS = {
-	seedling: 'text-yellow-600',
-	growing: 'text-green-600',
-	flowering: 'text-purple-600',
-	ready_to_harvest: 'text-orange-600',
-	harvested: 'text-gray-600',
+	seedling: "text-yellow-600",
+	growing: "text-green-600",
+	flowering: "text-purple-600",
+	ready_to_harvest: "text-orange-600",
+	harvested: "text-gray-600",
 };
 
 const STATUS_ICONS = {
-	seedling: '🌱',
-	growing: '🌿',
-	flowering: '🌸',
-	ready_to_harvest: '🍅',
-	harvested: '📦',
+	seedling: "🌱",
+	growing: "🌿",
+	flowering: "🌸",
+	ready_to_harvest: "🍅",
+	harvested: "📦",
 };
 
 const PLANT_TYPES = [
-	{ id: 'tomatoes', name: 'Tomatoes', icon: '🍅' },
-	{ id: 'lettuce', name: 'Lettuce', icon: '🥬' },
-	{ id: 'carrots', name: 'Carrots', icon: '🥕' },
-	{ id: 'peppers', name: 'Peppers', icon: '🌶️' },
-	{ id: 'herbs', name: 'Herbs', icon: '🌿' },
-	{ id: 'strawberries', name: 'Strawberries', icon: '🍓' },
+	{ id: "tomatoes", name: "Tomatoes", icon: "🍅" },
+	{ id: "lettuce", name: "Lettuce", icon: "🥬" },
+	{ id: "carrots", name: "Carrots", icon: "🥕" },
+	{ id: "peppers", name: "Peppers", icon: "🌶️" },
+	{ id: "herbs", name: "Herbs", icon: "🌿" },
+	{ id: "strawberries", name: "Strawberries", icon: "🍓" },
 ];
 
 export default function PlantDetailScreen() {
@@ -88,7 +92,7 @@ export default function PlantDetailScreen() {
 	const [showCheckInModal, setShowCheckInModal] = useState(false);
 	const [showDeleteModal, setShowDeleteModal] = useState(false);
 	const [deleting, setDeleting] = useState(false);
-	
+
 	// Check-in form state
 	const [checkInImage, setCheckInImage] = useState<string | null>(null);
 	const [checkInNotes, setCheckInNotes] = useState("");
@@ -96,7 +100,7 @@ export default function PlantDetailScreen() {
 	const [checkInHealth, setCheckInHealth] = useState("healthy");
 	const [submittingCheckIn, setSubmittingCheckIn] = useState(false);
 	const [uploadingImage, setUploadingImage] = useState(false);
-    const { addNotification } = useNotifications();
+	const { addNotification } = useNotifications();
 
 	// Pull to refresh state
 	const [refreshing, setRefreshing] = useState(false);
@@ -163,7 +167,7 @@ export default function PlantDetailScreen() {
 		try {
 			await Promise.all([fetchPlantDetail(), fetchCheckIns()]);
 		} catch (error) {
-			console.error('Error refreshing plant detail:', error);
+			console.error("Error refreshing plant detail:", error);
 		} finally {
 			setRefreshing(false);
 		}
@@ -212,9 +216,8 @@ export default function PlantDetailScreen() {
 			Alert.alert(
 				"Plant Deleted",
 				`${plant?.plant_name || "Your plant"} has been successfully removed from your garden.`,
-				[{ text: "OK", onPress: () => router.back() }]
+				[{ text: "OK", onPress: () => router.back() }],
 			);
-
 		} catch (error) {
 			console.error("Error in handleDeletePlant:", error);
 			Alert.alert("Error", "Failed to delete plant. Please try again.");
@@ -230,17 +233,26 @@ export default function PlantDetailScreen() {
 			`Are you sure you want to delete "${plant?.plant_name}"? This will permanently remove the plant and all its check-ins. This action cannot be undone.`,
 			[
 				{ text: "Cancel", style: "cancel" },
-				{ text: "Delete", style: "destructive", onPress: () => setShowDeleteModal(true) }
-			]
+				{
+					text: "Delete",
+					style: "destructive",
+					onPress: () => setShowDeleteModal(true),
+				},
+			],
 		);
 	};
 
 	const requestPermissions = async () => {
-		const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
-		const { status: mediaStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-		
-		if (cameraStatus !== 'granted' || mediaStatus !== 'granted') {
-			Alert.alert("Permissions Required", "Camera and photo access are needed to take check-in photos.");
+		const { status: cameraStatus } =
+			await ImagePicker.requestCameraPermissionsAsync();
+		const { status: mediaStatus } =
+			await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+		if (cameraStatus !== "granted" || mediaStatus !== "granted") {
+			Alert.alert(
+				"Permissions Required",
+				"Camera and photo access are needed to take check-in photos.",
+			);
 			return false;
 		}
 		return true;
@@ -250,21 +262,17 @@ export default function PlantDetailScreen() {
 		const hasPermissions = await requestPermissions();
 		if (!hasPermissions) return;
 
-		Alert.alert(
-			"Add Check-in Photo",
-			"Choose how you'd like to add a photo",
-			[
-				{ text: "Take Photo", onPress: takePhoto },
-				{ text: "Choose from Library", onPress: pickImage },
-				{ text: "Cancel", style: "cancel" }
-			]
-		);
+		Alert.alert("Add Check-in Photo", "Choose how you'd like to add a photo", [
+			{ text: "Take Photo", onPress: takePhoto },
+			{ text: "Choose from Library", onPress: pickImage },
+			{ text: "Cancel", style: "cancel" },
+		]);
 	};
 
 	const takePhoto = async () => {
 		try {
 			setUploadingImage(true);
-			
+
 			const result = await ImagePicker.launchCameraAsync({
 				allowsEditing: true,
 				aspect: [4, 3],
@@ -285,7 +293,7 @@ export default function PlantDetailScreen() {
 	const pickImage = async () => {
 		try {
 			setUploadingImage(true);
-			
+
 			const result = await ImagePicker.launchImageLibraryAsync({
 				mediaTypes: ImagePicker.MediaTypeOptions.Images,
 				allowsEditing: true,
@@ -304,41 +312,42 @@ export default function PlantDetailScreen() {
 		}
 	};
 
-	const uploadCheckInImage = async (imageUri: string): Promise<string | null> => {
+	const uploadCheckInImage = async (
+		imageUri: string,
+	): Promise<string | null> => {
 		if (!session?.user?.id) return null;
 
 		try {
-			const fileExt = imageUri.split('.').pop()?.toLowerCase() || 'jpg';
+			const fileExt = imageUri.split(".").pop()?.toLowerCase() || "jpg";
 			const fileName = `${session.user.id}_${id}_${Date.now()}.${fileExt}`;
 			const filePath = `checkins/${fileName}`;
 
 			const formData = new FormData();
-			formData.append('file', {
+			formData.append("file", {
 				uri: imageUri,
 				type: `image/${fileExt}`,
 				name: fileName,
 			} as any);
 
 			const { data, error } = await supabase.storage
-				.from('plants')
+				.from("plants")
 				.upload(filePath, formData, {
-					cacheControl: '3600',
+					cacheControl: "3600",
 					upsert: false,
 				});
 
 			if (error) {
-				console.error('Error uploading check-in image:', error);
+				console.error("Error uploading check-in image:", error);
 				return null;
 			}
 
 			const { data: urlData } = supabase.storage
-				.from('plants')
+				.from("plants")
 				.getPublicUrl(filePath);
 
 			return urlData.publicUrl;
-
 		} catch (error) {
-			console.error('Error in uploadCheckInImage:', error);
+			console.error("Error in uploadCheckInImage:", error);
 			return null;
 		}
 	};
@@ -355,16 +364,14 @@ export default function PlantDetailScreen() {
 
 			const heightValue = checkInHeight ? parseFloat(checkInHeight) : null;
 
-			const { error } = await supabase
-				.from("plant_checkins")
-				.insert({
-					user_id: session.user.id,
-					plant_id: id,
-					image_url: imageUrl,
-					notes: checkInNotes.trim() || null,
-					height_cm: heightValue,
-					health_status: checkInHealth,
-				});
+			const { error } = await supabase.from("plant_checkins").insert({
+				user_id: session.user.id,
+				plant_id: id,
+				image_url: imageUrl,
+				notes: checkInNotes.trim() || null,
+				height_cm: heightValue,
+				health_status: checkInHealth,
+			});
 
 			if (error) {
 				console.error("Error submitting check-in:", error);
@@ -380,12 +387,12 @@ export default function PlantDetailScreen() {
 
 			// ADD THIS: Send achievement notification
 			addNotification({
-				type: 'achievement',
-				title: 'Plant check-in complete! 🌱',
+				type: "achievement",
+				title: "Plant check-in complete! 🌱",
 				message: `Great job taking care of ${plant?.plant_name}. Your plant is thriving!`,
-				data: { plant_id: id, achievement_type: 'check_in' },
+				data: { plant_id: id, achievement_type: "check_in" },
 				urgent: false,
-				icon: '🎉',
+				icon: "🎉",
 				expires_at: addDays(new Date(), 3).toISOString(),
 			});
 
@@ -399,7 +406,10 @@ export default function PlantDetailScreen() {
 			// Refresh data
 			await Promise.all([fetchPlantDetail(), fetchCheckIns()]);
 
-			Alert.alert("Check-in Complete!", "Your daily check-in has been recorded! 📸");
+			Alert.alert(
+				"Check-in Complete!",
+				"Your daily check-in has been recorded! 📸",
+			);
 		} catch (error) {
 			console.error("Error in submitCheckIn:", error);
 			Alert.alert("Error", "Failed to submit check-in. Please try again.");
@@ -424,18 +434,18 @@ export default function PlantDetailScreen() {
 				return;
 			}
 
-			setPlant(prev => prev ? { ...prev, status: newStatus } : null);
-			
+			setPlant((prev) => (prev ? { ...prev, status: newStatus } : null));
+
 			// ADD THIS: Send notification for harvest readiness
-			if (newStatus === 'ready_to_harvest') {
+			if (newStatus === "ready_to_harvest") {
 				addNotification({
-					type: 'achievement',
-					title: 'Ready to Harvest! 🍅',
+					type: "achievement",
+					title: "Ready to Harvest! 🍅",
 					message: `Your ${plant?.plant_name} is ready for harvest! Consider selling on the marketplace.`,
-					data: { plant_id: id, achievement_type: 'harvest_ready' },
+					data: { plant_id: id, achievement_type: "harvest_ready" },
 					urgent: false,
-					icon: '🎉',
-					action_url: '/(protected)/create-product-modal',
+					icon: "🎉",
+					action_url: "/(protected)/create-product-modal",
 					expires_at: addDays(new Date(), 7).toISOString(),
 				});
 
@@ -444,11 +454,11 @@ export default function PlantDetailScreen() {
 					"Your plant is ready for harvest! Consider selling your produce on the marketplace.",
 					[
 						{ text: "Later", style: "cancel" },
-						{ 
-							text: "Sell on Marketplace", 
-							onPress: () => router.push("/(protected)/create-product-modal")
-						}
-					]
+						{
+							text: "Sell on Marketplace",
+							onPress: () => router.push("/(protected)/create-product-modal"),
+						},
+					],
 				);
 			}
 		} catch (error) {
@@ -470,13 +480,15 @@ export default function PlantDetailScreen() {
 		if (!plant?.last_checkin) return true;
 		const lastCheckIn = new Date(plant.last_checkin);
 		const now = new Date();
-		const hoursSince = Math.floor((now.getTime() - lastCheckIn.getTime()) / (1000 * 60 * 60));
+		const hoursSince = Math.floor(
+			(now.getTime() - lastCheckIn.getTime()) / (1000 * 60 * 60),
+		);
 		return hoursSince >= 20; // Allow check-in after 20 hours
 	};
 
 	const getPlantTypeIcon = (plantType: string) => {
-		const type = PLANT_TYPES.find(t => t.id === plantType);
-		return type?.icon || '🌱';
+		const type = PLANT_TYPES.find((t) => t.id === plantType);
+		return type?.icon || "🌱";
 	};
 
 	if (loading) {
@@ -484,7 +496,9 @@ export default function PlantDetailScreen() {
 			<SafeAreaView className="flex-1 bg-background">
 				<View className="flex-1 items-center justify-center">
 					<ActivityIndicator size="large" color="#10b981" />
-					<Text className="text-muted-foreground mt-2">Loading plant details...</Text>
+					<Text className="text-muted-foreground mt-2">
+						Loading plant details...
+					</Text>
 				</View>
 			</SafeAreaView>
 		);
@@ -513,8 +527,8 @@ export default function PlantDetailScreen() {
 				</TouchableOpacity>
 			</View>
 
-			<ScrollView 
-				className="flex-1" 
+			<ScrollView
+				className="flex-1"
 				showsVerticalScrollIndicator={false}
 				refreshControl={
 					<RefreshControl
@@ -540,10 +554,11 @@ export default function PlantDetailScreen() {
 							</Text>
 						</View>
 					)}
-					
+
 					<View className="absolute top-4 right-4 bg-black/70 px-3 py-1 rounded-full">
 						<Text className="text-white font-medium">
-							{STATUS_ICONS[plant.status as keyof typeof STATUS_ICONS]} {plant.status.replace('_', ' ')}
+							{STATUS_ICONS[plant.status as keyof typeof STATUS_ICONS]}{" "}
+							{plant.status.replace("_", " ")}
 						</Text>
 					</View>
 				</View>
@@ -553,15 +568,19 @@ export default function PlantDetailScreen() {
 					<View className="flex-row justify-between items-center mb-6">
 						<View>
 							<Text className="text-2xl font-bold">{plant.plant_name}</Text>
-							<Text className="text-lg text-muted-foreground capitalize">{plant.plant_type}</Text>
+							<Text className="text-lg text-muted-foreground capitalize">
+								{plant.plant_type}
+							</Text>
 						</View>
-						
+
 						{canCheckIn() && (
 							<TouchableOpacity
 								onPress={() => setShowCheckInModal(true)}
 								className="bg-primary px-5 py-3 rounded-full"
 							>
-								<Text className="text-primary-foreground font-medium">📸 Check-in</Text>
+								<Text className="text-primary-foreground font-medium">
+									📸 Check-in
+								</Text>
 							</TouchableOpacity>
 						)}
 					</View>
@@ -569,18 +588,28 @@ export default function PlantDetailScreen() {
 					{/* Stats */}
 					<View className="flex-row justify-between mb-8">
 						<View className="items-center flex-1">
-							<Text className="text-3xl font-bold text-primary">{getDaysGrowing()}</Text>
-							<Text className="text-sm text-muted-foreground mt-1">Days Growing</Text>
+							<Text className="text-3xl font-bold text-primary">
+								{getDaysGrowing()}
+							</Text>
+							<Text className="text-sm text-muted-foreground mt-1">
+								Days Growing
+							</Text>
 						</View>
 						<View className="items-center flex-1">
 							<Text className="text-3xl font-bold text-primary">
-								{getDaysUntilHarvest() !== null ? getDaysUntilHarvest() : '--'}
+								{getDaysUntilHarvest() !== null ? getDaysUntilHarvest() : "--"}
 							</Text>
-							<Text className="text-sm text-muted-foreground mt-1">Days to Harvest</Text>
+							<Text className="text-sm text-muted-foreground mt-1">
+								Days to Harvest
+							</Text>
 						</View>
 						<View className="items-center flex-1">
-							<Text className="text-3xl font-bold text-primary">{checkIns.length}</Text>
-							<Text className="text-sm text-muted-foreground mt-1">Check-ins</Text>
+							<Text className="text-3xl font-bold text-primary">
+								{checkIns.length}
+							</Text>
+							<Text className="text-sm text-muted-foreground mt-1">
+								Check-ins
+							</Text>
 						</View>
 					</View>
 
@@ -588,32 +617,44 @@ export default function PlantDetailScreen() {
 					<View className="flex-row gap-4 mb-8">
 						<TouchableOpacity
 							className="flex-1 bg-blue-600 p-4 rounded-xl"
-							onPress={() => router.push("/(protected)/plants/ai-calendar" as any)}
+							onPress={() =>
+								router.push("/(protected)/plants/ai-calendar" as any)
+							}
 						>
-							<Text className="text-white text-center font-medium">📅 Calendar</Text>
+							<Text className="text-white text-center font-medium">
+								📅 Calendar
+							</Text>
 						</TouchableOpacity>
-						
+
 						<TouchableOpacity
 							className="flex-1 bg-green-600 p-4 rounded-xl"
-							onPress={() => router.push("/(protected)/(tabs)/community" as any)}
+							onPress={() =>
+								router.push("/(protected)/(tabs)/community" as any)
+							}
 						>
-							<Text className="text-white text-center font-medium">💬 Community</Text>
+							<Text className="text-white text-center font-medium">
+								💬 Community
+							</Text>
 						</TouchableOpacity>
-						
-						{plant.status === 'ready_to_harvest' && (
+
+						{plant.status === "ready_to_harvest" && (
 							<TouchableOpacity
 								className="flex-1 bg-orange-600 p-4 rounded-xl"
 								onPress={() => router.push("/(protected)/create-product-modal")}
 							>
-								<Text className="text-white text-center font-medium">🛒 Sell</Text>
+								<Text className="text-white text-center font-medium">
+									🛒 Sell
+								</Text>
 							</TouchableOpacity>
 						)}
 					</View>
 
 					{/* Status Update */}
-					{plant.status !== 'harvested' && (
+					{plant.status !== "harvested" && (
 						<View className="bg-secondary/30 p-5 rounded-xl mb-8">
-							<Text className="font-semibold text-lg mb-4">Update Plant Status</Text>
+							<Text className="font-semibold text-lg mb-4">
+								Update Plant Status
+							</Text>
 							<View className="flex-row flex-wrap gap-3">
 								{Object.entries(STATUS_ICONS).map(([status, icon]) => (
 									<TouchableOpacity
@@ -621,15 +662,19 @@ export default function PlantDetailScreen() {
 										onPress={() => updatePlantStatus(status)}
 										disabled={plant.status === status}
 										className={`px-4 py-3 rounded-xl border ${
-											plant.status === status 
-												? 'bg-primary border-primary' 
-												: 'bg-background border-border'
+											plant.status === status
+												? "bg-primary border-primary"
+												: "bg-background border-border"
 										}`}
 									>
-										<Text className={`text-sm font-medium ${
-											plant.status === status ? 'text-primary-foreground' : 'text-foreground'
-										}`}>
-											{icon} {status.replace('_', ' ')}
+										<Text
+											className={`text-sm font-medium ${
+												plant.status === status
+													? "text-primary-foreground"
+													: "text-foreground"
+											}`}
+										>
+											{icon} {status.replace("_", " ")}
 										</Text>
 									</TouchableOpacity>
 								))}
@@ -643,7 +688,9 @@ export default function PlantDetailScreen() {
 						{checkIns.length === 0 ? (
 							<View className="items-center py-10 bg-secondary/30 rounded-xl">
 								<Text className="text-5xl mb-3">📸</Text>
-								<Text className="font-semibold text-lg mb-2">No check-ins yet</Text>
+								<Text className="font-semibold text-lg mb-2">
+									No check-ins yet
+								</Text>
 								<Text className="text-center text-muted-foreground">
 									Take your first photo to track your plant's progress
 								</Text>
@@ -651,19 +698,34 @@ export default function PlantDetailScreen() {
 						) : (
 							<View className="space-y-5">
 								{checkIns.map((checkIn) => (
-									<View key={checkIn.id} className="bg-card p-5 rounded-xl border border-border">
+									<View
+										key={checkIn.id}
+										className="bg-card p-5 rounded-xl border border-border"
+									>
 										<View className="flex-row items-center justify-between mb-4">
 											<Text className="font-semibold text-lg">
-												{format(new Date(checkIn.created_at), 'MMM d, yyyy')}
+												{format(new Date(checkIn.created_at), "MMM d, yyyy")}
 											</Text>
 											<View className="flex-row items-center bg-secondary/50 px-3 py-1 rounded-full">
 												<Text className="mr-2 text-lg">
-													{HEALTH_STATUS_OPTIONS.find(h => h.value === checkIn.health_status)?.icon}
+													{
+														HEALTH_STATUS_OPTIONS.find(
+															(h) => h.value === checkIn.health_status,
+														)?.icon
+													}
 												</Text>
-												<Text className={`text-sm font-medium ${
-													HEALTH_STATUS_OPTIONS.find(h => h.value === checkIn.health_status)?.color
-												}`}>
-													{HEALTH_STATUS_OPTIONS.find(h => h.value === checkIn.health_status)?.label}
+												<Text
+													className={`text-sm font-medium ${
+														HEALTH_STATUS_OPTIONS.find(
+															(h) => h.value === checkIn.health_status,
+														)?.color
+													}`}
+												>
+													{
+														HEALTH_STATUS_OPTIONS.find(
+															(h) => h.value === checkIn.health_status,
+														)?.label
+													}
 												</Text>
 											</View>
 										</View>
@@ -683,7 +745,9 @@ export default function PlantDetailScreen() {
 										)}
 
 										{checkIn.notes && (
-											<Text className="text-sm leading-relaxed">{checkIn.notes}</Text>
+											<Text className="text-sm leading-relaxed">
+												{checkIn.notes}
+											</Text>
 										)}
 									</View>
 								))}
@@ -712,7 +776,10 @@ export default function PlantDetailScreen() {
 							</TouchableOpacity>
 						</View>
 
-						<ScrollView className="max-h-96" showsVerticalScrollIndicator={false}>
+						<ScrollView
+							className="max-h-96"
+							showsVerticalScrollIndicator={false}
+						>
 							{/* Photo */}
 							<View className="mb-6">
 								<Text className="font-medium text-lg mb-3">Take a photo</Text>
@@ -757,7 +824,9 @@ export default function PlantDetailScreen() {
 
 							{/* Health Status */}
 							<View className="mb-6">
-								<Text className="font-medium text-lg mb-3">How's your plant doing?</Text>
+								<Text className="font-medium text-lg mb-3">
+									How's your plant doing?
+								</Text>
 								<View className="flex-row flex-wrap gap-3">
 									{HEALTH_STATUS_OPTIONS.map((option) => (
 										<TouchableOpacity
@@ -765,13 +834,17 @@ export default function PlantDetailScreen() {
 											onPress={() => setCheckInHealth(option.value)}
 											className={`px-4 py-3 rounded-xl border ${
 												checkInHealth === option.value
-													? 'bg-primary border-primary'
-													: 'bg-background border-border'
+													? "bg-primary border-primary"
+													: "bg-background border-border"
 											}`}
 										>
-											<Text className={`text-sm font-medium ${
-												checkInHealth === option.value ? 'text-primary-foreground' : 'text-foreground'
-											}`}>
+											<Text
+												className={`text-sm font-medium ${
+													checkInHealth === option.value
+														? "text-primary-foreground"
+														: "text-foreground"
+												}`}
+											>
 												{option.icon} {option.label}
 											</Text>
 										</TouchableOpacity>
@@ -781,7 +854,9 @@ export default function PlantDetailScreen() {
 
 							{/* Height */}
 							<View className="mb-6">
-								<Text className="font-medium text-lg mb-3">Height (cm) - Optional</Text>
+								<Text className="font-medium text-lg mb-3">
+									Height (cm) - Optional
+								</Text>
 								<TextInput
 									value={checkInHeight}
 									onChangeText={setCheckInHeight}
@@ -793,7 +868,9 @@ export default function PlantDetailScreen() {
 
 							{/* Notes */}
 							<View className="mb-8">
-								<Text className="font-medium text-lg mb-3">Notes - Optional</Text>
+								<Text className="font-medium text-lg mb-3">
+									Notes - Optional
+								</Text>
 								<TextInput
 									value={checkInNotes}
 									onChangeText={setCheckInNotes}
@@ -843,10 +920,12 @@ export default function PlantDetailScreen() {
 							<View className="w-16 h-16 bg-red-100 rounded-full items-center justify-center mb-4">
 								<Ionicons name="warning" size={32} color="#ef4444" />
 							</View>
-							<Text className="text-xl font-bold text-center mb-2">Delete Plant?</Text>
+							<Text className="text-xl font-bold text-center mb-2">
+								Delete Plant?
+							</Text>
 							<Text className="text-center text-muted-foreground">
-								This will permanently delete "{plant.plant_name}" and all its check-ins. 
-								This action cannot be undone.
+								This will permanently delete "{plant.plant_name}" and all its
+								check-ins. This action cannot be undone.
 							</Text>
 						</View>
 
@@ -869,7 +948,7 @@ export default function PlantDetailScreen() {
 									</Text>
 								)}
 							</Button>
-							
+
 							<Button
 								onPress={() => setShowDeleteModal(false)}
 								disabled={deleting}

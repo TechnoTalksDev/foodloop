@@ -288,19 +288,20 @@ export default function OnboardingScreen() {
 		// Reset modal state
 		setCustomPlantText("");
 		setShowOtherPlantModal(false);
-	};	const saveOnboardingData = async () => {
+	};
+	const saveOnboardingData = async () => {
 		if (!session?.user?.id) {
 			throw new Error("User not authenticated");
 		}
-		
+
 		// Process the answers to match the database schema - saving IDs instead of labels
 		const topics = answers[1] || []; // Keep the topic IDs as they are
 		const plants = answers[2] || []; // Keep the plant IDs as they are (includes custom_* IDs)
 		const often = answers[3]; // Keep the shopping frequency ID as it is
-		
+
 		// Note: For custom plants, the IDs are stored as "custom_plant_name" format
 		// The actual custom plant names are stored separately in answers[`custom_plant_${plantId}`]
-		
+
 		// Validate required data
 		if (topics.length === 0) {
 			throw new Error("Please select your interests before continuing");
@@ -561,7 +562,6 @@ export default function OnboardingScreen() {
 							</View>
 						) : (
 							<View className="gap-3">
-
 								{currentStepData.options.map((option) => {
 									const isSelected =
 										currentStepData.type === "multiple-choice"
@@ -697,7 +697,6 @@ export default function OnboardingScreen() {
 						disabled={!canContinue || loading}
 						className="w-full"
 					>
-
 						<Text className="text-primary-foreground font-semibold">
 							{loading
 								? isLastStep

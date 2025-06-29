@@ -1,4 +1,4 @@
-import { supabase } from '@/config/supabase';
+import { supabase } from "@/config/supabase";
 
 /**
  * Utility functions for managing Supabase realtime subscriptions
@@ -15,29 +15,29 @@ export interface RealtimeSubscription {
 export const subscribeToConversationMessages = (
 	conversationId: string,
 	onMessageInsert: (message: any) => void,
-	onMessageUpdate: (message: any) => void
+	onMessageUpdate: (message: any) => void,
 ): RealtimeSubscription => {
 	const channel = supabase
 		.channel(`messages-${conversationId}`)
 		.on(
-			'postgres_changes',
+			"postgres_changes",
 			{
-				event: 'INSERT',
-				schema: 'public',
-				table: 'messages',
+				event: "INSERT",
+				schema: "public",
+				table: "messages",
 				filter: `conversation_id=eq.${conversationId}`,
 			},
-			(payload) => onMessageInsert(payload.new)
+			(payload) => onMessageInsert(payload.new),
 		)
 		.on(
-			'postgres_changes',
+			"postgres_changes",
 			{
-				event: 'UPDATE',
-				schema: 'public',
-				table: 'messages',
+				event: "UPDATE",
+				schema: "public",
+				table: "messages",
 				filter: `conversation_id=eq.${conversationId}`,
 			},
-			(payload) => onMessageUpdate(payload.new)
+			(payload) => onMessageUpdate(payload.new),
 		)
 		.subscribe();
 
@@ -52,19 +52,19 @@ export const subscribeToConversationMessages = (
  */
 export const subscribeToConversationUpdates = (
 	conversationId: string,
-	onConversationUpdate: (conversation: any) => void
+	onConversationUpdate: (conversation: any) => void,
 ): RealtimeSubscription => {
 	const channel = supabase
 		.channel(`conversation-${conversationId}`)
 		.on(
-			'postgres_changes',
+			"postgres_changes",
 			{
-				event: 'UPDATE',
-				schema: 'public',
-				table: 'conversations',
+				event: "UPDATE",
+				schema: "public",
+				table: "conversations",
 				filter: `id=eq.${conversationId}`,
 			},
-			(payload) => onConversationUpdate(payload.new)
+			(payload) => onConversationUpdate(payload.new),
 		)
 		.subscribe();
 
@@ -79,18 +79,18 @@ export const subscribeToConversationUpdates = (
  */
 export const subscribeToAllMessages = (
 	userId: string,
-	onMessageChange: () => void
+	onMessageChange: () => void,
 ): RealtimeSubscription => {
 	const channel = supabase
-		.channel('all-messages-updates')
+		.channel("all-messages-updates")
 		.on(
-			'postgres_changes',
+			"postgres_changes",
 			{
-				event: '*',
-				schema: 'public',
-				table: 'messages',
+				event: "*",
+				schema: "public",
+				table: "messages",
 			},
-			() => onMessageChange()
+			() => onMessageChange(),
 		)
 		.subscribe();
 
@@ -105,18 +105,18 @@ export const subscribeToAllMessages = (
  */
 export const subscribeToAllConversations = (
 	userId: string,
-	onConversationChange: () => void
+	onConversationChange: () => void,
 ): RealtimeSubscription => {
 	const channel = supabase
-		.channel('all-conversations-updates')
+		.channel("all-conversations-updates")
 		.on(
-			'postgres_changes',
+			"postgres_changes",
 			{
-				event: '*',
-				schema: 'public',
-				table: 'conversations',
+				event: "*",
+				schema: "public",
+				table: "conversations",
 			},
-			() => onConversationChange()
+			() => onConversationChange(),
 		)
 		.subscribe();
 
@@ -137,9 +137,9 @@ export const checkRealtimeConfiguration = async (): Promise<{
 	try {
 		// Test if we can subscribe to a channel
 		const testChannel = supabase
-			.channel('test-connection')
+			.channel("test-connection")
 			.subscribe((status) => {
-				console.log('Realtime connection status:', status);
+				console.log("Realtime connection status:", status);
 			});
 
 		// Clean up test channel after a moment
@@ -149,10 +149,10 @@ export const checkRealtimeConfiguration = async (): Promise<{
 
 		return {
 			success: true,
-			message: 'Realtime configuration appears to be working',
+			message: "Realtime configuration appears to be working",
 		};
 	} catch (error) {
-		console.error('Realtime configuration check failed:', error);
+		console.error("Realtime configuration check failed:", error);
 		return {
 			success: false,
 			message: `Realtime configuration error: ${error}`,

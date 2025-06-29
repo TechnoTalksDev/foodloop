@@ -1,12 +1,16 @@
-import { Filter } from 'bad-words';
+import { Filter } from "bad-words";
 
 // Initialize the profanity filter
 const filter = new Filter();
 
 // Add some additional words that might be inappropriate for a professional marketplace
 const additionalWords = [
-  // Add any specific words you want to filter for your marketplace context
-  'scam', 'fraud', 'fake', 'stolen', 'slave',
+	// Add any specific words you want to filter for your marketplace context
+	"scam",
+	"fraud",
+	"fake",
+	"stolen",
+	"slave",
 ];
 
 filter.addWords(...additionalWords);
@@ -17,11 +21,11 @@ filter.addWords(...additionalWords);
  * @returns The filtered text with inappropriate words replaced with asterisks
  */
 export const filterProfanity = (text: string): string => {
-  if (!text || typeof text !== 'string') {
-    return text;
-  }
-  
-  return filter.clean(text);
+	if (!text || typeof text !== "string") {
+		return text;
+	}
+
+	return filter.clean(text);
 };
 
 /**
@@ -30,11 +34,11 @@ export const filterProfanity = (text: string): string => {
  * @returns True if the text contains inappropriate content
  */
 export const containsProfanity = (text: string): boolean => {
-  if (!text || typeof text !== 'string') {
-    return false;
-  }
-  
-  return filter.isProfane(text);
+	if (!text || typeof text !== "string") {
+		return false;
+	}
+
+	return filter.isProfane(text);
 };
 
 /**
@@ -43,20 +47,20 @@ export const containsProfanity = (text: string): boolean => {
  * @returns Array of profane words found
  */
 export const getProfaneWords = (text: string): string[] => {
-  if (!text || typeof text !== 'string') {
-    return [];
-  }
-  
-  const words = text.toLowerCase().split(/\s+/);
-  const profaneWords: string[] = [];
-  
-  words.forEach(word => {
-    // Remove punctuation for checking
-    const cleanWord = word.replace(/[^\w]/g, '');
-    if (filter.isProfane(cleanWord)) {
-      profaneWords.push(word);
-    }
-  });
-  
-  return profaneWords;
+	if (!text || typeof text !== "string") {
+		return [];
+	}
+
+	const words = text.toLowerCase().split(/\s+/);
+	const profaneWords: string[] = [];
+
+	words.forEach((word) => {
+		// Remove punctuation for checking
+		const cleanWord = word.replace(/[^\w]/g, "");
+		if (filter.isProfane(cleanWord)) {
+			profaneWords.push(word);
+		}
+	});
+
+	return profaneWords;
 };

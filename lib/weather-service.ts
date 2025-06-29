@@ -3,7 +3,7 @@ import * as Location from "expo-location";
 // Weather data interfaces
 export interface WeatherData {
 	temperature: number;
-	temperatureUnit: 'fahrenheit' | 'celsius';
+	temperatureUnit: "fahrenheit" | "celsius";
 	condition: string;
 	weatherCode: number;
 	isDay: boolean;
@@ -32,7 +32,7 @@ export interface ForecastDay {
 }
 
 export interface WeatherOptions {
-	temperatureUnit?: 'fahrenheit' | 'celsius';
+	temperatureUnit?: "fahrenheit" | "celsius";
 	forecastDays?: number;
 	includeHourly?: boolean;
 	includeDetails?: boolean;
@@ -97,7 +97,11 @@ const weatherConditionMap: { [key: number]: string } = {
 export class WeatherService {
 	private static instance: WeatherService;
 	private lastLocationFetch: number = 0;
-	private cachedLocation: { latitude: number; longitude: number; name: string } | null = null;
+	private cachedLocation: {
+		latitude: number;
+		longitude: number;
+		name: string;
+	} | null = null;
 	private readonly LOCATION_CACHE_DURATION = 10 * 60 * 1000; // 10 minutes
 
 	static getInstance(): WeatherService {
@@ -125,24 +129,31 @@ export class WeatherService {
 	/**
 	 * Get user's current location with caching
 	 */
-	private async getCurrentLocation(): Promise<{ latitude: number; longitude: number; name: string }> {
+	private async getCurrentLocation(): Promise<{
+		latitude: number;
+		longitude: number;
+		name: string;
+	}> {
 		const now = Date.now();
-		
+
 		// Return cached location if it's fresh
-		if (this.cachedLocation && (now - this.lastLocationFetch) < this.LOCATION_CACHE_DURATION) {
+		if (
+			this.cachedLocation &&
+			now - this.lastLocationFetch < this.LOCATION_CACHE_DURATION
+		) {
 			return this.cachedLocation;
 		}
 
 		try {
 			// Request location permission
 			const { status } = await Location.requestForegroundPermissionsAsync();
-			
-			if (status !== 'granted') {
+
+			if (status !== "granted") {
 				// Return default location if permission denied
 				const defaultLocation = {
 					latitude: 47.6062, // Seattle
 					longitude: -122.3321,
-					name: "Seattle, WA"
+					name: "Seattle, WA",
 				};
 				this.cachedLocation = defaultLocation;
 				this.lastLocationFetch = now;
@@ -164,16 +175,16 @@ export class WeatherService {
 
 				if (reverseGeocode.length > 0) {
 					const place = reverseGeocode[0];
-					locationName = `${place.city || place.subregion || 'Unknown'}, ${place.region || place.country || ''}`;
+					locationName = `${place.city || place.subregion || "Unknown"}, ${place.region || place.country || ""}`;
 				}
 			} catch (geocodeError) {
-				console.warn('Failed to reverse geocode location');
+				console.warn("Failed to reverse geocode location");
 			}
 
 			const userLocation = {
 				latitude: location.coords.latitude,
 				longitude: location.coords.longitude,
-				name: locationName
+				name: locationName,
 			};
 
 			// Cache the location
@@ -181,15 +192,14 @@ export class WeatherService {
 			this.lastLocationFetch = now;
 
 			return userLocation;
-
 		} catch (error) {
-			console.error('Error getting location:', error);
-			
+			console.error("Error getting location:", error);
+
 			// Return default location on error
 			const defaultLocation = {
 				latitude: 47.6062, // Seattle
 				longitude: -122.3321,
-				name: "Seattle, WA (Default)"
+				name: "Seattle, WA (Default)",
 			};
 			this.cachedLocation = defaultLocation;
 			this.lastLocationFetch = now;
@@ -200,11 +210,13 @@ export class WeatherService {
 	/**
 	 * Fetch weather data from Open-Meteo API
 	 */
-	public async getWeatherData(options: WeatherOptions = {}): Promise<WeatherData> {
+	public async getWeatherData(
+		options: WeatherOptions = {},
+	): Promise<WeatherData> {
 		const {
-			temperatureUnit = 'fahrenheit',
+			temperatureUnit = "fahrenheit",
 			forecastDays = 4,
-			includeDetails = false
+			includeDetails = false,
 		} = options;
 
 		try {
@@ -212,31 +224,40 @@ export class WeatherService {
 			const location = await this.getCurrentLocation();
 
 			// Build API URL
-			const baseUrl = 'https://api.open-meteo.com/v1/forecast';
+			const baseUrl = "https://api.open-meteo.com/v1/forecast";
 			const params = new URLSearchParams({
 				latitude: location.latitude.toString(),
 				longitude: location.longitude.toString(),
 				current: [
-					'temperature_2m',
-					'weather_code',
-					'is_day',
-					...(includeDetails ? ['relative_humidity_2m', 'wind_speed_10m', 'uv_index', 'apparent_temperature'] : [])
-				].join(','),
+					"temperature_2m",
+					"weather_code",
+					"is_day",
+					...(includeDetails
+						? [
+								"relative_humidity_2m",
+								"wind_speed_10m",
+								"uv_index",
+								"apparent_temperature",
+							]
+						: []),
+				].join(","),
 				daily: [
-					'weather_code',
-					'temperature_2m_max',
-					'temperature_2m_min',
-					...(includeDetails ? ['precipitation_probability_max'] : [])
-				].join(','),
+					"weather_code",
+					"temperature_2m_max",
+					"temperature_2m_min",
+					...(includeDetails ? ["precipitation_probability_max"] : []),
+				].join(","),
 				temperature_unit: temperatureUnit,
-				timezone: 'auto',
-				forecast_days: forecastDays.toString()
+				timezone: "auto",
+				forecast_days: forecastDays.toString(),
 			});
 
 			const response = await fetch(`${baseUrl}?${params.toString()}`);
-			
+
 			if (!response.ok) {
-				throw new Error(`Weather API request failed: ${response.status} ${response.statusText}`);
+				throw new Error(
+					`Weather API request failed: ${response.status} ${response.statusText}`,
+				);
 			}
 
 			const data = await response.json();
@@ -249,18 +270,23 @@ export class WeatherService {
 
 			// Process forecast
 			const forecastDays_labels = this.generateForecastLabels(forecastDays);
-			const forecast: ForecastDay[] = data.daily.weather_code.map((code: number, index: number) => ({
-				date: data.daily.time[index],
-				day: forecastDays_labels[index],
-				weatherCode: code,
-				icon: this.getWeatherIcon(code, true),
-				temperatureMax: Math.round(data.daily.temperature_2m_max[index]),
-				temperatureMin: Math.round(data.daily.temperature_2m_min[index]),
-				condition: this.getWeatherCondition(code),
-				...(includeDetails && data.daily.precipitation_probability_max ? {
-					precipitationProbability: data.daily.precipitation_probability_max[index]
-				} : {})
-			}));
+			const forecast: ForecastDay[] = data.daily.weather_code.map(
+				(code: number, index: number) => ({
+					date: data.daily.time[index],
+					day: forecastDays_labels[index],
+					weatherCode: code,
+					icon: this.getWeatherIcon(code, true),
+					temperatureMax: Math.round(data.daily.temperature_2m_max[index]),
+					temperatureMin: Math.round(data.daily.temperature_2m_min[index]),
+					condition: this.getWeatherCondition(code),
+					...(includeDetails && data.daily.precipitation_probability_max
+						? {
+								precipitationProbability:
+									data.daily.precipitation_probability_max[index],
+							}
+						: {}),
+				}),
+			);
 
 			// Build weather data object
 			const weatherData: WeatherData = {
@@ -273,22 +299,25 @@ export class WeatherService {
 				location: {
 					name: location.name,
 					latitude: location.latitude,
-					longitude: location.longitude
+					longitude: location.longitude,
 				},
 				forecast,
-				...(includeDetails ? {
-					humidity: current.relative_humidity_2m,
-					windSpeed: current.wind_speed_10m,
-					uvIndex: current.uv_index,
-					feelsLike: Math.round(current.apparent_temperature)
-				} : {})
+				...(includeDetails
+					? {
+							humidity: current.relative_humidity_2m,
+							windSpeed: current.wind_speed_10m,
+							uvIndex: current.uv_index,
+							feelsLike: Math.round(current.apparent_temperature),
+						}
+					: {}),
 			};
 
 			return weatherData;
-
 		} catch (error) {
-			console.error('Error fetching weather data:', error);
-			throw new Error(`Failed to fetch weather data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			console.error("Error fetching weather data:", error);
+			throw new Error(
+				`Failed to fetch weather data: ${error instanceof Error ? error.message : "Unknown error"}`,
+			);
 		}
 	}
 
@@ -296,44 +325,53 @@ export class WeatherService {
 	 * Get weather for a specific location
 	 */
 	public async getWeatherForLocation(
-		latitude: number, 
-		longitude: number, 
+		latitude: number,
+		longitude: number,
 		locationName?: string,
-		options: WeatherOptions = {}
+		options: WeatherOptions = {},
 	): Promise<WeatherData> {
 		const {
-			temperatureUnit = 'fahrenheit',
+			temperatureUnit = "fahrenheit",
 			forecastDays = 4,
-			includeDetails = false
+			includeDetails = false,
 		} = options;
 
 		try {
 			// Build API URL
-			const baseUrl = 'https://api.open-meteo.com/v1/forecast';
+			const baseUrl = "https://api.open-meteo.com/v1/forecast";
 			const params = new URLSearchParams({
 				latitude: latitude.toString(),
 				longitude: longitude.toString(),
 				current: [
-					'temperature_2m',
-					'weather_code',
-					'is_day',
-					...(includeDetails ? ['relative_humidity_2m', 'wind_speed_10m', 'uv_index', 'apparent_temperature'] : [])
-				].join(','),
+					"temperature_2m",
+					"weather_code",
+					"is_day",
+					...(includeDetails
+						? [
+								"relative_humidity_2m",
+								"wind_speed_10m",
+								"uv_index",
+								"apparent_temperature",
+							]
+						: []),
+				].join(","),
 				daily: [
-					'weather_code',
-					'temperature_2m_max',
-					'temperature_2m_min',
-					...(includeDetails ? ['precipitation_probability_max'] : [])
-				].join(','),
+					"weather_code",
+					"temperature_2m_max",
+					"temperature_2m_min",
+					...(includeDetails ? ["precipitation_probability_max"] : []),
+				].join(","),
 				temperature_unit: temperatureUnit,
-				timezone: 'auto',
-				forecast_days: forecastDays.toString()
+				timezone: "auto",
+				forecast_days: forecastDays.toString(),
 			});
 
 			const response = await fetch(`${baseUrl}?${params.toString()}`);
-			
+
 			if (!response.ok) {
-				throw new Error(`Weather API request failed: ${response.status} ${response.statusText}`);
+				throw new Error(
+					`Weather API request failed: ${response.status} ${response.statusText}`,
+				);
 			}
 
 			const data = await response.json();
@@ -346,18 +384,23 @@ export class WeatherService {
 
 			// Process forecast
 			const forecastDays_labels = this.generateForecastLabels(forecastDays);
-			const forecast: ForecastDay[] = data.daily.weather_code.map((code: number, index: number) => ({
-				date: data.daily.time[index],
-				day: forecastDays_labels[index],
-				weatherCode: code,
-				icon: this.getWeatherIcon(code, true),
-				temperatureMax: Math.round(data.daily.temperature_2m_max[index]),
-				temperatureMin: Math.round(data.daily.temperature_2m_min[index]),
-				condition: this.getWeatherCondition(code),
-				...(includeDetails && data.daily.precipitation_probability_max ? {
-					precipitationProbability: data.daily.precipitation_probability_max[index]
-				} : {})
-			}));
+			const forecast: ForecastDay[] = data.daily.weather_code.map(
+				(code: number, index: number) => ({
+					date: data.daily.time[index],
+					day: forecastDays_labels[index],
+					weatherCode: code,
+					icon: this.getWeatherIcon(code, true),
+					temperatureMax: Math.round(data.daily.temperature_2m_max[index]),
+					temperatureMin: Math.round(data.daily.temperature_2m_min[index]),
+					condition: this.getWeatherCondition(code),
+					...(includeDetails && data.daily.precipitation_probability_max
+						? {
+								precipitationProbability:
+									data.daily.precipitation_probability_max[index],
+							}
+						: {}),
+				}),
+			);
 
 			// Build weather data object
 			const weatherData: WeatherData = {
@@ -368,24 +411,28 @@ export class WeatherService {
 				isDay,
 				icon: this.getWeatherIcon(currentWeatherCode, isDay),
 				location: {
-					name: locationName || `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
+					name:
+						locationName || `${latitude.toFixed(2)}, ${longitude.toFixed(2)}`,
 					latitude,
-					longitude
+					longitude,
 				},
 				forecast,
-				...(includeDetails ? {
-					humidity: current.relative_humidity_2m,
-					windSpeed: current.wind_speed_10m,
-					uvIndex: current.uv_index,
-					feelsLike: Math.round(current.apparent_temperature)
-				} : {})
+				...(includeDetails
+					? {
+							humidity: current.relative_humidity_2m,
+							windSpeed: current.wind_speed_10m,
+							uvIndex: current.uv_index,
+							feelsLike: Math.round(current.apparent_temperature),
+						}
+					: {}),
 			};
 
 			return weatherData;
-
 		} catch (error) {
-			console.error('Error fetching weather data for location:', error);
-			throw new Error(`Failed to fetch weather data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+			console.error("Error fetching weather data for location:", error);
+			throw new Error(
+				`Failed to fetch weather data: ${error instanceof Error ? error.message : "Unknown error"}`,
+			);
 		}
 	}
 
@@ -393,35 +440,38 @@ export class WeatherService {
 	 * Generate forecast day labels
 	 */
 	private generateForecastLabels(days: number): string[] {
-		const labels = ['Today'];
-		const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-		
+		const labels = ["Today"];
+		const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
 		for (let i = 1; i < days; i++) {
 			const date = new Date();
 			date.setDate(date.getDate() + i);
 			labels.push(dayNames[date.getDay()]);
 		}
-		
+
 		return labels;
 	}
 
 	/**
 	 * Check if weather conditions are good for outdoor activities
 	 */
-	public isGoodWeatherForActivity(weatherCode: number, activityType: 'gardening' | 'harvesting' | 'outdoor' = 'outdoor'): boolean {
+	public isGoodWeatherForActivity(
+		weatherCode: number,
+		activityType: "gardening" | "harvesting" | "outdoor" = "outdoor",
+	): boolean {
 		// Good weather codes (clear, partly cloudy)
 		const goodWeatherCodes = [0, 1, 2];
-		
+
 		// Acceptable weather codes depending on activity
 		const acceptableForGardening = [0, 1, 2, 3, 51]; // Include overcast and light drizzle
 		const acceptableForHarvesting = [0, 1, 2, 3]; // Avoid any precipitation
-		
+
 		switch (activityType) {
-			case 'gardening':
+			case "gardening":
 				return acceptableForGardening.includes(weatherCode);
-			case 'harvesting':
+			case "harvesting":
 				return acceptableForHarvesting.includes(weatherCode);
-			case 'outdoor':
+			case "outdoor":
 			default:
 				return goodWeatherCodes.includes(weatherCode);
 		}
@@ -433,14 +483,14 @@ export class WeatherService {
 	public getFarmingAdvice(weatherData: WeatherData): string {
 		const code = weatherData.weatherCode;
 		const temp = weatherData.temperature;
-		
+
 		// Temperature-based advice
 		if (temp < 32) {
 			return "❄️ Frost warning! Protect sensitive plants and harvest what you can.";
 		} else if (temp > 85) {
 			return "🌡️ Very hot! Water plants early morning or evening. Provide shade if needed.";
 		}
-		
+
 		// Weather-based advice
 		if ([61, 63, 65, 80, 81, 82].includes(code)) {
 			return "🌧️ Good day for indoor tasks. Rain provides natural watering!";
@@ -453,7 +503,7 @@ export class WeatherService {
 		} else if ([45, 48].includes(code)) {
 			return "🌫️ Foggy conditions. Wait for visibility to improve before working outside.";
 		}
-		
+
 		return "🌤️ Good conditions for most outdoor activities.";
 	}
 

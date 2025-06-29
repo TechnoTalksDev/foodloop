@@ -14,8 +14,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/config/supabase";
 import { useCart } from "@/context/cart-provider";
 import { useAuth } from "@/context/supabase-provider";
-import { isProductSoldOut, getSoldOutMessage } from '@/lib/product-cleanup';
-import { differenceInDays } from 'date-fns';
+import { isProductSoldOut, getSoldOutMessage } from "@/lib/product-cleanup";
+import { differenceInDays } from "date-fns";
 
 import { Text } from "@/components/ui/text";
 import { SafeAreaView } from "@/components/safe-area-view";
@@ -171,7 +171,7 @@ export default function ProductDetailScreen() {
 		try {
 			await fetchProduct();
 		} catch (error) {
-			console.error('Error refreshing product:', error);
+			console.error("Error refreshing product:", error);
 		} finally {
 			setRefreshing(false);
 		}
@@ -232,8 +232,8 @@ export default function ProductDetailScreen() {
 				// Check if this is the user's own product
 				if (product.user_id === session?.user?.id) {
 					Alert.alert(
-						"Cannot Add to Cart", 
-						"You cannot purchase your own products. Other users can buy this item from the marketplace."
+						"Cannot Add to Cart",
+						"You cannot purchase your own products. Other users can buy this item from the marketplace.",
 					);
 				} else {
 					Alert.alert("Error", "Failed to add item to cart. Please try again.");
@@ -316,7 +316,7 @@ export default function ProductDetailScreen() {
 
 	return (
 		<SafeAreaView className="flex-1" style={{ backgroundColor: bgColor }}>
-			<ScrollView 
+			<ScrollView
 				className="flex-1"
 				refreshControl={
 					<RefreshControl
@@ -456,7 +456,11 @@ export default function ProductDetailScreen() {
 					{/* Amount Available */}
 					<View className="mt-4">
 						<View className="flex-row items-center mb-1">
-							<Ionicons name="cube" size={20} color={isProductSoldOut(product) ? "red" : "blue"} />
+							<Ionicons
+								name="cube"
+								size={20}
+								color={isProductSoldOut(product) ? "red" : "blue"}
+							/>
 							<Text
 								className="text-base font-medium ml-1"
 								style={{ color: textColor }}
@@ -467,7 +471,9 @@ export default function ProductDetailScreen() {
 						{isProductSoldOut(product) ? (
 							<View className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200">
 								<Text className="text-red-600 font-medium">
-									{getSoldOutMessage(differenceInDays(new Date(), new Date(product.created_at)))}
+									{getSoldOutMessage(
+										differenceInDays(new Date(), new Date(product.created_at)),
+									)}
 								</Text>
 								<Text className="text-red-500 text-sm mt-1">
 									This listing will be automatically removed after 2 days
@@ -624,12 +630,16 @@ export default function ProductDetailScreen() {
 					// Item not in cart - show add to cart button
 					<Button
 						className={
-							isProductSoldOut(product) || product.user_id === session?.user?.id 
-								? "bg-gray-400 rounded-full" 
+							isProductSoldOut(product) || product.user_id === session?.user?.id
+								? "bg-gray-400 rounded-full"
 								: "bg-green-500 rounded-full"
 						}
 						onPress={handleAddToCart}
-						disabled={addingToCart || isProductSoldOut(product) || product.user_id === session?.user?.id}
+						disabled={
+							addingToCart ||
+							isProductSoldOut(product) ||
+							product.user_id === session?.user?.id
+						}
 					>
 						{addingToCart ? (
 							<View className="flex-row items-center">
@@ -637,13 +647,9 @@ export default function ProductDetailScreen() {
 								<Text className="text-white font-semibold ml-2">Adding...</Text>
 							</View>
 						) : isProductSoldOut(product) ? (
-							<Text className="text-white font-semibold">
-								Sold Out
-							</Text>
+							<Text className="text-white font-semibold">Sold Out</Text>
 						) : product.user_id === session?.user?.id ? (
-							<Text className="text-white font-semibold">
-								Your Product
-							</Text>
+							<Text className="text-white font-semibold">Your Product</Text>
 						) : (
 							<Text className="text-white font-semibold">
 								Add {quantity > 1 ? `${quantity} items` : "to Cart"} - $

@@ -60,8 +60,9 @@ const EVENT_ICONS = {
 	custom: "📝",
 };
 
-const GEMINI_API_KEY = 'AIzaSyCB5BR0-zGxedYP3yH6V7P88_mA6oe8f0s';
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const GEMINI_API_KEY = "AIzaSyCB5BR0-zGxedYP3yH6V7P88_mA6oe8f0s";
+const GEMINI_API_URL =
+	"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 
 export default function AICalendarScreen() {
 	const router = useRouter();
@@ -71,7 +72,9 @@ export default function AICalendarScreen() {
 	const [loading, setLoading] = useState(true);
 	const [refreshing, setRefreshing] = useState(false);
 	const [weatherForecast, setWeatherForecast] = useState<WeatherForecast[]>([]);
-	const [selectedView, setSelectedView] = useState<'today' | 'week' | 'upcoming'>('today');
+	const [selectedView, setSelectedView] = useState<
+		"today" | "week" | "upcoming"
+	>("today");
 	const [generatingTasks, setGeneratingTasks] = useState(false);
 
 	useEffect(() => {
@@ -86,12 +89,14 @@ export default function AICalendarScreen() {
 			// Fetch calendar events
 			const { data: eventsData, error: eventsError } = await supabase
 				.from("plant_calendar_events")
-				.select(`
+				.select(
+					`
 					*,
 					user_plants:plant_id(plant_name, plant_type)
-				`)
+				`,
+				)
 				.eq("user_id", session.user.id)
-				.gte("scheduled_date", format(new Date(), 'yyyy-MM-dd'))
+				.gte("scheduled_date", format(new Date(), "yyyy-MM-dd"))
 				.order("scheduled_date", { ascending: true })
 				.limit(50);
 
@@ -117,7 +122,6 @@ export default function AICalendarScreen() {
 			} else {
 				setUserPlants(plantsData || []);
 			}
-
 		} catch (error) {
 			console.error("Error in fetchCalendarData:", error);
 		} finally {
@@ -128,9 +132,9 @@ export default function AICalendarScreen() {
 	const fetchWeatherForecast = async () => {
 		try {
 			const weather = await weatherService.getWeatherData({
-				temperatureUnit: 'fahrenheit',
+				temperatureUnit: "fahrenheit",
 				forecastDays: 7,
-				includeDetails: false
+				includeDetails: false,
 			});
 
 			setWeatherForecast(weather.forecast);
@@ -145,7 +149,7 @@ export default function AICalendarScreen() {
 				.from("plant_calendar_events")
 				.update({
 					completed: true,
-					completed_at: new Date().toISOString()
+					completed_at: new Date().toISOString(),
 				})
 				.eq("id", eventId);
 
@@ -156,11 +160,11 @@ export default function AICalendarScreen() {
 			}
 
 			// Update local state
-			setEvents(events.map(event => 
-				event.id === eventId 
-					? { ...event, completed: true }
-					: event
-			));
+			setEvents(
+				events.map((event) =>
+					event.id === eventId ? { ...event, completed: true } : event,
+				),
+			);
 
 			Alert.alert("Great job!", "Task completed successfully! 🎉");
 		} catch (error) {
@@ -170,7 +174,10 @@ export default function AICalendarScreen() {
 
 	const generateAICalendarTasks = async () => {
 		if (!session?.user?.id || userPlants.length === 0) {
-			Alert.alert("No Plants", "Add some plants first to generate SmartCalendar tasks!");
+			Alert.alert(
+				"No Plants",
+				"Add some plants first to generate SmartCalendar tasks!",
+			);
 			return;
 		}
 
@@ -178,33 +185,36 @@ export default function AICalendarScreen() {
 		try {
 			// Get weather data
 			const weatherData = await weatherService.getWeatherData({
-				temperatureUnit: 'fahrenheit',
+				temperatureUnit: "fahrenheit",
 				forecastDays: 7,
-				includeDetails: true
+				includeDetails: true,
 			});
 
 			// Prepare plant and weather context for AI
-			const plantsContext = userPlants.map(plant => ({
+			const plantsContext = userPlants.map((plant) => ({
 				name: plant.plant_name,
 				type: plant.plant_type,
 				planted_date: plant.planted_date,
 				expected_harvest: plant.expected_harvest,
 				status: plant.status,
-				days_since_planted: Math.floor((new Date().getTime() - new Date(plant.planted_date).getTime()) / (1000 * 60 * 60 * 24))
+				days_since_planted: Math.floor(
+					(new Date().getTime() - new Date(plant.planted_date).getTime()) /
+						(1000 * 60 * 60 * 24),
+				),
 			}));
 
 			const weatherContext = {
 				current: {
 					temperature: weatherData.temperature,
 					condition: weatherData.condition,
-					location: weatherData.location.name
+					location: weatherData.location.name,
 				},
-				forecast: weatherData.forecast.slice(0, 5).map(day => ({
+				forecast: weatherData.forecast.slice(0, 5).map((day) => ({
 					date: day.date,
 					max_temp: day.temperatureMax,
 					min_temp: day.temperatureMin,
-					condition: day.condition
-				}))
+					condition: day.condition,
+				})),
 			};
 
 			const aiPrompt = `You are HarvestHelper AI, a plant care specialist. Based on the following user's plants and weather forecast, generate a comprehensive care schedule for the next 7 days.
@@ -231,19 +241,21 @@ For each task, provide:
 Respond ONLY with a JSON array of tasks. Each task should be specific to the user's plants and current conditions.`;
 
 			const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-				method: 'POST',
+				method: "POST",
 				headers: {
-					'Content-Type': 'application/json',
+					"Content-Type": "application/json",
 				},
 				body: JSON.stringify({
-					contents: [{
-						role: 'user',
-						parts: [{ text: aiPrompt }]
-					}],
+					contents: [
+						{
+							role: "user",
+							parts: [{ text: aiPrompt }],
+						},
+					],
 					generationConfig: {
 						temperature: 0.7,
 						maxOutputTokens: 2048,
-					}
+					},
 				}),
 			});
 
@@ -269,16 +281,23 @@ Respond ONLY with a JSON array of tasks. Each task should be specific to the use
 			// Process and insert AI-generated tasks
 			const tasksToInsert = aiTasks.map((task: any) => ({
 				user_id: session.user.id,
-				plant_id: plantsContext[0]?.name ? userPlants.find(p => 
-					task.description.toLowerCase().includes(p.plant_name.toLowerCase()) ||
-					task.description.toLowerCase().includes(p.plant_type.toLowerCase())
-				)?.id || userPlants[0].id : userPlants[0].id,
-				event_type: task.event_type || 'custom',
+				plant_id: plantsContext[0]?.name
+					? userPlants.find(
+							(p) =>
+								task.description
+									.toLowerCase()
+									.includes(p.plant_name.toLowerCase()) ||
+								task.description
+									.toLowerCase()
+									.includes(p.plant_type.toLowerCase()),
+						)?.id || userPlants[0].id
+					: userPlants[0].id,
+				event_type: task.event_type || "custom",
 				title: task.title,
 				description: task.description,
 				scheduled_date: task.scheduled_date,
 				ai_generated: true,
-				completed: false
+				completed: false,
 			}));
 
 			// Insert tasks into database
@@ -295,13 +314,15 @@ Respond ONLY with a JSON array of tasks. Each task should be specific to the use
 			await fetchCalendarData();
 
 			Alert.alert(
-				"SmartCalendar Generated! 🤖", 
-				`Generated ${tasksToInsert.length} personalized care tasks based on your plants and weather conditions.`
+				"SmartCalendar Generated! 🤖",
+				`Generated ${tasksToInsert.length} personalized care tasks based on your plants and weather conditions.`,
 			);
-
 		} catch (error) {
 			console.error("Error generating AI tasks:", error);
-			Alert.alert("AI Error", "Failed to generate SmartCalendar. Please try again.");
+			Alert.alert(
+				"AI Error",
+				"Failed to generate SmartCalendar. Please try again.",
+			);
 		} finally {
 			setGeneratingTasks(false);
 		}
@@ -317,50 +338,60 @@ Respond ONLY with a JSON array of tasks. Each task should be specific to the use
 		const today = new Date();
 
 		switch (selectedView) {
-			case 'today':
-				return events.filter(event => 
-					isToday(new Date(event.scheduled_date))
+			case "today":
+				return events.filter((event) =>
+					isToday(new Date(event.scheduled_date)),
 				);
-			case 'week':
+			case "week":
 				const weekEnd = new Date(today);
 				weekEnd.setDate(today.getDate() + 7);
-				return events.filter(event => {
+				return events.filter((event) => {
 					const eventDate = new Date(event.scheduled_date);
 					return eventDate >= today && eventDate <= weekEnd;
 				});
-			case 'upcoming':
+			case "upcoming":
 			default:
-				return events.filter(event => !event.completed);
+				return events.filter((event) => !event.completed);
 		}
 	};
 
 	const getEventStatus = (event: CalendarEvent) => {
 		const eventDate = new Date(event.scheduled_date);
-		
-		if (event.completed) return 'completed';
-		if (isPast(eventDate) && !isToday(eventDate)) return 'overdue';
-		if (isToday(eventDate)) return 'today';
-		if (isTomorrow(eventDate)) return 'tomorrow';
-		return 'upcoming';
+
+		if (event.completed) return "completed";
+		if (isPast(eventDate) && !isToday(eventDate)) return "overdue";
+		if (isToday(eventDate)) return "today";
+		if (isTomorrow(eventDate)) return "tomorrow";
+		return "upcoming";
 	};
 
 	const getStatusColor = (status: string) => {
 		switch (status) {
-			case 'completed': return 'text-green-600';
-			case 'overdue': return 'text-red-600';
-			case 'today': return 'text-orange-600';
-			case 'tomorrow': return 'text-blue-600';
-			default: return 'text-gray-600';
+			case "completed":
+				return "text-green-600";
+			case "overdue":
+				return "text-red-600";
+			case "today":
+				return "text-orange-600";
+			case "tomorrow":
+				return "text-blue-600";
+			default:
+				return "text-gray-600";
 		}
 	};
 
 	const getStatusIcon = (status: string) => {
 		switch (status) {
-			case 'completed': return '✅';
-			case 'overdue': return '⚠️';
-			case 'today': return '📅';
-			case 'tomorrow': return '🔜';
-			default: return '📋';
+			case "completed":
+				return "✅";
+			case "overdue":
+				return "⚠️";
+			case "today":
+				return "📅";
+			case "tomorrow":
+				return "🔜";
+			default:
+				return "📋";
 		}
 	};
 
@@ -372,8 +403,8 @@ Respond ONLY with a JSON array of tasks. Each task should be specific to the use
 					<Ionicons name="chevron-back" size={24} color="#666" />
 				</TouchableOpacity>
 				<H1 className="flex-1 text-center">SmartCalendar</H1>
-				<TouchableOpacity 
-					onPress={generateAICalendarTasks} 
+				<TouchableOpacity
+					onPress={generateAICalendarTasks}
 					disabled={generatingTasks}
 					className="p-2 -mr-2"
 				>
@@ -428,7 +459,7 @@ Respond ONLY with a JSON array of tasks. Each task should be specific to the use
 							</Text>
 						)}
 					</Button>
-					
+
 					{userPlants.length === 0 && (
 						<Text className="text-center text-xs text-muted-foreground mt-3">
 							Add plants first to generate SmartCalendar tasks
@@ -439,12 +470,16 @@ Respond ONLY with a JSON array of tasks. Each task should be specific to the use
 				{/* Weather Forecast */}
 				{weatherForecast.length > 0 && (
 					<View className="mx-6 mb-8 p-5 bg-secondary/30 rounded-xl border border-border">
-						<Text className="font-semibold text-lg mb-4">7-Day Weather Forecast</Text>
+						<Text className="font-semibold text-lg mb-4">
+							7-Day Weather Forecast
+						</Text>
 						<ScrollView horizontal showsHorizontalScrollIndicator={false}>
 							{weatherForecast.map((day, index) => (
 								<View key={index} className="items-center mr-6">
 									<Text className="text-sm text-muted-foreground mb-2 font-medium">
-										{index === 0 ? 'Today' : format(addDays(new Date(), index), 'EEE')}
+										{index === 0
+											? "Today"
+											: format(addDays(new Date(), index), "EEE")}
 									</Text>
 									<Text className="text-3xl mb-2">{day.icon}</Text>
 									<Text className="text-sm font-medium">
@@ -459,17 +494,21 @@ Respond ONLY with a JSON array of tasks. Each task should be specific to the use
 				{/* View Selector */}
 				<View className="px-6 mb-6">
 					<View className="flex-row bg-secondary/30 rounded-xl p-2">
-						{(['today', 'week', 'upcoming'] as const).map((view) => (
+						{(["today", "week", "upcoming"] as const).map((view) => (
 							<TouchableOpacity
 								key={view}
 								onPress={() => setSelectedView(view)}
 								className={`flex-1 py-3 px-4 rounded-lg ${
-									selectedView === view ? 'bg-primary' : ''
+									selectedView === view ? "bg-primary" : ""
 								}`}
 							>
-								<Text className={`text-center capitalize font-medium text-base ${
-									selectedView === view ? 'text-primary-foreground' : 'text-foreground'
-								}`}>
+								<Text
+									className={`text-center capitalize font-medium text-base ${
+										selectedView === view
+											? "text-primary-foreground"
+											: "text-foreground"
+									}`}
+								>
 									{view}
 								</Text>
 							</TouchableOpacity>
@@ -482,21 +521,26 @@ Respond ONLY with a JSON array of tasks. Each task should be specific to the use
 					{loading ? (
 						<View className="items-center py-12">
 							<ActivityIndicator size="large" color="#10b981" />
-							<Text className="text-muted-foreground mt-3 text-base">Loading your calendar...</Text>
+							<Text className="text-muted-foreground mt-3 text-base">
+								Loading your calendar...
+							</Text>
 						</View>
 					) : getFilteredEvents().length === 0 ? (
 						<View className="items-center py-12 bg-secondary/30 rounded-xl">
 							<Text className="text-5xl mb-5">📅</Text>
-							<Text className="text-xl font-semibold mb-3">No tasks {selectedView === 'today' ? 'today' : 'upcoming'}</Text>
+							<Text className="text-xl font-semibold mb-3">
+								No tasks {selectedView === "today" ? "today" : "upcoming"}
+							</Text>
 							<Text className="text-center text-muted-foreground mb-6 leading-relaxed">
-								{selectedView === 'today' 
+								{selectedView === "today"
 									? "You're all caught up for today! Generate AI tasks or add plants."
-									: "Generate AI-powered care tasks based on your plants and weather."
-								}
+									: "Generate AI-powered care tasks based on your plants and weather."}
 							</Text>
 							<View className="flex-row gap-3">
 								<Button
-									onPress={() => router.push("/(protected)/plants/add-plant" as any)}
+									onPress={() =>
+										router.push("/(protected)/plants/add-plant" as any)
+									}
 									variant="outline"
 									size="sm"
 								>
@@ -516,12 +560,14 @@ Respond ONLY with a JSON array of tasks. Each task should be specific to the use
 							{getFilteredEvents().map((event) => {
 								const status = getEventStatus(event);
 								const eventType = event.event_type as keyof typeof EVENT_ICONS;
-								
+
 								return (
 									<View
 										key={event.id}
 										className={`p-5 rounded-xl border ${
-											event.completed ? 'bg-green-50 border-green-200' : 'bg-card border-border'
+											event.completed
+												? "bg-green-50 border-green-200"
+												: "bg-card border-border"
 										}`}
 									>
 										<View className="flex-row items-start justify-between mb-3">
@@ -530,9 +576,13 @@ Respond ONLY with a JSON array of tasks. Each task should be specific to the use
 													{EVENT_ICONS[eventType] || EVENT_ICONS.custom}
 												</Text>
 												<View className="flex-1">
-													<Text className={`font-semibold text-lg ${
-														event.completed ? 'line-through text-muted-foreground' : ''
-													}`}>
+													<Text
+														className={`font-semibold text-lg ${
+															event.completed
+																? "line-through text-muted-foreground"
+																: ""
+														}`}
+													>
 														{event.title}
 													</Text>
 													{event.plant_name && (
@@ -542,18 +592,22 @@ Respond ONLY with a JSON array of tasks. Each task should be specific to the use
 													)}
 												</View>
 											</View>
-											
+
 											<View className="items-end">
 												<View className="flex-row items-center bg-secondary/50 px-3 py-1 rounded-full">
 													<Text className="text-sm mr-1">
 														{getStatusIcon(status)}
 													</Text>
-													<Text className={`text-sm font-medium ${getStatusColor(status)}`}>
-														{format(new Date(event.scheduled_date), 'MMM d')}
+													<Text
+														className={`text-sm font-medium ${getStatusColor(status)}`}
+													>
+														{format(new Date(event.scheduled_date), "MMM d")}
 													</Text>
 												</View>
 												{event.ai_generated && (
-													<Text className="text-xs text-purple-600 mt-2 font-medium">🤖 AI</Text>
+													<Text className="text-xs text-purple-600 mt-2 font-medium">
+														🤖 AI
+													</Text>
 												)}
 											</View>
 										</View>
@@ -564,13 +618,15 @@ Respond ONLY with a JSON array of tasks. Each task should be specific to the use
 											</Text>
 										)}
 
-										{!event.completed && status !== 'upcoming' && (
+										{!event.completed && status !== "upcoming" && (
 											<Button
 												onPress={() => markEventComplete(event.id)}
 												size="sm"
 												className="self-start"
 											>
-												<Text className="text-primary-foreground">Mark Complete</Text>
+												<Text className="text-primary-foreground">
+													Mark Complete
+												</Text>
 											</Button>
 										)}
 									</View>

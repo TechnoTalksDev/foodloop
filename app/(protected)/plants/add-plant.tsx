@@ -31,22 +31,83 @@ interface PlantType {
 }
 
 const DEFAULT_PLANT_TYPES: PlantType[] = [
-	{ id: 'tomatoes', name: 'Tomatoes', emoji: '🍅', season: 'spring', harvest_time_days: 80 },
-	{ id: 'lettuce', name: 'Lettuce', emoji: '🥬', season: 'spring', harvest_time_days: 45 },
-	{ id: 'carrots', name: 'Carrots', emoji: '🥕', season: 'spring', harvest_time_days: 70 },
-	{ id: 'peppers', name: 'Peppers', emoji: '🌶️', season: 'spring', harvest_time_days: 90 },
-	{ id: 'herbs', name: 'Herbs', emoji: '🌿', season: 'year-round', harvest_time_days: 30 },
-	{ id: 'strawberries', name: 'Strawberries', emoji: '🍓', season: 'spring', harvest_time_days: 60 },
-	{ id: 'spinach', name: 'Spinach', emoji: '🥬', season: 'spring', harvest_time_days: 40 },
-	{ id: 'radishes', name: 'Radishes', emoji: '🔴', season: 'spring', harvest_time_days: 25 },
-	{ id: 'beans', name: 'Beans', emoji: '🫘', season: 'spring', harvest_time_days: 55 },
-	{ id: 'cucumbers', name: 'Cucumbers', emoji: '🥒', season: 'spring', harvest_time_days: 55 },
+	{
+		id: "tomatoes",
+		name: "Tomatoes",
+		emoji: "🍅",
+		season: "spring",
+		harvest_time_days: 80,
+	},
+	{
+		id: "lettuce",
+		name: "Lettuce",
+		emoji: "🥬",
+		season: "spring",
+		harvest_time_days: 45,
+	},
+	{
+		id: "carrots",
+		name: "Carrots",
+		emoji: "🥕",
+		season: "spring",
+		harvest_time_days: 70,
+	},
+	{
+		id: "peppers",
+		name: "Peppers",
+		emoji: "🌶️",
+		season: "spring",
+		harvest_time_days: 90,
+	},
+	{
+		id: "herbs",
+		name: "Herbs",
+		emoji: "🌿",
+		season: "year-round",
+		harvest_time_days: 30,
+	},
+	{
+		id: "strawberries",
+		name: "Strawberries",
+		emoji: "🍓",
+		season: "spring",
+		harvest_time_days: 60,
+	},
+	{
+		id: "spinach",
+		name: "Spinach",
+		emoji: "🥬",
+		season: "spring",
+		harvest_time_days: 40,
+	},
+	{
+		id: "radishes",
+		name: "Radishes",
+		emoji: "🔴",
+		season: "spring",
+		harvest_time_days: 25,
+	},
+	{
+		id: "beans",
+		name: "Beans",
+		emoji: "🫘",
+		season: "spring",
+		harvest_time_days: 55,
+	},
+	{
+		id: "cucumbers",
+		name: "Cucumbers",
+		emoji: "🥒",
+		season: "spring",
+		harvest_time_days: 55,
+	},
 ];
 
 export default function AddPlantScreen() {
 	const router = useRouter();
 	const { session } = useAuth();
-	const [plantTypes, setPlantTypes] = useState<PlantType[]>(DEFAULT_PLANT_TYPES);
+	const [plantTypes, setPlantTypes] =
+		useState<PlantType[]>(DEFAULT_PLANT_TYPES);
 	const [selectedType, setSelectedType] = useState<string>("");
 	const [plantName, setPlantName] = useState("");
 	const [plantedDate, setPlantedDate] = useState(new Date());
@@ -81,14 +142,16 @@ export default function AddPlantScreen() {
 	};
 
 	const requestPermissions = async () => {
-		const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
-		const { status: mediaStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-		
-		if (cameraStatus !== 'granted' || mediaStatus !== 'granted') {
+		const { status: cameraStatus } =
+			await ImagePicker.requestCameraPermissionsAsync();
+		const { status: mediaStatus } =
+			await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+		if (cameraStatus !== "granted" || mediaStatus !== "granted") {
 			Alert.alert(
 				"Permissions Required",
 				"Camera and photo library access are needed to add plant photos.",
-				[{ text: "OK" }]
+				[{ text: "OK" }],
 			);
 			return false;
 		}
@@ -105,15 +168,15 @@ export default function AddPlantScreen() {
 			[
 				{ text: "Take Photo", onPress: takePhoto },
 				{ text: "Choose from Library", onPress: pickImage },
-				{ text: "Cancel", style: "cancel" }
-			]
+				{ text: "Cancel", style: "cancel" },
+			],
 		);
 	};
 
 	const takePhoto = async () => {
 		try {
 			setUploadingImage(true);
-			
+
 			const result = await ImagePicker.launchCameraAsync({
 				mediaTypes: ImagePicker.MediaTypeOptions.Images,
 				allowsEditing: true,
@@ -135,7 +198,7 @@ export default function AddPlantScreen() {
 	const pickImage = async () => {
 		try {
 			setUploadingImage(true);
-			
+
 			const result = await ImagePicker.launchImageLibraryAsync({
 				mediaTypes: ImagePicker.MediaTypeOptions.Images,
 				allowsEditing: true,
@@ -159,13 +222,13 @@ export default function AddPlantScreen() {
 
 		try {
 			// Create a unique filename
-			const fileExt = uri.split('.').pop()?.toLowerCase() || 'jpg';
+			const fileExt = uri.split(".").pop()?.toLowerCase() || "jpg";
 			const fileName = `${session.user.id}_${Date.now()}.${fileExt}`;
 			const filePath = `plants/${fileName}`;
 
 			// Create FormData for upload
 			const formData = new FormData();
-			formData.append('file', {
+			formData.append("file", {
 				uri: uri,
 				type: `image/${fileExt}`,
 				name: fileName,
@@ -173,42 +236,49 @@ export default function AddPlantScreen() {
 
 			// Upload using fetch with FormData
 			const { data, error } = await supabase.storage
-				.from('plants')
+				.from("plants")
 				.upload(filePath, formData, {
-					cacheControl: '3600',
+					cacheControl: "3600",
 					upsert: false,
 				});
 
 			if (error) {
-				console.error('Supabase upload error:', error);
+				console.error("Supabase upload error:", error);
 				return null;
 			}
 
 			// Get public URL
 			const { data: urlData } = supabase.storage
-				.from('plants')
+				.from("plants")
 				.getPublicUrl(filePath);
 
 			return urlData.publicUrl;
-
 		} catch (error) {
-			console.error('Error uploading image:', error);
+			console.error("Error uploading image:", error);
 			return null;
 		}
 	};
 
-	const calculateExpectedHarvest = (plantedDate: Date, plantType: string): string => {
-		const selectedPlantType = plantTypes.find(p => p.id === plantType);
-		if (!selectedPlantType) return format(new Date(), 'yyyy-MM-dd');
-		
+	const calculateExpectedHarvest = (
+		plantedDate: Date,
+		plantType: string,
+	): string => {
+		const selectedPlantType = plantTypes.find((p) => p.id === plantType);
+		if (!selectedPlantType) return format(new Date(), "yyyy-MM-dd");
+
 		const harvestDate = new Date(plantedDate);
-		harvestDate.setDate(harvestDate.getDate() + selectedPlantType.harvest_time_days);
-		return format(harvestDate, 'yyyy-MM-dd');
+		harvestDate.setDate(
+			harvestDate.getDate() + selectedPlantType.harvest_time_days,
+		);
+		return format(harvestDate, "yyyy-MM-dd");
 	};
 
 	const handleSavePlant = async () => {
 		if (!selectedType || !plantName.trim()) {
-			Alert.alert("Missing Information", "Please select a plant type and enter a name.");
+			Alert.alert(
+				"Missing Information",
+				"Please select a plant type and enter a name.",
+			);
 			return;
 		}
 
@@ -220,34 +290,35 @@ export default function AddPlantScreen() {
 		setLoading(true);
 		try {
 			console.log("Starting plant save process...");
-			
+
 			let imageUrl = null;
 			if (imageUri) {
 				console.log("Uploading image...");
 				setUploadingImage(true);
 				imageUrl = await uploadImageToSupabase(imageUri);
 				setUploadingImage(false);
-				
+
 				if (!imageUrl) {
 					console.log("Image upload failed, proceeding without image");
 				}
 			}
 
-			const expectedHarvest = calculateExpectedHarvest(plantedDate, selectedType);
+			const expectedHarvest = calculateExpectedHarvest(
+				plantedDate,
+				selectedType,
+			);
 
 			console.log("Saving plant to database...");
-			const { error } = await supabase
-				.from("user_plants")
-				.insert({
-					user_id: session.user.id,
-					plant_name: plantName.trim(),
-					plant_type: selectedType,
-					planted_date: format(plantedDate, 'yyyy-MM-dd'),
-					expected_harvest: expectedHarvest,
-					notes: notes.trim() || null,
-					image_url: imageUrl,
-					status: 'seedling'
-				});
+			const { error } = await supabase.from("user_plants").insert({
+				user_id: session.user.id,
+				plant_name: plantName.trim(),
+				plant_type: selectedType,
+				planted_date: format(plantedDate, "yyyy-MM-dd"),
+				expected_harvest: expectedHarvest,
+				notes: notes.trim() || null,
+				image_url: imageUrl,
+				status: "seedling",
+			});
 
 			if (error) {
 				console.error("Error adding plant:", error);
@@ -262,9 +333,9 @@ export default function AddPlantScreen() {
 				[
 					{
 						text: "OK",
-						onPress: () => router.back()
-					}
-				]
+						onPress: () => router.back(),
+					},
+				],
 			);
 		} catch (error) {
 			console.error("Error in handleSavePlant:", error);
@@ -279,7 +350,7 @@ export default function AddPlantScreen() {
 		<SafeAreaView className="flex-1 bg-background">
 			{/* Header */}
 			<View className="flex-row items-center justify-between px-6 py-4 border-b border-border">
-				<TouchableOpacity 
+				<TouchableOpacity
 					onPress={() => router.back()}
 					className="w-10 h-10 rounded-full bg-secondary/50 items-center justify-center"
 					activeOpacity={0.8}
@@ -290,10 +361,15 @@ export default function AddPlantScreen() {
 				<View className="w-10" />
 			</View>
 
-			<ScrollView className="flex-1 px-6 py-6" showsVerticalScrollIndicator={false}>
+			<ScrollView
+				className="flex-1 px-6 py-6"
+				showsVerticalScrollIndicator={false}
+			>
 				{/* Plant Type Selection */}
 				<View className="mb-8">
-					<Text className="text-lg font-semibold mb-4">What are you growing?</Text>
+					<Text className="text-lg font-semibold mb-4">
+						What are you growing?
+					</Text>
 					<View className="flex-row flex-wrap gap-3">
 						{plantTypes.map((type) => (
 							<TouchableOpacity
@@ -307,9 +383,13 @@ export default function AddPlantScreen() {
 								activeOpacity={0.8}
 							>
 								<Text className="text-3xl text-center mb-2">{type.emoji}</Text>
-								<Text className={`text-sm text-center font-semibold ${
-									selectedType === type.id ? "text-primary" : "text-foreground"
-								}`}>
+								<Text
+									className={`text-sm text-center font-semibold ${
+										selectedType === type.id
+											? "text-primary"
+											: "text-foreground"
+									}`}
+								>
 									{type.name}
 								</Text>
 								<Text className="text-xs text-center text-muted-foreground mt-1">
@@ -334,15 +414,22 @@ export default function AddPlantScreen() {
 
 				{/* Planted Date */}
 				<View className="mb-8">
-					<Text className="text-lg font-semibold mb-4">When did you plant it?</Text>
+					<Text className="text-lg font-semibold mb-4">
+						When did you plant it?
+					</Text>
 					<TouchableOpacity
 						onPress={() => setShowDatePicker(true)}
 						className="flex-row items-center border border-border rounded-xl px-5 py-4 bg-card"
 						activeOpacity={0.8}
 					>
-						<Ionicons name="calendar-outline" size={22} color="#666" style={{ marginRight: 15 }} />
+						<Ionicons
+							name="calendar-outline"
+							size={22}
+							color="#666"
+							style={{ marginRight: 15 }}
+						/>
 						<Text className="text-base text-foreground font-medium">
-							{format(plantedDate, 'MMMM d, yyyy')}
+							{format(plantedDate, "MMMM d, yyyy")}
 						</Text>
 					</TouchableOpacity>
 
@@ -361,8 +448,10 @@ export default function AddPlantScreen() {
 
 				{/* Photo Section */}
 				<View className="mb-8">
-					<Text className="text-lg font-semibold mb-4">Add a photo (optional)</Text>
-					
+					<Text className="text-lg font-semibold mb-4">
+						Add a photo (optional)
+					</Text>
+
 					{imageUri ? (
 						<View className="relative">
 							<Image
@@ -436,8 +525,11 @@ export default function AddPlantScreen() {
 							🌱 Expected Harvest
 						</Text>
 						<Text className="text-green-600 dark:text-green-400 text-sm">
-							Based on typical growing time, you can expect to harvest around{' '}
-							{format(new Date(calculateExpectedHarvest(plantedDate, selectedType)), 'MMMM d, yyyy')}
+							Based on typical growing time, you can expect to harvest around{" "}
+							{format(
+								new Date(calculateExpectedHarvest(plantedDate, selectedType)),
+								"MMMM d, yyyy",
+							)}
 						</Text>
 					</View>
 				)}
@@ -445,7 +537,9 @@ export default function AddPlantScreen() {
 				{/* Save Button */}
 				<Button
 					onPress={handleSavePlant}
-					disabled={loading || uploadingImage || !selectedType || !plantName.trim()}
+					disabled={
+						loading || uploadingImage || !selectedType || !plantName.trim()
+					}
 					className="w-full mb-6"
 				>
 					{loading || uploadingImage ? (
@@ -465,8 +559,8 @@ export default function AddPlantScreen() {
 				{/* Help Text */}
 				<View className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg mb-6">
 					<Text className="text-blue-700 dark:text-blue-300 text-sm">
-						💡 After adding your plant, check the AI Calendar for automated care reminders 
-						based on your plant type and local weather conditions.
+						💡 After adding your plant, check the AI Calendar for automated care
+						reminders based on your plant type and local weather conditions.
 					</Text>
 				</View>
 			</ScrollView>

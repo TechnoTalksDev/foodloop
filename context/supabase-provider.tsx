@@ -41,7 +41,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
 	const router = useRouter();
 
 	// ✅ Use dynamic redirect URI for Expo Go (no scheme override)
-	const redirectTo = makeRedirectUri()
+	const redirectTo = makeRedirectUri();
 	console.log("🔁 Redirect URI being used:", redirectTo);
 
 	const createSessionFromUrl = async (url: string) => {
@@ -75,7 +75,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
 				throw error;
 			}
 
-			console.log("✅ Session created successfully:", data.session?.user?.email);
+			console.log(
+				"✅ Session created successfully:",
+				data.session?.user?.email,
+			);
 			return data.session;
 		} catch (error) {
 			console.error("🔥 Error in createSessionFromUrl:", error);
@@ -167,20 +170,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
 	const checkOnboardingStatus = async () => {
 		if (!session?.user?.id) return;
-		
+
 		try {
 			const { data, error } = await supabase
 				.from("users")
 				.select("onboarding_complete")
 				.eq("id", session.user.id)
 				.single();
-			
+
 			if (error) {
 				console.error("Error checking onboarding status:", error);
 				router.replace("/");
 				return;
 			}
-			
+
 			if (data?.onboarding_complete === false) {
 				console.log("🎯 User needs to complete onboarding");
 				router.replace("/onboarding");

@@ -283,17 +283,17 @@ export default function CreateProduct() {
 
 			// Send marketplace notification
 			await addNotification({
-				type: 'marketplace_update',
-				title: 'Product listed successfully! 🛒',
+				type: "marketplace_update",
+				title: "Product listed successfully! 🛒",
 				message: `Your "${data.name}" is now live on the marketplace. Buyers can discover it now!`,
-				data: { 
-					action: 'product_created', 
-					product_name: data.name, 
-					product_id: product.id 
+				data: {
+					action: "product_created",
+					product_name: data.name,
+					product_id: product.id,
 				},
 				urgent: false,
-				icon: '✅',
-				action_url: '/(protected)/(tabs)/marketplace',
+				icon: "✅",
+				action_url: "/(protected)/(tabs)/marketplace",
 				expires_at: addDays(new Date(), 7).toISOString(),
 			});
 

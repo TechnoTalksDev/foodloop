@@ -22,7 +22,7 @@ import { supabase } from "@/config/supabase";
 import { useCart } from "@/context/cart-provider";
 import { useColorScheme } from "@/lib/useColorScheme";
 import { colors } from "@/constants/colors";
-import { cleanupSoldOutProducts } from '@/lib/product-cleanup';
+import { cleanupSoldOutProducts } from "@/lib/product-cleanup";
 
 import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
@@ -137,8 +137,8 @@ export default function Marketplace() {
 			setLoading(true);
 
 			// Run automatic cleanup of old sold-out products
-			cleanupSoldOutProducts().catch(error => 
-				console.error('Product cleanup failed:', error)
+			cleanupSoldOutProducts().catch((error) =>
+				console.error("Product cleanup failed:", error),
 			);
 
 			const { data, error } = await supabase
@@ -445,7 +445,9 @@ export default function Marketplace() {
 			>
 				{/* REPLACE the existing header with this updated version */}
 				<View className="flex-row justify-between items-center px-4 py-3">
-					<TouchableOpacity onPress={() => router.push("/(protected)/notification-modal")}>
+					<TouchableOpacity
+						onPress={() => router.push("/(protected)/notification-modal")}
+					>
 						<View className="w-10 h-10 items-center justify-center">
 							<Text className="text-2xl">🔔</Text>
 							{/* ADD THIS notification badge */}
@@ -488,10 +490,12 @@ export default function Marketplace() {
 								placeholderTextColor="#A0A0A0"
 							/>
 							<TouchableOpacity
-								onPress={() => router.push({
-									pathname: "/(protected)/filter-modal",
-									params: { filters: JSON.stringify(filters) }
-								})}
+								onPress={() =>
+									router.push({
+										pathname: "/(protected)/filter-modal",
+										params: { filters: JSON.stringify(filters) },
+									})
+								}
 								className="ml-2 p-1"
 							>
 								<View className="flex-row items-center">
@@ -575,10 +579,12 @@ export default function Marketplace() {
 						{filteredProducts.length === 1 ? "result" : "results"} found
 					</Text>
 					<TouchableOpacity
-						onPress={() => router.push({
-							pathname: "/(protected)/filter-modal",
-							params: { filters: JSON.stringify(filters) }
-						})}
+						onPress={() =>
+							router.push({
+								pathname: "/(protected)/filter-modal",
+								params: { filters: JSON.stringify(filters) },
+							})
+						}
 						className="flex-row items-center"
 					>
 						<Ionicons name="swap-vertical" size={16} color="#666" />

@@ -1,10 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { router, useLocalSearchParams } from "expo-router";
-import {
-	ScrollView,
-	TouchableOpacity,
-	View,
-} from "react-native";
+import { ScrollView, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
 import { SafeAreaView } from "@/components/safe-area-view";
@@ -55,7 +51,7 @@ const foodCategories = [
 export default function FilterModal() {
 	// Get current filters from URL params if available
 	const params = useLocalSearchParams();
-	
+
 	const [filters, setFilters] = useState<FilterOptions>({
 		category: [],
 		priceRange: [0, 100],
@@ -91,9 +87,9 @@ export default function FilterModal() {
 	const applyFilters = () => {
 		// Navigate back with filters as params
 		router.back();
-		router.setParams({ 
+		router.setParams({
 			appliedFilters: JSON.stringify(filters),
-			timestamp: Date.now().toString()
+			timestamp: Date.now().toString(),
 		});
 	};
 
@@ -157,8 +153,11 @@ export default function FilterModal() {
 										category: prev.category.includes(category.id)
 											? prev.category.filter((c) => c !== category.id)
 											: category.id === "all"
-											? []
-											: [...prev.category.filter((c) => c !== "all"), category.id],
+												? []
+												: [
+														...prev.category.filter((c) => c !== "all"),
+														category.id,
+													],
 									}))
 								}
 								className={`px-3 py-2 rounded-full border ${

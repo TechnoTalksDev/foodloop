@@ -81,16 +81,23 @@ export default function Community() {
 	} = usePopularGroups();
 
 	// Calculate community-specific notification counts
-	const communityNotificationCount = notifications.filter(n => 
-		['community_post', 'community_reply', 'community_vote', 'group_join', 'group_update'].includes(n.type) && !n.read
+	const communityNotificationCount = notifications.filter(
+		(n) =>
+			[
+				"community_post",
+				"community_reply",
+				"community_vote",
+				"group_join",
+				"group_update",
+			].includes(n.type) && !n.read,
 	).length;
 
-	const newPostsCount = notifications.filter(n => 
-		n.type === 'community_post' && !n.read
+	const newPostsCount = notifications.filter(
+		(n) => n.type === "community_post" && !n.read,
 	).length;
 
-	const newGroupUpdatesCount = notifications.filter(n => 
-		['group_join', 'group_update'].includes(n.type) && !n.read
+	const newGroupUpdatesCount = notifications.filter(
+		(n) => ["group_join", "group_update"].includes(n.type) && !n.read,
 	).length;
 
 	useEffect(() => {
@@ -600,7 +607,7 @@ export default function Community() {
 							{unreadCount > 0 && (
 								<View className="absolute top-0 right-0 w-5 h-5 bg-red-500 rounded-full items-center justify-center">
 									<Text className="text-white text-xs font-bold">
-										{unreadCount > 99 ? '99+' : unreadCount}
+										{unreadCount > 99 ? "99+" : unreadCount}
 									</Text>
 								</View>
 							)}
@@ -652,10 +659,9 @@ export default function Community() {
 									Community Updates
 								</Text>
 								<Text className="text-sm text-green-600 dark:text-green-400">
-									{communityNotificationCount === 1 
+									{communityNotificationCount === 1
 										? "You have 1 new community notification"
-										: `You have ${communityNotificationCount} new community notifications`
-									}
+										: `You have ${communityNotificationCount} new community notifications`}
 								</Text>
 							</View>
 							<Ionicons name="chevron-forward" size={20} color="#059669" />
@@ -691,20 +697,21 @@ export default function Community() {
 									{tab.name}
 								</Text>
 								{/* Tab-specific notification indicators */}
-								{tab.id === "popular" && (newPostsCount > 0 || newGroupUpdatesCount > 0) && (
-									<View className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full" />
-								)}
+								{tab.id === "popular" &&
+									(newPostsCount > 0 || newGroupUpdatesCount > 0) && (
+										<View className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full" />
+									)}
 								{tab.id === "posts" && newPostsCount > 0 && (
 									<View className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full items-center justify-center">
 										<Text className="text-white text-xs font-bold">
-											{newPostsCount > 9 ? '9+' : newPostsCount}
+											{newPostsCount > 9 ? "9+" : newPostsCount}
 										</Text>
 									</View>
 								)}
 								{tab.id === "groups" && newGroupUpdatesCount > 0 && (
 									<View className="absolute -top-1 -right-1 w-5 h-5 bg-blue-500 rounded-full items-center justify-center">
 										<Text className="text-white text-xs font-bold">
-											{newGroupUpdatesCount > 9 ? '9+' : newGroupUpdatesCount}
+											{newGroupUpdatesCount > 9 ? "9+" : newGroupUpdatesCount}
 										</Text>
 									</View>
 								)}
