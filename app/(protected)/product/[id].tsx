@@ -13,6 +13,9 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "@/config/supabase";
 import { useCart } from "@/context/cart-provider";
+import { useAuth } from "@/context/supabase-provider";
+import { isProductSoldOut, getSoldOutMessage } from '@/lib/product-cleanup';
+import { differenceInDays } from 'date-fns';
 
 import { Text } from "@/components/ui/text";
 import { SafeAreaView } from "@/components/safe-area-view";
@@ -88,6 +91,7 @@ const tagIcons = {
 export default function ProductDetailScreen() {
 	const router = useRouter();
 	const { id } = useLocalSearchParams<{ id: string }>();
+	const { session } = useAuth();
 	const { colorScheme } = useColorScheme();
 	const [quantity, setQuantity] = useState(1);
 	const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -225,7 +229,15 @@ export default function ProductDetailScreen() {
 					],
 				);
 			} else {
-				Alert.alert("Error", "Failed to add item to cart. Please try again.");
+				// Check if this is the user's own product
+				if (product.user_id === session?.user?.id) {
+					Alert.alert(
+						"Cannot Add to Cart", 
+						"You cannot purchase your own products. Other users can buy this item from the marketplace."
+					);
+				} else {
+					Alert.alert("Error", "Failed to add item to cart. Please try again.");
+				}
 			}
 		} catch (error) {
 			console.error("Error adding to cart:", error);
@@ -444,7 +456,7 @@ export default function ProductDetailScreen() {
 					{/* Amount Available */}
 					<View className="mt-4">
 						<View className="flex-row items-center mb-1">
-							<Ionicons name="cube" size={20} color="blue" />
+							<Ionicons name="cube" size={20} color={isProductSoldOut(product) ? "red" : "blue"} />
 							<Text
 								className="text-base font-medium ml-1"
 								style={{ color: textColor }}
@@ -452,9 +464,20 @@ export default function ProductDetailScreen() {
 								Available
 							</Text>
 						</View>
-						<Text className="text-base" style={{ color: mutedTextColor }}>
-							{product.amount} {product.amount === 1 ? "item" : "items"} left
-						</Text>
+						{isProductSoldOut(product) ? (
+							<View className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200">
+								<Text className="text-red-600 font-medium">
+									{getSoldOutMessage(differenceInDays(new Date(), new Date(product.created_at)))}
+								</Text>
+								<Text className="text-red-500 text-sm mt-1">
+									This listing will be automatically removed after 2 days
+								</Text>
+							</View>
+						) : (
+							<Text className="text-base" style={{ color: mutedTextColor }}>
+								{product.amount} {product.amount === 1 ? "item" : "items"} left
+							</Text>
+						)}
 					</View>
 					{/* Environmental Impact */}
 					<View className="mt-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
@@ -600,15 +623,27 @@ export default function ProductDetailScreen() {
 				) : (
 					// Item not in cart - show add to cart button
 					<Button
-						className="bg-green-500 rounded-full"
+						className={
+							isProductSoldOut(product) || product.user_id === session?.user?.id 
+								? "bg-gray-400 rounded-full" 
+								: "bg-green-500 rounded-full"
+						}
 						onPress={handleAddToCart}
-						disabled={addingToCart}
+						disabled={addingToCart || isProductSoldOut(product) || product.user_id === session?.user?.id}
 					>
 						{addingToCart ? (
 							<View className="flex-row items-center">
 								<ActivityIndicator size="small" color="#ffffff" />
 								<Text className="text-white font-semibold ml-2">Adding...</Text>
 							</View>
+						) : isProductSoldOut(product) ? (
+							<Text className="text-white font-semibold">
+								Sold Out
+							</Text>
+						) : product.user_id === session?.user?.id ? (
+							<Text className="text-white font-semibold">
+								Your Product
+							</Text>
 						) : (
 							<Text className="text-white font-semibold">
 								Add {quantity > 1 ? `${quantity} items` : "to Cart"} - $

@@ -16,6 +16,7 @@ import { format, subMonths, differenceInHours, isToday } from 'date-fns';
 import { weatherService, WeatherData } from "@/lib/weather-service";
 import { useNotifications } from "@/context/notification-provider";
 import { useAchievements } from "@/hooks/useAchievements";
+import { cleanupSoldOutProducts } from '@/lib/product-cleanup';
 
 // Sample food categories with eco-friendly icons
 const foodCategories = [
@@ -567,6 +568,7 @@ export default function Home() {
 				fetchPlantCheckInData(),
 				fetchRecommendedItems(),
 				fetchCalendarData(),
+				cleanupSoldOutProducts(), // Cleanup sold-out products
 				// Note: Real impact data is fetched in useEffect based on session
 			]);
 		} catch (error) {

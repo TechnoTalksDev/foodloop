@@ -132,6 +132,23 @@ export function CartProvider({ children }: PropsWithChildren) {
     }
 
     try {
+      // First, check if the user is trying to add their own product
+      const { data: productData, error: productError } = await supabase
+        .from('product')
+        .select('user_id')
+        .eq('id', productId)
+        .single();
+
+      if (productError) {
+        console.error('Error checking product ownership:', productError);
+        return false;
+      }
+
+      if (productData && productData.user_id === session.user.id) {
+        console.log('Cannot add own product to cart');
+        return false; // Seller cannot buy their own product
+      }
+
       // Check if item already exists in cart
       const existingItem = cartItems.find(item => item.product_id === productId);
       

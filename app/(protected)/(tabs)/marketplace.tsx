@@ -22,6 +22,7 @@ import { supabase } from "@/config/supabase";
 import { useCart } from "@/context/cart-provider";
 import { useColorScheme } from "@/lib/useColorScheme";
 import { colors } from "@/constants/colors";
+import { cleanupSoldOutProducts } from '@/lib/product-cleanup';
 
 import { SafeAreaView } from "@/components/safe-area-view";
 import { Text } from "@/components/ui/text";
@@ -134,6 +135,11 @@ export default function Marketplace() {
 	const fetchProducts = async () => {
 		try {
 			setLoading(true);
+
+			// Run automatic cleanup of old sold-out products
+			cleanupSoldOutProducts().catch(error => 
+				console.error('Product cleanup failed:', error)
+			);
 
 			const { data, error } = await supabase
 				.from("product")
@@ -428,6 +434,14 @@ export default function Marketplace() {
 			<ScrollView
 				contentContainerStyle={{ paddingBottom: 120 }}
 				showsVerticalScrollIndicator={false}
+				refreshControl={
+					<RefreshControl
+						refreshing={refreshing}
+						onRefresh={onRefresh}
+						tintColor="#10b981"
+						colors={["#10b981"]}
+					/>
+				}
 			>
 				{/* REPLACE the existing header with this updated version */}
 				<View className="flex-row justify-between items-center px-4 py-3">
