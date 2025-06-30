@@ -10,6 +10,7 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import * as Location from "expo-location";
+import { useCameraPermissions } from "expo-camera";
 
 import { Image } from "@/components/image";
 import { SafeAreaView } from "@/components/safe-area-view";
@@ -81,6 +82,14 @@ const onboardingSteps = [
 		type: "location",
 		options: [], // No predefined options for location type
 	},
+	{
+		id: 5,
+		title: "Enable Camera Access",
+		subtitle:
+			"We need camera access to help you identify plants and share your gardening progress",
+		type: "camera",
+		options: [], // No predefined options for camera type
+	},
 ];
 
 export default function OnboardingScreen() {
@@ -107,6 +116,11 @@ export default function OnboardingScreen() {
 	const [isLoadingLocation, setIsLoadingLocation] = useState(false);
 	const [locationPermissionGranted, setLocationPermissionGranted] =
 		useState(false);
+	
+	// Camera-specific state
+	const [cameraPermission, requestCameraPermission] = useCameraPermissions();
+	const [isLoadingCamera, setIsLoadingCamera] = useState(false);
+	const [cameraPermissionGranted, setCameraPermissionGranted] = useState(false);
 
 	// Custom plant input state
 	const [showOtherPlantModal, setShowOtherPlantModal] = useState(false);
@@ -131,8 +145,23 @@ export default function OnboardingScreen() {
 			}
 		};
 
+		const checkCameraPermission = async () => {
+			try {
+				if (cameraPermission?.status === "granted") {
+					setCameraPermissionGranted(true);
+					setAnswers((prev) => ({
+						...prev,
+						5: "camera_granted", // hardcoded to camera step id
+					}));
+				}
+			} catch (error) {
+				console.error("Error checking camera permission:", error);
+			}
+		};
+
 		checkLocationPermission();
-	}, []);
+		checkCameraPermission();
+	}, [cameraPermission]);
 
 	const appIcon =
 		colorScheme === "dark"
@@ -143,6 +172,8 @@ export default function OnboardingScreen() {
 	const canContinue =
 		currentStepData.type === "location"
 			? locationPermissionGranted
+			: currentStepData.type === "camera"
+			? cameraPermissionGranted
 			: currentStepData.type === "multiple-choice"
 				? currentStepData.id === 2
 					? (answers[currentStepData.id] || []).length === 3 // Exactly 3 for plant selection
@@ -178,6 +209,35 @@ export default function OnboardingScreen() {
 			setCurrentLocation(null);
 		} finally {
 			setIsLoadingLocation(false);
+		}
+	};
+
+	// Camera permission function
+	const requestCameraPermissionAsync = async () => {
+		setIsLoadingCamera(true);
+		try {
+			// Request permission to access camera
+			const permission = await requestCameraPermission();
+			if (permission?.status === "granted") {
+				console.log("Camera permission granted");
+				setCameraPermissionGranted(true);
+				setAnswers((prev) => ({
+					...prev,
+					[currentStepData.id]: "camera_granted",
+				}));
+			} else {
+				console.log("Camera permission denied");
+				setCameraPermissionGranted(false);
+				// Show user that permission is required
+				alert(
+					"Camera permission is required to continue. Please enable camera access in your device settings to proceed.",
+				);
+			}
+		} catch (error) {
+			console.error("Error requesting camera permission:", error);
+			setCameraPermissionGranted(false);
+		} finally {
+			setIsLoadingCamera(false);
 		}
 	};
 	const handleOptionSelect = (optionId: string) => {
@@ -557,6 +617,118 @@ export default function OnboardingScreen() {
 									<Text className="text-center text-muted-foreground text-sm">
 										🔒 Your location data is used only to show relevant local
 										content and is never shared with third parties.
+									</Text>
+								</View>
+							</View>
+						) : currentStepData.type === "camera" ? (
+							<View className="gap-6">
+								{/* Camera Permission Explanation */}
+								<View className="p-6 rounded-2xl bg-secondary/50 border border-border">
+									<View className="flex-row items-center mb-4">
+										<View className="w-12 h-12 rounded-xl bg-primary/20 items-center justify-center mr-4">
+											<Ionicons
+												name="camera"
+												size={24}
+												color={primaryColor}
+											/>
+										</View>
+										<View className="flex-1">
+											<Text className="text-lg font-semibold text-foreground">
+												Camera Permission Required
+											</Text>
+											<Text className="text-sm text-muted-foreground">
+												Help us identify plants and track your progress
+											</Text>
+										</View>
+									</View>
+
+									<Text className="text-foreground mb-4 leading-6">
+										We need access to your camera to:
+									</Text>
+
+									<View className="gap-3 mb-6">
+										<View className="flex-row items-center">
+											<View className="w-2 h-2 rounded-full bg-primary mr-3" />
+											<Text className="text-muted-foreground flex-1">
+												Use AI to identify plants and diagnose plant health issues
+											</Text>
+										</View>
+										<View className="flex-row items-center">
+											<View className="w-2 h-2 rounded-full bg-primary mr-3" />
+											<Text className="text-muted-foreground flex-1">
+												Take photos of your garden progress and food finds
+											</Text>
+										</View>
+										<View className="flex-row items-center">
+											<View className="w-2 h-2 rounded-full bg-primary mr-3" />
+											<Text className="text-muted-foreground flex-1">
+												Share photos with the community and get growing tips
+											</Text>
+										</View>
+										<View className="flex-row items-center">
+											<View className="w-2 h-2 rounded-full bg-primary mr-3" />
+											<Text className="text-muted-foreground flex-1">
+												Create listings with photos of surplus food items
+											</Text>
+										</View>
+									</View>
+								</View>
+
+								{/* Permission Request Button */}
+								<TouchableOpacity
+									onPress={requestCameraPermissionAsync}
+									disabled={isLoadingCamera}
+									className={`p-6 rounded-2xl border-2 flex-row items-center ${
+										cameraPermissionGranted
+											? "border-primary bg-primary/10"
+											: "border-border bg-background"
+									}`}
+									activeOpacity={0.7}
+								>
+									<View className="w-12 h-12 rounded-xl bg-primary/20 items-center justify-center mr-4">
+										{isLoadingCamera ? (
+											<Text className="text-primary text-xl">⏳</Text>
+										) : cameraPermissionGranted ? (
+											<Ionicons
+												name="checkmark-circle"
+												size={24}
+												color={primaryColor}
+											/>
+										) : (
+											<Ionicons
+												name="camera"
+												size={24}
+												color={primaryColor}
+											/>
+										)}
+									</View>
+									<View className="flex-1">
+										<Text
+											className={`text-lg font-medium ${cameraPermissionGranted ? "text-primary" : "text-foreground"}`}
+										>
+											{isLoadingCamera
+												? "Requesting permission..."
+												: cameraPermissionGranted
+													? "Camera Permission Granted"
+													: "Grant Camera Permission"}
+										</Text>
+										<Text className="text-sm text-muted-foreground">
+											{cameraPermissionGranted
+												? "You can now continue to the next step"
+												: "Tap to allow camera access"}
+										</Text>
+									</View>
+									{cameraPermissionGranted && (
+										<View className="w-6 h-6 rounded-full bg-primary items-center justify-center">
+											<Text className="text-primary-foreground text-sm">✓</Text>
+										</View>
+									)}
+								</TouchableOpacity>
+
+								{/* Privacy Note */}
+								<View className="p-4 rounded-2xl bg-muted/30">
+									<Text className="text-center text-muted-foreground text-sm">
+										📸 Your photos are only used for plant identification and community sharing when you choose to share them.
 									</Text>
 								</View>
 							</View>
