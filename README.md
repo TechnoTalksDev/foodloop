@@ -1,24 +1,30 @@
 ![FoodLoop Logo](src/routes/logo.png)
 
-# Foodloop
+# 🌱 FoodLoop
 
-## 🌱 About Foodloop
+*A sustainable food marketplace connecting communities to reduce waste and support local businesses*
 
-FoodLoop is a sustainable food marketplace that connects consumers with local businesses to purchase surplus food at discounted prices. Our platform helps:
+**🏆 TSA Washington State 2025 Software Development Entry**  
+*Foundation for our TSA Nationals 2025 Entry - see [native branch](https://github.com/TechnoTalksDev/foodloop/tree/native) for the full nationals implementation*
 
-- **Reduce food waste** by giving businesses a way to sell food that would otherwise go to waste
-- **Save consumers money** with great discounts on quality food items
-- **Help the environment** by reducing CO₂ emissions from food waste
-- **Support local businesses** by creating a new revenue stream
+## � About FoodLoop
 
-Partnering with local buisnesses such as our own student store to reduce waste in our community!
+FoodLoop is a web-based sustainable food marketplace that connects consumers with local businesses to purchase surplus food at discounted prices. Our platform creates a comprehensive solution for environmental sustainability and economic savings by:
+
+- **🌍 Reducing Food Waste** - Preventing quality food from ending up in landfills
+- **💰 Saving Money** - Offering consumers significant discounts on fresh food
+- **🌱 Helping the Environment** - Reducing CO₂ emissions from food waste
+- **🏪 Supporting Local Businesses** - Creating new revenue streams for partnerships
+
+Partnering with local businesses such as our own student store to reduce waste in our community!
 
 ## ⚡ Quick Start
 
 ### Prerequisites
 
-- Node.js
-- npm, bun, etc.
+- Node.js 18+
+- Bun package manager (recommended) or npm
+- Supabase account with configured project
 
 ### Installation
 
@@ -30,9 +36,20 @@ git clone https://github.com/TechnoTalksDev/foodloop
 cd foodloop
 
 # Install dependencies
-npm install
-# or
 bun install
+# or
+npm install
+```
+
+### Environment Setup
+
+```bash
+# Copy environment template
+cp .env.example .env
+
+# Add your Supabase credentials
+EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
 ### Development
@@ -40,6 +57,8 @@ bun install
 Start the development server:
 
 ```bash
+bun run dev
+# or
 npm run dev
 ```
 
@@ -47,15 +66,13 @@ The app will be available at [http://localhost:5173](http://localhost:5173).
 
 ### Building
 
-Simeo can either be built as a standalone Node server, a Docker container, or a Azure Static Web Application.
+FoodLoop can be built as a standalone Node server, a Docker container, or an Azure Static Web Application.
 
 #### How to change platforms
 
-In order to build for either a standalone server or docker container you must first change `svelte.config.js` to reflect this
+To build for either a standalone server or docker container, you must first change `svelte.config.js` to reflect this:
 
-**For Azure SWA:**
-
-This is the default configuration
+**For Azure SWA (Default):**
 
 ```js
 import azure from 'svelte-adapter-azure-swa';
@@ -72,7 +89,7 @@ const config = {
 export default config;
 ```
 
-**Node/Docker**
+**For Node/Docker:**
 
 ```js
 import adapter from '@sveltejs/adapter-node';
@@ -86,13 +103,14 @@ const config = {
 		adapter: adapter()
 	}
 };
+export default config;
 ```
 
 ## 🛠️ Tech Stack & Best Practices
 
 ### SvelteKit
 
-Foodloop is built with SvelteKit, a framework for building web applications of all sizes that delivers exceptional performance with minimal JavaScript by compiling to native JavaScript vs. React's virutal DOM approach.
+FoodLoop is built with SvelteKit, a framework for building web applications of all sizes that delivers exceptional performance with minimal JavaScript by compiling to native JavaScript vs. React's virtual DOM approach.
 
 ### TypeScript
 
@@ -133,13 +151,80 @@ We prioritize accessibility in our UI components:
 - ARIA attributes when necessary
 - Keyboard navigation support
 
-## 🚀 Features
+## 🏆 TSA Competition Details
 
-- Business dashboard for listing surplus food items
-- Consumer interface for discovering and purchasing deals
-- SmartPlate AI recipe generation to reduce home food waste
-- Location-based food discovery
-- Mobile-friendly responsive design
+### Washington State Entry (Current Branch)
+This main branch represents our **TSA Washington State 2025 Software Development Entry**, featuring:
+
+- **Web-based Platform**: Built with SvelteKit for optimal performance
+- **Core Marketplace**: Business listing system with cart functionality
+- **AI Integration**: SmartPlate recipe generation using Google Gemini
+- **Authentication**: Secure OAuth with Google and GitHub
+- **Database**: Supabase backend with PostgreSQL
+- **Responsive Design**: TailwindCSS with accessibility focus
+
+### Nationals Enhancement (Native Branch)
+Our [native branch](https://github.com/TechnoTalksDev/foodloop/tree/native) contains the **full TSA Nationals 2025 implementation** with enhanced features for Nashville, Tennessee, including:
+
+- **Mobile Application**: React Native + Expo for cross-platform native experience
+- **Advanced Community Features**: Forums, groups, and messaging systems
+- **Garden Management**: Plant tracking with calendar integration
+- **Real-time Features**: Live chat, notifications, and cart synchronization
+- **Impact Analytics**: Environmental impact tracking and achievements
+- **Enhanced AI**: Plant disease diagnosis and personalized recommendations
+
+## 📈 Environmental Impact
+
+FoodLoop addresses the critical issue of food waste, which accounts for **40% of the US food supply**. Our platform provides measurable environmental benefits:
+
+- **CO₂ Emission Reduction**: Track saved emissions from prevented food waste
+- **Resource Conservation**: Water and energy savings metrics
+- **Community Education**: Sustainable practices promotion
+- **Local Business Support**: New revenue streams for surplus inventory
+
+## 🤝 Contributing
+
+We welcome contributions from the community! Whether you're fixing bugs, adding features, or improving documentation, your help makes FoodLoop better for everyone.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+**Built with ❤️ for TSA Washington State 2025 • Enhanced for TSA Nationals 2025 in Nashville, Tennessee**
+
+## ✨ Key Features
+
+### 🛒 Smart Marketplace
+- Real-time inventory of surplus food from local businesses
+- Advanced filtering by category, price, location, and dietary preferences
+- Smart cart system with instant updates
+- Secure checkout with integrated payment processing
+
+### 🤖 AI-Powered SmartPlate Advisor
+- Recipe generation using Google Gemini AI
+- Personalized recommendations based on available ingredients
+- Smart ingredient combination suggestions
+- Waste reduction through creative recipe ideas
+
+### 👤 User Management & Authentication
+- Secure Google and GitHub OAuth integration
+- Comprehensive user profiles with impact tracking
+- Business and consumer account management
+- Session management with Supabase Auth
+
+### 💬 Business Tools
+- Intuitive product listing creation with image upload
+- Inventory management for surplus food items
+- Location-based business discovery
+- Pricing and expiration date management
+
+### 📱 Responsive Design
+- Mobile-first responsive interface
+- Accessibility-focused UI components
+- Modern design system with TailwindCSS
+- Cross-platform compatibility
 
 
 
